@@ -3736,7 +3736,22 @@ let dailyDate = '';             // YYYY-MM-DD of the active daily run
 function loadDailyScores() {
   try {
     const raw = localStorage.getItem('castleDailyScores');
-    return raw ? JSON.parse(raw) : {};
+    if (!raw) return {};
+    const map = JSON.parse(raw);
+    // Prune entries older than 90 days so localStorage doesn't grow forever.
+    // Date strings are YYYY-MM-DD which sort lexicographically — safe to compare.
+    const cutoff = new Date(Date.now() - 90 * 86400000);
+    const cutStr = cutoff.getFullYear() + '-' + String(cutoff.getMonth()+1).padStart(2,'0') + '-' + String(cutoff.getDate()).padStart(2,'0');
+    const cleaned = {};
+    let pruned = false;
+    for (const k in map) {
+      if (k >= cutStr) cleaned[k] = map[k];
+      else pruned = true;
+    }
+    if (pruned) {
+      try { localStorage.setItem('castleDailyScores', JSON.stringify(cleaned)); } catch {}
+    }
+    return cleaned;
   } catch { return {}; }
 }
 function saveDailyScores(map) {
@@ -4012,10 +4027,10 @@ const HAZARDS = {
         });
       }
     },
-    apply(h, e) {
+    apply(h, e, dt) {
       e.slowT = Math.max(e.slowT || 0, 0.25);
       if ((e.slowMul || 1) > h.slowMul) e.slowMul = h.slowMul;
-      e.hp -= h.dps * (1/60);  // approximate per-frame; called every frame anyway
+      e.hp -= h.dps * (dt || (1/60));   // frame-rate-independent
     }
   },
   brazier: {
@@ -4118,7 +4133,7 @@ function updateHazards(dt) {
       if (e.hp <= 0) continue;
       const dx = e.x - h.x, dy = e.y - h.y;
       if (dx*dx + dy*dy <= r2) {
-        HAZARDS[h.kind].apply(h, e);
+        HAZARDS[h.kind].apply(h, e, dt);
         if (h.kind === 'beartrap' && !h.armed) break;
       }
     }
@@ -6479,7 +6494,9 @@ function openSkillBuyMenu(idx) {
   let left = barRect.left + barRect.width / 2 - pw / 2;
   let top  = barRect.top - ph - 10;
   left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
-  top  = Math.max(8, top);
+  // Respect the HUD strip — keep the panel below the HUD divider.
+  const hudH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hud-h')) || 0;
+  top = Math.max(hudH + 8, top);
   skillPanelEl.style.left = left + 'px';
   skillPanelEl.style.top  = top  + 'px';
 }
@@ -6962,7 +6979,9 @@ function showPanel(slot) {
   let left = sx + 40;
   let top  = sy - ph / 2;
   left = Math.min(left, window.innerWidth  - pw - 10);
-  top  = Math.max(10, Math.min(top, window.innerHeight - ph - 10));
+  // Respect the HUD strip at the top — never let the panel slide UNDER the HUD.
+  const hudH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hud-h')) || 0;
+  top = Math.max(hudH + 10, Math.min(top, window.innerHeight - ph - 10));
   panelEl.style.left = left + 'px';
   panelEl.style.top  = top  + 'px';
 }
