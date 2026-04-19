@@ -789,6 +789,24 @@
     letter-spacing: 1px;
     text-transform: uppercase;
   }
+  #title-overlay .title-actions .daily-btn {
+    color: #ffd060;
+    box-shadow: inset 0 0 0 2px #c89030, inset 0 0 0 4px #1a0c00, 3px 3px 0 0 #1a0c00;
+  }
+  #title-overlay .title-actions .daily-btn:hover {
+    color: #ffe080;
+    box-shadow: inset 0 0 0 2px #ffd060, inset 0 0 0 4px #1a0c00, 4px 4px 0 0 #1a0c00;
+  }
+  #title-overlay .title-daily-best {
+    margin-top: 12px;
+    color: #c89030;
+    font-size: 12px;
+    letter-spacing: 1px;
+    line-height: 1.4;
+    min-height: 16px;
+    text-align: center;
+  }
+  #title-overlay .title-daily-best b { color: #ffd060; }
 
   /* WELCOME CARD — first-time intro modal */
   #welcome-overlay {
@@ -900,6 +918,27 @@
     color: #c0b090;
     box-shadow: inset 0 0 0 2px #6a5a3a;
     transform: none;
+  }
+
+  /* DAILY chip — visible only when body has .daily-mode (the seeded daily challenge run) */
+  body.daily-mode::before {
+    content: 'DAILY \2605 ' attr(data-daily-date);
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #3a2616;
+    color: #ffd060;
+    padding: 4px 12px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    box-shadow: inset 0 0 0 2px #c89030, inset 0 0 0 4px #1a0c00, 3px 3px 0 0 rgba(0,0,0,0.7);
+    z-index: 9;
+    pointer-events: none;
+  }
+  @media (max-height: 500px) {
+    body.daily-mode::before { top: 50px; font-size: 9px; padding: 3px 10px; }
   }
 
   /* HELP BUTTON — sits to the LEFT of #pause-btn in top-right (pause is at right:14, w:44 → help at right:66) */
@@ -1870,7 +1909,7 @@
   <div id="skill-panel"></div>
   <div id="gameover">
     <div class="card">
-      <h2>Wall Breached</h2>
+      <h2 id="go-title">Wall Breached</h2>
       <div class="row"><span>Wave reached</span><b id="go-wave">1</b></div>
       <div class="row"><span>Goblins slain</span><b id="go-kills">0</b></div>
       <div class="row"><span>Gold earned</span><b id="go-gold">0</b></div>
@@ -2001,7 +2040,8 @@
         <button onclick="pauseOpenResearch()">Research</button>
         <button onclick="pauseOpenStats()">Stats</button>
         <button onclick="pauseOpenSettings()">Settings</button>
-        <button onclick="pauseEndRun()" style="grid-column: span 2;">End Run</button>
+        <button onclick="pauseOpenTitle()">Main Menu</button>
+        <button onclick="pauseEndRun()">End Run</button>
       </div>
       <div class="hint">Press SPACE or ESC to resume</div>
     </div>
@@ -2070,9 +2110,11 @@
       <div class="title-sub">Hold the wall, bank Research &amp; Crowns, return stronger.</div>
       <div class="title-actions">
         <button onclick="titlePlay()">PLAY</button>
+        <button class="daily-btn" onclick="titleStartDaily()">TODAY&rsquo;S CHALLENGE</button>
         <button onclick="titleOpenResearch()">RESEARCH</button>
         <button onclick="titleOpenSettings()">SETTINGS</button>
       </div>
+      <div class="title-daily-best" id="title-daily-best"></div>
       <div class="title-foot">v9 &middot; click anywhere to begin</div>
     </div>
   </div>
@@ -2924,6 +2966,11 @@ function triggerGameOver() {
   if (gameOver) return;
   gameOver = true;
   Audio.sfx.gameOver();
+  // Daily mode: skip RP/Crown banking, save score, show daily-themed result card
+  if (dailyMode) {
+    finishDailyRun(/* via wall breach */);
+    return;
+  }
   const rpEarned     = currentRpEarned();
   const crownsEarned = runState.crownsThisRun || 0;
   research.rp           += rpEarned;
@@ -2944,6 +2991,14 @@ function triggerGameOver() {
 // Closing research will start a fresh run automatically.
 function endRunForResearch() {
   if (gameOver) return;
+  // In daily mode, the End Run button just finishes the daily attempt
+  // (no RP banking — daily score is wave/kills/gold based)
+  if (dailyMode) {
+    gameOver = true;
+    finishDailyRun();
+    if (typeof Tutorial !== 'undefined') Tutorial.notify('endrun');
+    return;
+  }
   gameOver = true;
   const rpEarned     = currentRpEarned();
   const crownsEarned = runState.crownsThisRun || 0;
@@ -2959,7 +3014,57 @@ function endRunForResearch() {
   if (typeof Tutorial !== 'undefined') Tutorial.notify('endrun');
 }
 
-window.resetRun = function () {
+// =====================================================================
+//  DAILY-RESULT card — repurposes the gameover overlay with a daily theme
+// =====================================================================
+function finishDailyRun() {
+  const result = {
+    date:  dailyDate || todayDateStr(),
+    wave:  wave,
+    kills: totalKills,
+    gold:  totalGoldEarned,
+    time:  Math.floor((performance.now() - runState.startT) / 1000)
+  };
+  const { saved, prev } = recordDailyResult(result);
+  bumpStat('dailiesPlayed', 1);
+  if (saved) bumpStat('dailiesBested', 1);
+  // Repurpose the wall-breach card with daily-themed content
+  const goTitleEl = document.getElementById('go-title');
+  if (goTitleEl) goTitleEl.textContent = 'Daily Run Complete';
+  document.getElementById('go-wave').textContent  = result.wave;
+  document.getElementById('go-kills').textContent = result.kills;
+  document.getElementById('go-gold').textContent  = result.gold;
+  const rpEl = document.getElementById('go-rp');
+  if (saved) {
+    rpEl.innerHTML = '\u2605 NEW DAILY BEST! \u2605';
+    rpEl.style.color = '#ffd060';
+  } else if (prev) {
+    rpEl.innerHTML = 'Today\u2019s best: Wave ' + prev.wave + ' &middot; ' + prev.kills + ' kills';
+    rpEl.style.color = '#a8957a';
+  } else {
+    rpEl.innerHTML = 'Daily run complete';
+    rpEl.style.color = '#a8957a';
+  }
+  const goEl = document.getElementById('gameover');
+  goEl.classList.add('daily', 'show');
+}
+
+window.resetRun = function (opts) {
+  opts = opts || {};
+  // Daily mode is per-run; clear unless caller asks to keep it (titleStartDaily does)
+  if (!opts.keepDaily) {
+    dailyMode = false;
+    dailyDate = '';
+    runRng.clear();
+    document.body.classList.remove('daily-mode');
+    document.body.removeAttribute('data-daily-date');
+    const goEl = document.getElementById('gameover');
+    if (goEl) goEl.classList.remove('daily');
+    const goTitleEl = document.getElementById('go-title');
+    if (goTitleEl) goTitleEl.textContent = 'Wall Breached';
+    const goRpEl = document.getElementById('go-rp');
+    if (goRpEl) goRpEl.style.color = '';
+  }
   applyResearch();
   gameOver = false;
   pendingNewRun = false;
@@ -3270,6 +3375,64 @@ let runState = {
   rpBonus:         0         // flat extra RP banked at end of run
 };
 let paused   = false;
+
+// ---------- DAILY CHALLENGE ----------
+// Seeded RNG for daily mode; falls back to Math.random when daily is off.
+// Only used at "outcome" decision points (event picks, mid-events, enemy
+// speed roll); cosmetic randomness (particles, audio) stays unseeded.
+const runRng = {
+  seeded: false,
+  _draw:  null,         // set by setSeed
+  setSeed(seedStr) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < seedStr.length; i++) {
+      h ^= seedStr.charCodeAt(i);
+      h  = Math.imul(h, 16777619);
+    }
+    this._draw  = mulberry32(h >>> 0);
+    this.seeded = true;
+  },
+  clear() { this.seeded = false; this._draw = null; },
+  next()  { return this.seeded ? this._draw() : Math.random(); }
+};
+function todayDateStr() {
+  const d = new Date();
+  return d.getFullYear()
+       + '-' + String(d.getMonth() + 1).padStart(2, '0')
+       + '-' + String(d.getDate()).padStart(2, '0');
+}
+let dailyMode = false;          // true while playing today's seeded challenge
+let dailyDate = '';             // YYYY-MM-DD of the active daily run
+
+function loadDailyScores() {
+  try {
+    const raw = localStorage.getItem('castleDailyScores');
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+function saveDailyScores(map) {
+  try { localStorage.setItem('castleDailyScores', JSON.stringify(map)); } catch {}
+}
+function recordDailyResult(result) {
+  // result: { date, wave, kills, gold, time }
+  const all = loadDailyScores();
+  const prev = all[result.date];
+  // Tie-break: highest wave, then highest kills, then highest gold
+  const isBetter = !prev
+    || result.wave  > prev.wave
+    || (result.wave  === prev.wave  && result.kills > prev.kills)
+    || (result.wave  === prev.wave  && result.kills === prev.kills && result.gold > prev.gold);
+  if (isBetter) {
+    all[result.date] = result;
+    saveDailyScores(all);
+    return { saved: true, prev };
+  }
+  return { saved: false, prev };
+}
+function todaysBest() {
+  const all = loadDailyScores();
+  return all[todayDateStr()] || null;
+}
 
 const effects = {
   dmgMul: 1, fireRateMul: 1, rngAdd: 0,
@@ -5165,11 +5328,11 @@ function pickWaveEvent(w) {
   // Bosses stay vanilla for now; events only trigger from wave 4 onward
   if (w % 10 === 0) return null;
   if (w < 4) return null;
-  if (Math.random() > 0.12) return null;
+  if (runRng.next() > 0.12) return null;
   // weighted pick — Champion is rarer
   const pool = ['bloodMoon','night','horde','plague'];
-  if (Math.random() < 0.20) pool.push('champion');
-  return EVENT_WAVES[pool[Math.floor(Math.random() * pool.length)]];
+  if (runRng.next() < 0.20) pool.push('champion');
+  return EVENT_WAVES[pool[Math.floor(runRng.next() * pool.length)]];
 }
 
 function waveEnemyCount(w) {
@@ -5194,7 +5357,7 @@ function enemyStats(w, asBoss) {
     return {
       hp:      Math.floor(150 * Math.pow(1.18, w)),    // way more HP — wave 10 ≈ 785
       dmg:     5 + Math.floor(w / 5),
-      speed:   5 + Math.random() * 2,                  // slower than minions
+      speed:   5 + runRng.next() * 2,                  // slower than minions
       sizeMul: 1.7,
       coinVal: Math.floor(effects.killGold * Math.max(15, w * 2) * (effects.bossBountyMul || 1)),
       isBoss:  true
@@ -5203,7 +5366,7 @@ function enemyStats(w, asBoss) {
   return {
     hp:      Math.floor(BASE_WAVE_ENEMY_HP * Math.pow(1.14, w - 1)),
     dmg:     1 + Math.floor((w - 1) / 5),
-    speed:   11 + Math.random() * 6 + (w - 1) * 0.15,
+    speed:   11 + runRng.next() * 6 + (w - 1) * 0.15,
     sizeMul: 1,
     coinVal: effects.killGold * Math.max(1, Math.floor((w + 1) / 3)),
     isBoss:  false
@@ -5336,9 +5499,9 @@ function maybeRollMidEvent() {
   if (gameOver) return;
   if (currentEvent) return;                     // skip when a special-event wave was just played
   if (totalWavesCleared < 5) return;
-  if (Math.random() > 0.25) return;
+  if (runRng.next() > 0.25) return;
   const ids = Object.keys(MID_EVENTS);
-  const ev  = MID_EVENTS[ids[Math.floor(Math.random() * ids.length)]];
+  const ev  = MID_EVENTS[ids[Math.floor(runRng.next() * ids.length)]];
   showMidEvent(ev);
 }
 
@@ -8811,6 +8974,29 @@ const welcomeEl = document.getElementById('welcome-overlay');
 window.titlePlay         = function () { hideTitle(true); };
 window.titleOpenResearch = function () { hideTitle(false); window.openResearch(); };
 window.titleOpenSettings = function () { hideTitle(false); window.openSettings(); };
+window.titleStartDaily   = function () {
+  // Drop title overlay, dismiss any welcome card, then kick off a seeded run
+  titleEl.classList.remove('show');
+  try { localStorage.setItem('castleSeenTitle', '1'); } catch {}
+  Audio.init();
+  if (welcomeEl) welcomeEl.classList.remove('show');
+  dailyMode = true;
+  dailyDate = todayDateStr();
+  runRng.setSeed('crownfall-daily-v1-' + dailyDate);
+  document.body.classList.add('daily-mode');
+  document.body.setAttribute('data-daily-date', dailyDate);
+  window.resetRun({ keepDaily: true });
+};
+function refreshTitleDailyBest() {
+  const el = document.getElementById('title-daily-best');
+  if (!el) return;
+  const best = todaysBest();
+  if (best) {
+    el.innerHTML = 'Today\u2019s Best: <b>Wave ' + best.wave + '</b> &middot; ' + best.kills + ' kills &middot; ' + best.gold + 'g';
+  } else {
+    el.innerHTML = 'No daily attempt yet today.';
+  }
+}
 function hideTitle(playing) {
   titleEl.classList.remove('show');
   try { localStorage.setItem('castleSeenTitle', '1'); } catch {}
@@ -8823,6 +9009,7 @@ function maybeShowTitle() {
   let seen = false;
   try { seen = localStorage.getItem('castleSeenTitle') === '1'; } catch {}
   if (!seen) titleEl.classList.add('show');
+  refreshTitleDailyBest();
 }
 // background click on the title overlay (not a button) also starts play
 titleEl.addEventListener('pointerdown', e => {
@@ -9109,6 +9296,12 @@ window.togglePause = function () {
 window.pauseOpenResearch = function () { exitPause(); window.openResearch(); };
 window.pauseOpenSettings = function () { exitPause(); window.openSettings(); };
 window.pauseEndRun       = function () { exitPause(); endRunForResearch(); };
+window.pauseOpenTitle    = function () {
+  exitPause();
+  // Show the title overlay (works even after first-visit) and refresh daily-best
+  titleEl.classList.add('show');
+  refreshTitleDailyBest();
+};
 
 // =====================================================================
 //  KEYBOARD SHORTCUTS
