@@ -4105,27 +4105,69 @@ function shapeSvg(kind, fill, stroke) {
     </svg>`;
   }
   if (kind === 'cannoneers') {
-    // CANNON pointing right
+    // CANNON on a wheeled carriage, pointing right with muzzle flash
     return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges">
       <g fill="${stroke}">
-        <!-- barrel outline -->
-        <rect x="1" y="5" width="13" height="1"/>
-        <rect x="1" y="11" width="13" height="1"/>
-        <rect x="0" y="6" width="1" height="5"/>
-        <rect x="14" y="6" width="2" height="5"/>
-        <!-- carriage / wheel base -->
-        <rect x="2" y="12" width="9" height="2"/>
-        <rect x="3" y="14" width="7" height="1"/>
+        <!-- barrel top + bottom outline -->
+        <rect x="2" y="3" width="10" height="1"/>
+        <rect x="2" y="9" width="10" height="1"/>
+        <!-- breech cap (rear end) -->
+        <rect x="1" y="4" width="1" height="5"/>
+        <rect x="0" y="5" width="1" height="3"/>
+        <!-- muzzle ring (wider band at the right tip) -->
+        <rect x="12" y="2" width="2" height="1"/>
+        <rect x="12" y="10" width="2" height="1"/>
+        <rect x="13" y="3" width="1" height="7"/>
+        <!-- carriage trapezoid outline -->
+        <rect x="4" y="10" width="8" height="1"/>
+        <rect x="3" y="11" width="1" height="1"/>
+        <rect x="12" y="11" width="1" height="1"/>
+        <rect x="4" y="12" width="1" height="1"/>
+        <rect x="11" y="12" width="1" height="1"/>
+        <!-- left wheel outline -->
+        <rect x="1" y="12" width="1" height="1"/>
+        <rect x="0" y="13" width="1" height="2"/>
+        <rect x="5" y="13" width="1" height="2"/>
+        <rect x="1" y="15" width="1" height="1"/>
+        <rect x="4" y="15" width="1" height="1"/>
+        <rect x="2" y="15" width="2" height="1"/>
+        <!-- right wheel outline -->
+        <rect x="14" y="12" width="1" height="1"/>
+        <rect x="10" y="13" width="1" height="2"/>
+        <rect x="15" y="13" width="1" height="2"/>
+        <rect x="11" y="15" width="1" height="1"/>
+        <rect x="14" y="15" width="1" height="1"/>
+        <rect x="12" y="15" width="2" height="1"/>
       </g>
       <g fill="${fill}">
         <!-- barrel body -->
-        <rect x="1" y="6" width="13" height="5"/>
+        <rect x="2" y="4" width="10" height="5"/>
+        <!-- muzzle ring fill -->
+        <rect x="12" y="3" width="1" height="7"/>
+        <!-- carriage body -->
+        <rect x="4" y="11" width="8" height="1"/>
+        <rect x="5" y="12" width="6" height="1"/>
+        <!-- left wheel fill -->
+        <rect x="1" y="13" width="4" height="2"/>
+        <rect x="2" y="12" width="2" height="1"/>
+        <!-- right wheel fill -->
+        <rect x="11" y="13" width="4" height="2"/>
+        <rect x="12" y="12" width="2" height="1"/>
       </g>
       <g fill="${stroke}">
-        <!-- reinforcement band -->
-        <rect x="6" y="6" width="1" height="5"/>
-        <!-- muzzle hole (dark center at the right end) -->
-        <rect x="14" y="7" width="1" height="3"/>
+        <!-- reinforcement bands across the barrel -->
+        <rect x="5" y="4" width="1" height="5"/>
+        <rect x="9" y="4" width="1" height="5"/>
+        <!-- muzzle bore (dark hole at the tip) -->
+        <rect x="12" y="6" width="1" height="1"/>
+        <!-- wheel hubs -->
+        <rect x="2" y="13" width="2" height="1"/>
+        <rect x="12" y="13" width="2" height="1"/>
+      </g>
+      <!-- muzzle flash accent -->
+      <g fill="#ffb038">
+        <rect x="14" y="5" width="1" height="3"/>
+        <rect x="15" y="6" width="1" height="1"/>
       </g>
     </svg>`;
   }
