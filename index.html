@@ -4014,31 +4014,44 @@ function shapeSvg(kind, fill, stroke) {
     </svg>`;
   }
   if (kind === 'mages') {
-    // STAFF with crystal orb at top
+    // MAGE STAFF — round orb atop a tapering bracket with shaft + ferrule
     return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges">
       <g fill="${stroke}">
-        <!-- staff -->
-        <rect x="6" y="6" width="3" height="9"/>
-        <!-- staff bracket holding orb -->
-        <rect x="5" y="5" width="5" height="1"/>
-        <!-- orb outline -->
-        <rect x="5" y="0" width="5" height="1"/>
+        <!-- orb outline (circle, 8x6) -->
+        <rect x="5" y="0" width="6" height="1"/>
         <rect x="4" y="1" width="1" height="1"/>
-        <rect x="10" y="1" width="1" height="1"/>
+        <rect x="11" y="1" width="1" height="1"/>
         <rect x="3" y="2" width="1" height="2"/>
-        <rect x="11" y="2" width="1" height="2"/>
+        <rect x="12" y="2" width="1" height="2"/>
         <rect x="4" y="4" width="1" height="1"/>
-        <rect x="10" y="4" width="1" height="1"/>
+        <rect x="11" y="4" width="1" height="1"/>
+        <rect x="5" y="5" width="6" height="1"/>
+        <!-- bracket tapering down to shaft -->
+        <rect x="4" y="6" width="1" height="1"/>
+        <rect x="11" y="6" width="1" height="1"/>
+        <rect x="5" y="7" width="1" height="1"/>
+        <rect x="10" y="7" width="1" height="1"/>
+        <!-- shaft outline -->
+        <rect x="6" y="8" width="1" height="7"/>
+        <rect x="9" y="8" width="1" height="7"/>
+        <!-- ferrule -->
+        <rect x="6" y="15" width="4" height="1"/>
       </g>
       <g fill="${fill}">
         <!-- orb body -->
-        <rect x="5" y="1" width="5" height="3"/>
-        <rect x="4" y="2" width="7" height="2"/>
-        <rect x="5" y="4" width="5" height="1"/>
+        <rect x="5" y="1" width="6" height="1"/>
+        <rect x="4" y="2" width="8" height="2"/>
+        <rect x="5" y="4" width="6" height="1"/>
+        <!-- bracket fill under orb -->
+        <rect x="5" y="6" width="6" height="1"/>
+        <rect x="6" y="7" width="4" height="1"/>
+        <!-- shaft -->
+        <rect x="7" y="8" width="2" height="7"/>
       </g>
       <!-- orb sparkle highlight -->
-      <g fill="#ffffff" opacity="0.65">
+      <g fill="#ffffff" opacity="0.75">
         <rect x="5" y="2" width="2" height="1"/>
+        <rect x="6" y="1" width="1" height="1"/>
       </g>
     </svg>`;
   }
