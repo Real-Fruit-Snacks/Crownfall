@@ -3918,27 +3918,43 @@ function shapeSvg(kind, fill, stroke) {
     </svg>`;
   }
   if (kind === 'crossbows') {
-    // CROSSBOW — horizontal stock with prod arms
+    // CROSSBOW — vertical prod + horizontal stock, bolt loaded pointing right
     return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges">
       <g fill="${stroke}">
-        <rect x="2" y="7" width="11" height="1"/>
-        <rect x="2" y="10" width="11" height="1"/>
-        <rect x="2" y="8" width="1" height="2"/>
-        <!-- prod arms (vertical limbs) -->
-        <rect x="9" y="4" width="1" height="2"/>
-        <rect x="9" y="12" width="1" height="2"/>
-        <rect x="10" y="3" width="1" height="1"/>
-        <rect x="10" y="14" width="1" height="1"/>
-        <rect x="11" y="2" width="1" height="1"/>
-        <rect x="11" y="15" width="1" height="1"/>
-        <!-- bolt tip -->
-        <rect x="14" y="8" width="1" height="2"/>
-        <rect x="15" y="9" width="1" height="1"/>
+        <!-- prod (bow limb) outline: curves outward at tips -->
+        <rect x="4" y="1"  width="2" height="1"/>
+        <rect x="4" y="14" width="2" height="1"/>
+        <rect x="3" y="2"  width="1" height="3"/>
+        <rect x="3" y="11" width="1" height="3"/>
+        <rect x="6" y="2"  width="1" height="3"/>
+        <rect x="6" y="11" width="1" height="3"/>
+        <rect x="4" y="5"  width="1" height="6"/>
+        <rect x="5" y="5"  width="1" height="1"/>
+        <rect x="5" y="10" width="1" height="1"/>
+        <!-- stock (tiller) outline: top, bottom, back cap -->
+        <rect x="6" y="6"  width="8" height="1"/>
+        <rect x="6" y="10" width="7" height="1"/>
+        <rect x="13" y="7" width="1" height="3"/>
+        <!-- trigger nub -->
+        <rect x="10" y="11" width="2" height="2"/>
+        <!-- bolt shaft + arrowhead -->
+        <rect x="7"  y="4" width="7" height="1"/>
+        <rect x="14" y="3" width="1" height="3"/>
+        <rect x="15" y="4" width="1" height="1"/>
       </g>
       <g fill="${fill}">
-        <rect x="3" y="8" width="9" height="2"/>
-        <rect x="9" y="6" width="1" height="6"/>
-        <rect x="13" y="9" width="1" height="1"/>
+        <!-- prod body fill -->
+        <rect x="4" y="2"  width="2" height="3"/>
+        <rect x="4" y="11" width="2" height="3"/>
+        <rect x="5" y="6"  width="1" height="4"/>
+        <!-- stock body fill -->
+        <rect x="6" y="7"  width="7" height="3"/>
+        <!-- bolt shaft fill -->
+        <rect x="7" y="5"  width="7" height="1"/>
+      </g>
+      <!-- bolt head highlight -->
+      <g fill="#ffffff" opacity="0.55">
+        <rect x="14" y="4" width="1" height="1"/>
       </g>
     </svg>`;
   }
