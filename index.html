@@ -902,32 +902,40 @@
     transform: none;
   }
 
-  /* HELP BUTTON — small "?" pixel chip in top-right */
+  /* HELP BUTTON — sits to the LEFT of #pause-btn in top-right (pause is at right:14, w:44 → help at right:66) */
   #help-btn {
     position: fixed;
     top: 10px;
-    right: 10px;
-    width: 38px; height: 38px;
+    right: 66px;
+    width: 44px; height: 44px;
     background: #2a1a08;
     color: #f5d889;
     border: 0; cursor: pointer;
     padding: 0;
     font-family: 'Press Start 2P', monospace;
-    font-size: 16px;
-    z-index: 11;
+    font-size: 18px;
+    z-index: 10;
+    display: flex; align-items: center; justify-content: center;
     box-shadow:
       inset 0 0 0 2px #6a4528,
       inset 0 0 0 4px #1a0c00,
-      3px 3px 0 0 rgba(0,0,0,0.7);
-    transition: transform 0.06s, box-shadow 0.06s;
+      4px 4px 0 0 rgba(0,0,0,0.78);
+    transition: transform 0.08s, box-shadow 0.08s;
   }
   #help-btn:hover {
     transform: translate(-1px,-1px);
     color: #ffd060;
     box-shadow:
-      inset 0 0 0 2px #ffd060,
+      inset 0 0 0 2px #8a6428,
       inset 0 0 0 4px #1a0c00,
-      4px 4px 0 0 rgba(0,0,0,0.7);
+      5px 5px 0 0 rgba(0,0,0,0.78);
+  }
+  #help-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow:
+      inset 0 0 0 2px #6a4528,
+      inset 0 0 0 4px #1a0c00,
+      2px 2px 0 0 rgba(0,0,0,0.78);
   }
 
   /* TUTORIAL — spotlight + coachmark with action waiting */
