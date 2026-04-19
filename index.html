@@ -2010,11 +2010,26 @@
     /* Overlays scroll at the OVERLAY level on short viewports — flex centering
        can push tall cards above the viewport, so swap to top-aligned + scroll. */
     #title-overlay, #welcome-overlay, #settings-overlay, #confirm-overlay,
-    #stats-overlay, #commander-overlay, #midevent-overlay, #gameover {
+    #stats-overlay, #commander-overlay, #midevent-overlay, #gameover,
+    #prestige-overlay {
       align-items: flex-start;
       overflow-y: auto;
       padding: 8px 0;
     }
+    #prestige-overlay .prestige-card { padding: 14px 18px; max-height: 96vh; }
+    #prestige-overlay .prestige-banner { font-size: 13px; padding: 8px 10px 6px; margin-bottom: 8px; }
+    #prestige-overlay .prestige-banner .sub { font-size: 7px; margin-top: 4px; }
+    #prestige-overlay .prestige-hud { padding: 6px; gap: 4px; margin-bottom: 8px; }
+    #prestige-overlay .prestige-hud .hud-lbl { font-size: 7px; }
+    #prestige-overlay .prestige-hud b { font-size: 12px; }
+    #prestige-overlay .prestige-blurb { font-size: 11px; padding: 6px 8px; margin-bottom: 8px; }
+    #prestige-overlay .prestige-tree { gap: 4px; margin-bottom: 10px; }
+    #prestige-overlay .p-node { padding: 6px 8px; }
+    #prestige-overlay .p-node .p-name { font-size: 8px; }
+    #prestige-overlay .p-node .p-cost { font-size: 8px; }
+    #prestige-overlay .p-node .p-desc { font-size: 10px; }
+    #prestige-overlay .p-node .p-stacks { font-size: 6px; }
+    #prestige-overlay button { padding: 7px 12px; font-size: 9px; }
     /* Top corner buttons — keep small + flush */
     #help-btn, #pause-btn, #fs-btn { width: 32px; height: 32px; top: 4px; }
     #fs-btn   { left: 4px;  font-size: 14px; }
@@ -3634,10 +3649,21 @@ function loadPrestige() {
     const raw = localStorage.getItem('castlePrestige');
     if (!raw) return;
     const p = JSON.parse(raw);
-    prestige.shards            = p.shards            || 0;
-    prestige.totalShardsEarned = p.totalShardsEarned || 0;
-    prestige.prestigeCount     = p.prestigeCount     || 0;
-    prestige.purchased         = p.purchased         || {};
+    prestige.shards            = Math.max(0, p.shards            || 0);
+    prestige.totalShardsEarned = Math.max(0, p.totalShardsEarned || 0);
+    prestige.prestigeCount     = Math.max(0, p.prestigeCount     || 0);
+    // Defensive: must be a plain object (not an array, not corrupt). Coerce stack
+    // counts to safe integers and clamp to each bonus's maxStacks so a bad import
+    // can't grant infinite damage etc.
+    const purchased = (p.purchased && typeof p.purchased === 'object' && !Array.isArray(p.purchased))
+      ? p.purchased : {};
+    prestige.purchased = {};
+    for (const b of PRESTIGE_BONUSES) {
+      const raw = Number(purchased[b.id]) || 0;
+      const max = b.maxStacks || 1;
+      const clamped = Math.max(0, Math.min(max, Math.floor(raw)));
+      if (clamped > 0) prestige.purchased[b.id] = clamped;
+    }
   } catch {}
 }
 function savePrestige() {
@@ -4596,13 +4622,24 @@ function loadResearch() {
     const raw = localStorage.getItem('castleResearch');
     if (!raw) return;
     const d = JSON.parse(raw);
-    research.rp           = d.rp || 0;
-    research.totalRp      = d.totalRp || 0;
-    research.crowns       = d.crowns || 0;
-    research.totalCrowns  = d.totalCrowns || 0;
-    research.purchased    = new Set(d.purchased || ['root']);
-    research.disabled     = new Set(d.disabled  || []);
-    research.repeatCounts = d.repeatCounts || {};
+    research.rp           = Math.max(0, d.rp || 0);
+    research.totalRp      = Math.max(0, d.totalRp || 0);
+    research.crowns       = Math.max(0, d.crowns || 0);
+    research.totalCrowns  = Math.max(0, d.totalCrowns || 0);
+    research.purchased    = new Set(Array.isArray(d.purchased) ? d.purchased : ['root']);
+    research.disabled     = new Set(Array.isArray(d.disabled)  ? d.disabled  : []);
+    // Defensive: clamp repeat counts to each node's maxStacks. A corrupted
+    // import should never grant unbounded stacks of a stacking effect.
+    const counts = (d.repeatCounts && typeof d.repeatCounts === 'object' && !Array.isArray(d.repeatCounts))
+      ? d.repeatCounts : {};
+    research.repeatCounts = {};
+    for (const n of RESEARCH_NODES) {
+      if (!n.repeatable) continue;
+      const raw = Number(counts[n.id]) || 0;
+      const max = n.maxStacks || Infinity;
+      const clamped = Math.max(0, Math.min(max, Math.floor(raw)));
+      if (clamped > 0) research.repeatCounts[n.id] = clamped;
+    }
     research.purchased.add('root');
   } catch {}
 }
@@ -5600,7 +5637,7 @@ const EVENT_WAVES = {
       e.hp = Math.floor(e.hp * 1.5); e.maxHp = e.hp;
       e.attackDmg = Math.floor(e.attackDmg * 1.5);
       e.coinVal = Math.floor(e.coinVal * 2);
-      e.eventDropCrown = Math.random() < 0.25;
+      e.eventDropCrown = runRng.next() < 0.25;
     }
   },
   night: {
@@ -7977,7 +8014,7 @@ const ENEMY_KINDS = {
 // Bosses every 10 waves — random kind from the same archetypes as minions
 const BOSS_KINDS = ['goblin', 'charger', 'shielded', 'archer', 'healer', 'witch'];
 function pickBossKind(w) {
-  return BOSS_KINDS[Math.floor(Math.random() * BOSS_KINDS.length)];
+  return BOSS_KINDS[Math.floor(runRng.next() * BOSS_KINDS.length)];
 }
 
 function pickEnemyKind(w) {
@@ -7988,7 +8025,7 @@ function pickEnemyKind(w) {
   if (w >= 8)  pool.push({ k: 'healer',   wt: Math.min(18, 3 + w * 0.5) });
   if (w >= 12) pool.push({ k: 'witch',    wt: Math.min(18, 3 + w * 0.5) });
   let total = 0; for (const p of pool) total += p.wt;
-  let r = Math.random() * total;
+  let r = runRng.next() * total;
   for (const p of pool) { r -= p.wt; if (r <= 0) return p.k; }
   return 'goblin';
 }
@@ -9486,7 +9523,9 @@ function hideTitle(playing) {
   titleEl.classList.remove('show');
   try { localStorage.setItem('castleSeenTitle', '1'); } catch {}
   Audio.init();
-  if (playing && localStorage.getItem('castleTutorialDone') !== '1') {
+  let tutorialDone = false;
+  try { tutorialDone = localStorage.getItem('castleTutorialDone') === '1'; } catch {}
+  if (playing && !tutorialDone) {
     window.openWelcome(false);   // open immediately — no deferred timer
   }
 }
@@ -9787,6 +9826,16 @@ window.pauseOpenPrestige = function () { exitPause(); window.openPrestige(); };
 window.pauseEndRun       = function () { exitPause(); endRunForResearch(); };
 window.pauseOpenTitle    = function () {
   exitPause();
+  // "Main Menu" is a deliberate "leave this run mode" signal — clear daily flags
+  // so PLAY from the title resumes as a normal run (not a stale daily session).
+  // The current run state is preserved, just the daily-tracking layer is dropped.
+  if (dailyMode) {
+    dailyMode = false;
+    dailyDate = '';
+    runRng.clear();
+    document.body.classList.remove('daily-mode');
+    document.body.removeAttribute('data-daily-date');
+  }
   // Show the title overlay (works even after first-visit) and refresh daily-best
   titleEl.classList.add('show');
   refreshTitleDailyBest();
