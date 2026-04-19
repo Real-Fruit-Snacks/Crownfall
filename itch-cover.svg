@@ -1,0 +1,333 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="630" height="500" viewBox="0 0 630 500" shape-rendering="crispEdges">
+  <!-- ============================================================
+       ITCH.IO COVER (630x500) — vertical poster
+       Hero scene at top, title plate dominant in middle, badge row at bottom.
+       ============================================================ -->
+
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="80%">
+      <stop offset="0%"  stop-color="#3a2410"/>
+      <stop offset="55%" stop-color="#1a0e05"/>
+      <stop offset="100%" stop-color="#0a0500"/>
+    </radialGradient>
+    <linearGradient id="banner" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#5a3a18"/>
+      <stop offset="100%" stop-color="#3a2616"/>
+    </linearGradient>
+  </defs>
+  <rect width="630" height="500" fill="url(#bg)"/>
+
+  <!-- ============================================================
+       TOP SCENE STRIP (y=0..240) — wall on left, heroes firing,
+       enemies on the right, big boss in the back
+       ============================================================ -->
+  <!-- grass field -->
+  <rect x="200" y="0" width="430" height="240" fill="#5a8a30"/>
+  <g fill="#3a6a1a">
+    <rect x="240" y="20"  width="16" height="6"/>
+    <rect x="320" y="50"  width="20" height="6"/>
+    <rect x="420" y="100" width="14" height="6"/>
+    <rect x="540" y="40"  width="20" height="6"/>
+    <rect x="280" y="150" width="16" height="6"/>
+    <rect x="380" y="180" width="20" height="6"/>
+    <rect x="500" y="200" width="14" height="6"/>
+    <rect x="600" y="160" width="14" height="6"/>
+  </g>
+  <g fill="#7aaa48">
+    <rect x="260" y="80"  width="6" height="6"/>
+    <rect x="360" y="120" width="6" height="6"/>
+    <rect x="460" y="60"  width="6" height="6"/>
+    <rect x="560" y="120" width="6" height="6"/>
+    <rect x="320" y="200" width="6" height="6"/>
+  </g>
+  <g fill="#f5d889">
+    <rect x="400" y="40"  width="6" height="6"/>
+    <rect x="500" y="160" width="6" height="6"/>
+    <rect x="280" y="100" width="6" height="6"/>
+  </g>
+
+  <!-- WALL (Steel material) - 200px wide, 240 tall -->
+  <rect x="0" y="0" width="170" height="240" fill="#5a606a"/>
+  <!-- mortar grid -->
+  <g fill="#0e1218">
+    <rect x="0" y="50"  width="170" height="4"/>
+    <rect x="0" y="100" width="170" height="4"/>
+    <rect x="0" y="150" width="170" height="4"/>
+    <rect x="0" y="200" width="170" height="4"/>
+    <rect x="56" y="0"   width="4" height="50"/>
+    <rect x="112" y="0"  width="4" height="50"/>
+    <rect x="28" y="50"  width="4" height="50"/>
+    <rect x="84" y="50"  width="4" height="50"/>
+    <rect x="140" y="50" width="4" height="50"/>
+    <rect x="56" y="100"  width="4" height="50"/>
+    <rect x="112" y="100" width="4" height="50"/>
+    <rect x="28" y="150"  width="4" height="50"/>
+    <rect x="84" y="150"  width="4" height="50"/>
+    <rect x="140" y="150" width="4" height="50"/>
+    <rect x="56" y="200"  width="4" height="40"/>
+    <rect x="112" y="200" width="4" height="40"/>
+  </g>
+  <!-- block sheen -->
+  <g fill="#9aa0ac">
+    <rect x="20"  y="6"   width="4" height="40"/>
+    <rect x="76"  y="6"   width="4" height="40"/>
+    <rect x="132" y="6"   width="4" height="40"/>
+    <rect x="48"  y="56"  width="4" height="40"/>
+    <rect x="104" y="56"  width="4" height="40"/>
+    <rect x="20"  y="106" width="4" height="40"/>
+    <rect x="76"  y="106" width="4" height="40"/>
+    <rect x="132" y="106" width="4" height="40"/>
+    <rect x="48"  y="156" width="4" height="40"/>
+    <rect x="104" y="156" width="4" height="40"/>
+    <rect x="20"  y="206" width="4" height="30"/>
+    <rect x="76"  y="206" width="4" height="30"/>
+    <rect x="132" y="206" width="4" height="30"/>
+  </g>
+  <!-- inner edge -->
+  <rect x="0" y="0" width="8" height="240" fill="#3a3e48"/>
+  <rect x="0" y="0" width="4" height="240" fill="#1a1e28"/>
+  <!-- merlons (right edge of wall) -->
+  <g fill="#5a606a">
+    <rect x="170" y="0"   width="32" height="56"/>
+    <rect x="170" y="92"  width="32" height="56"/>
+    <rect x="170" y="184" width="32" height="56"/>
+  </g>
+  <g fill="#9aa0ac">
+    <rect x="170" y="0"   width="32" height="8"/>
+    <rect x="170" y="92"  width="32" height="8"/>
+    <rect x="170" y="184" width="32" height="8"/>
+  </g>
+  <g fill="#3a3e48">
+    <rect x="170" y="48"  width="32" height="8"/>
+    <rect x="170" y="56"  width="32" height="36"/>
+    <rect x="170" y="140" width="32" height="8"/>
+    <rect x="170" y="148" width="32" height="36"/>
+    <rect x="170" y="232" width="32" height="8"/>
+  </g>
+  <rect x="198" y="0" width="4" height="240" fill="#1a1e28"/>
+  <rect x="202" y="0" width="12" height="240" fill="rgba(10,6,2,0.35)"/>
+
+  <!-- HEROES — Archer + Mage on the wall -->
+  <g transform="translate(80, 60)">
+    <rect x="-4" y="20" width="12" height="4" fill="#2a1f14"/>
+    <rect x="-4" y="4"  width="12" height="16" fill="#3e4f8a"/>
+    <rect x="0"  y="4"  width="4"  height="8"  fill="#5a6fa8"/>
+    <rect x="-4" y="12" width="12" height="4"  fill="#6b4a2a"/>
+    <rect x="-4" y="0"  width="12" height="4"  fill="#e4b37a"/>
+    <rect x="-4" y="-4" width="12" height="4"  fill="#a0a0a8"/>
+    <!-- bow -->
+    <rect x="8"  y="0"  width="4" height="20" fill="#5a3a1a"/>
+    <rect x="8"  y="0"  width="4" height="4"  fill="#e8dcaa"/>
+    <rect x="8"  y="16" width="4" height="4"  fill="#e8dcaa"/>
+  </g>
+  <g transform="translate(80, 160)">
+    <rect x="-4" y="20" width="12" height="4" fill="#2a1f14"/>
+    <rect x="-4" y="4"  width="12" height="16" fill="#4a2a6a"/>
+    <rect x="0"  y="4"  width="4"  height="8"  fill="#6a3a8a"/>
+    <rect x="-4" y="12" width="12" height="4"  fill="#6b4a2a"/>
+    <rect x="-4" y="0"  width="12" height="4"  fill="#e4b37a"/>
+    <rect x="-4" y="-4" width="12" height="4"  fill="#2a1038"/>
+    <!-- staff with crystal -->
+    <rect x="8"  y="-4" width="4"  height="24" fill="#4a2a18"/>
+    <rect x="8"  y="-12" width="4" height="4"  fill="#e4b4ff"/>
+    <rect x="4"  y="-8" width="4"  height="4"  fill="#b07bd6"/>
+    <rect x="12" y="-8" width="4"  height="4"  fill="#b07bd6"/>
+  </g>
+
+  <!-- PROJECTILES — arrow + magic bolt -->
+  <g transform="translate(170, 70)">
+    <rect x="0"  y="0"  width="12" height="4" fill="#c89b4a"/>
+    <rect x="12" y="0"  width="4"  height="4" fill="#e8e0c0"/>
+    <rect x="-4" y="-4" width="4"  height="4" fill="#a8413a"/>
+    <rect x="-4" y="4"  width="4"  height="4" fill="#a8413a"/>
+  </g>
+  <g transform="translate(180, 170)">
+    <rect x="-4" y="0"  width="4" height="4"  fill="#7a3a9a"/>
+    <rect x="0"  y="0"  width="8" height="4"  fill="#b07bd6"/>
+    <rect x="4"  y="-4" width="4" height="4"  fill="#b07bd6"/>
+    <rect x="4"  y="4"  width="4" height="4"  fill="#b07bd6"/>
+    <rect x="4"  y="0"  width="4" height="4"  fill="#e4b4ff"/>
+    <rect x="8"  y="0"  width="4" height="4"  fill="#ffffff"/>
+  </g>
+
+  <!-- ENEMIES -->
+  <g transform="translate(440, 70)">
+    <rect x="-12" y="20" width="24" height="4" fill="rgba(10,6,2,0.55)"/>
+    <rect x="-6"  y="0"  width="16" height="20" fill="#2c4a10"/>
+    <rect x="0"   y="6"  width="4"  height="10" fill="#3a6a1a"/>
+    <rect x="-6"  y="-10" width="16" height="10" fill="#4a8a28"/>
+    <rect x="-6"  y="-6" width="4"  height="4"  fill="#ff3030"/>
+    <rect x="6"   y="-6" width="4"  height="4"  fill="#ff3030"/>
+    <rect x="-12" y="6"  width="4"  height="10" fill="#7a5236"/>
+  </g>
+  <g transform="translate(380, 180)">
+    <rect x="-12" y="20" width="24" height="4" fill="rgba(10,6,2,0.55)"/>
+    <rect x="-6"  y="0"  width="16" height="20" fill="#5a1a0a"/>
+    <rect x="0"   y="6"  width="4"  height="10" fill="#8a2a18"/>
+    <rect x="-6"  y="-10" width="16" height="10" fill="#c84028"/>
+    <rect x="-6"  y="-6" width="4"  height="4"  fill="#ffe860"/>
+    <rect x="6"   y="-6" width="4"  height="4"  fill="#ffe860"/>
+    <rect x="-6"  y="-14" width="4" height="4"  fill="#ffd060"/>
+    <rect x="6"   y="-14" width="4" height="4"  fill="#ffd060"/>
+  </g>
+
+  <!-- BOSS in the back -->
+  <g transform="translate(560, 130)">
+    <rect x="-22" y="32" width="48" height="8" fill="rgba(10,6,2,0.65)"/>
+    <rect x="-16" y="0"  width="36" height="32" fill="#1e3808"/>
+    <rect x="-4"  y="6"  width="14" height="16" fill="#335a10"/>
+    <rect x="-16" y="-22" width="36" height="16" fill="#3a6a18"/>
+    <rect x="-16" y="-12" width="36" height="6"  fill="#22460a"/>
+    <!-- crown -->
+    <rect x="-16" y="-30" width="36" height="6" fill="#f5d889"/>
+    <rect x="-16" y="-36" width="6"  height="6" fill="#f5d889"/>
+    <rect x="0"   y="-36" width="6"  height="6" fill="#f5d889"/>
+    <rect x="14"  y="-36" width="6"  height="6" fill="#f5d889"/>
+    <!-- eyes -->
+    <rect x="-10" y="-18" width="6" height="6" fill="#ff2020"/>
+    <rect x="10"  y="-18" width="6" height="6" fill="#ff2020"/>
+  </g>
+
+  <!-- HAZARDS in field — spike row + brazier + tar pit -->
+  <g fill="#7a4818">
+    <rect x="240" y="20"  width="4" height="20"/>
+    <rect x="240" y="60"  width="4" height="20"/>
+    <rect x="240" y="120" width="4" height="20"/>
+    <rect x="240" y="180" width="4" height="20"/>
+  </g>
+  <g fill="#3a2008">
+    <rect x="240" y="16"  width="4" height="4"/>
+    <rect x="240" y="56"  width="4" height="4"/>
+    <rect x="240" y="116" width="4" height="4"/>
+    <rect x="240" y="176" width="4" height="4"/>
+  </g>
+  <!-- brazier -->
+  <g transform="translate(330, 110)">
+    <rect x="-4" y="6" width="12" height="4" fill="#2a1a08"/>
+    <rect x="-8" y="0" width="20" height="6" fill="#6a3a18"/>
+    <rect x="-8" y="0" width="20" height="3" fill="#a87a3e"/>
+    <rect x="0"  y="-8" width="4" height="8" fill="#ffb030"/>
+    <rect x="0"  y="-12" width="4" height="4" fill="#ffe080"/>
+  </g>
+  <!-- tar pit -->
+  <ellipse cx="500" cy="220" rx="32" ry="10" fill="#1a0e1a"/>
+  <ellipse cx="500" cy="219" rx="22" ry="6" fill="#0a040e"/>
+
+  <!-- ============================================================
+       TITLE PLATE — middle (y=240..400), prominent
+       ============================================================ -->
+  <rect x="0" y="240" width="630" height="160" fill="rgba(10,6,2,0.55)"/>
+
+  <g transform="translate(40, 252)">
+    <!-- triple-inset chunky pixel border -->
+    <rect x="-4" y="-4" width="558" height="148" fill="#1a0c00"/>
+    <rect x="0"  y="0"  width="550" height="140" fill="#6a4528"/>
+    <rect x="4"  y="4"  width="542" height="132" fill="#1a0c00"/>
+    <rect x="8"  y="8"  width="534" height="124" fill="url(#banner)"/>
+
+    <!-- title -->
+    <text x="275" y="68"
+          text-anchor="middle"
+          font-family="'Press Start 2P', 'Courier New', monospace"
+          font-size="44" font-weight="bold"
+          fill="#f5d889"
+          letter-spacing="6"
+          stroke="#1a0c00" stroke-width="2.5" paint-order="stroke">CROWNFALL</text>
+    <!-- subtitle -->
+    <text x="275" y="106"
+          text-anchor="middle"
+          font-family="'Press Start 2P', 'Courier New', monospace"
+          font-size="14"
+          fill="#c89030"
+          letter-spacing="3">AN INCREMENTAL DEFENSE</text>
+  </g>
+
+  <!-- ============================================================
+       BOTTOM FOOTER STRIP — features icons + tagline (y=400..500)
+       ============================================================ -->
+  <rect x="0" y="400" width="630" height="100" fill="#1a0c00"/>
+  <rect x="0" y="400" width="630" height="3" fill="#6a4528"/>
+  <rect x="0" y="497" width="630" height="3" fill="#6a4528"/>
+
+  <!-- 4 feature icons across -->
+  <!-- Crown (Crowns currency) -->
+  <g transform="translate(80, 425) scale(2.5)" shape-rendering="crispEdges">
+    <g fill="#1a0c00">
+      <rect x="2" y="3" width="1" height="1"/>
+      <rect x="0" y="4" width="1" height="6"/>
+      <rect x="14" y="4" width="1" height="6"/>
+      <rect x="7" y="2" width="1" height="1"/>
+      <rect x="13" y="3" width="1" height="1"/>
+    </g>
+    <g fill="#ffd060">
+      <rect x="1" y="4" width="1" height="6"/>
+      <rect x="2" y="6" width="1" height="4"/>
+      <rect x="3" y="7" width="3" height="3"/>
+      <rect x="6" y="4" width="3" height="6"/>
+      <rect x="9" y="7" width="3" height="3"/>
+      <rect x="12" y="6" width="1" height="4"/>
+      <rect x="13" y="4" width="1" height="6"/>
+    </g>
+    <g fill="#c83020"><rect x="7" y="6" width="1" height="1"/></g>
+    <g fill="#80c8ff">
+      <rect x="3" y="8" width="1" height="1"/>
+      <rect x="11" y="8" width="1" height="1"/>
+    </g>
+  </g>
+  <text x="100" y="488" text-anchor="middle"
+        font-family="'Press Start 2P', monospace" font-size="8"
+        fill="#c89030" letter-spacing="1">CROWNS</text>
+
+  <!-- Sword icon (heroes) -->
+  <g transform="translate(220, 425)">
+    <rect x="14" y="0" width="4" height="4" fill="#1a0c00"/>
+    <rect x="14" y="4" width="4" height="32" fill="#c0c0c8"/>
+    <rect x="14" y="36" width="4" height="4" fill="#1a0c00"/>
+    <rect x="6" y="40" width="20" height="4" fill="#6a4528"/>
+    <rect x="6" y="44" width="4" height="4"  fill="#1a0c00"/>
+    <rect x="22" y="44" width="4" height="4" fill="#1a0c00"/>
+    <rect x="14" y="48" width="4" height="8" fill="#6a4528"/>
+    <rect x="14" y="56" width="4" height="4" fill="#c89030"/>
+  </g>
+  <text x="240" y="488" text-anchor="middle"
+        font-family="'Press Start 2P', monospace" font-size="8"
+        fill="#c89030" letter-spacing="1">6 HEROES</text>
+
+  <!-- Spell/orb icon (skills + imbues) -->
+  <g transform="translate(360, 425)">
+    <rect x="14" y="6" width="20" height="20" fill="#7a3a9a"/>
+    <rect x="10" y="10" width="28" height="12" fill="#7a3a9a"/>
+    <rect x="14" y="6" width="20" height="4" fill="#b07bd6"/>
+    <rect x="10" y="10" width="4" height="8" fill="#b07bd6"/>
+    <rect x="18" y="10" width="6" height="6" fill="#e4b4ff"/>
+    <rect x="18" y="10" width="3" height="3" fill="#ffffff"/>
+  </g>
+  <text x="380" y="488" text-anchor="middle"
+        font-family="'Press Start 2P', monospace" font-size="8"
+        fill="#c89030" letter-spacing="1">8 ELEMENTS</text>
+
+  <!-- Wall/shield icon (research) -->
+  <g transform="translate(500, 425)">
+    <!-- battlements -->
+    <rect x="6"  y="4" width="6" height="6" fill="#5a606a"/>
+    <rect x="18" y="4" width="6" height="6" fill="#5a606a"/>
+    <rect x="30" y="4" width="6" height="6" fill="#5a606a"/>
+    <!-- wall body -->
+    <rect x="6"  y="10" width="30" height="40" fill="#5a606a"/>
+    <!-- mortar -->
+    <rect x="6"  y="20" width="30" height="2" fill="#0e1218"/>
+    <rect x="6"  y="32" width="30" height="2" fill="#0e1218"/>
+    <rect x="6"  y="44" width="30" height="2" fill="#0e1218"/>
+    <rect x="20" y="10" width="2" height="10" fill="#0e1218"/>
+    <rect x="14" y="22" width="2" height="10" fill="#0e1218"/>
+    <rect x="26" y="22" width="2" height="10" fill="#0e1218"/>
+    <rect x="20" y="34" width="2" height="10" fill="#0e1218"/>
+    <!-- highlight -->
+    <rect x="8"  y="12" width="2" height="6" fill="#9aa0ac"/>
+    <rect x="22" y="12" width="2" height="6" fill="#9aa0ac"/>
+  </g>
+  <text x="520" y="488" text-anchor="middle"
+        font-family="'Press Start 2P', monospace" font-size="8"
+        fill="#c89030" letter-spacing="1">ENDLESS</text>
+
+</svg>
