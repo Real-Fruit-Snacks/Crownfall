@@ -47,12 +47,16 @@
   /* Slot panel — pixel-art chunky frame */
   #panel {
     position: fixed; display: none;
+    box-sizing: border-box;                 /* max-height must include padding */
     background: #2a1a08;
     padding: 12px;
     color: #e8d9b8;
     font-family: 'Pixelify Sans', monospace;
     font-size: 13px;
-    min-width: 250px; max-width: 290px; max-height: 88vh;
+    min-width: 250px; max-width: 290px;
+    /* Never exceed playing-field height (viewport minus HUD strip, plus a 20px
+       breathing buffer). Overflow-y lets the panel scroll internally. */
+    max-height: calc(100vh - var(--hud-h) - 20px);
     overflow-y: auto;
     border: 0; border-radius: 0;
     z-index: 20;
@@ -2011,10 +2015,12 @@
        can push tall cards above the viewport, so swap to top-aligned + scroll. */
     #title-overlay, #welcome-overlay, #settings-overlay, #confirm-overlay,
     #stats-overlay, #commander-overlay, #midevent-overlay, #gameover,
-    #prestige-overlay {
+    #prestige-overlay, #pause-overlay, #research-overlay {
       align-items: flex-start;
       overflow-y: auto;
-      padding: 8px 0;
+      /* Start content BELOW the HUD strip so the top of each card isn't
+         hidden under the solid topbar. Add a little breathing room below. */
+      padding: calc(var(--hud-h) + 6px) 0 8px 0;
     }
     #prestige-overlay .prestige-card { padding: 14px 18px; max-height: 96vh; }
     #prestige-overlay .prestige-banner { font-size: 13px; padding: 8px 10px 6px; margin-bottom: 8px; }
@@ -2080,6 +2086,34 @@
     #confirm-overlay h3 { font-size: 13px; margin-bottom: 8px; }
     #confirm-overlay p  { font-size: 12px; margin-bottom: 12px; }
     #confirm-overlay button { padding: 7px 14px; font-size: 11px; }
+
+    /* Pause overlay — 7 buttons + 6 stat rows MUST fit in ~300px of content */
+    #pause-overlay .card { padding: 12px 16px; max-height: 96vh; }
+    #pause-overlay h2 { font-size: 14px; margin-bottom: 8px; padding-bottom: 6px; }
+    #pause-overlay .stats { margin: 0 0 8px; }
+    #pause-overlay .row { padding: 3px 0; font-size: 11px; }
+    #pause-overlay .actions { gap: 5px; }
+    #pause-overlay button { padding: 6px 8px; font-size: 9px; letter-spacing: 0.5px; }
+    #pause-overlay .hint { font-size: 10px; margin-top: 6px; }
+
+    /* Stats overlay — Hall of Records has lots of rows, compact */
+    #stats-overlay .card { padding: 12px 16px; max-height: 96vh; }
+    #stats-overlay h2 { font-size: 14px; margin-bottom: 6px; padding-bottom: 4px; }
+    #stats-overlay .row { padding: 2px 0; font-size: 11px; }
+    #stats-overlay .row span, #stats-overlay .row b { font-size: 11px; }
+    #stats-overlay button { padding: 6px 12px; font-size: 10px; }
+
+    /* Commander overlay */
+    #commander-overlay .card { padding: 12px 16px; max-height: 96vh; }
+    #commander-overlay h2 { font-size: 13px; margin-bottom: 6px; }
+    #commander-overlay .cmd-block { padding: 6px 8px; margin-bottom: 6px; }
+    #commander-overlay button { padding: 6px 10px; font-size: 10px; }
+
+    /* Mid-event overlay — decision card between waves */
+    #midevent-overlay .card { padding: 12px 18px; max-height: 96vh; }
+    #midevent-overlay h3 { font-size: 13px; margin-bottom: 6px; }
+    #midevent-overlay p  { font-size: 11px; margin-bottom: 8px; }
+    #midevent-overlay button { padding: 8px 12px; font-size: 11px; }
 
     /* Game-over card */
     #gameover .card { padding: 18px 22px; max-height: 92vh; overflow-y: auto; }
@@ -9756,8 +9790,10 @@ const Tutorial = {
       bxx = (window.innerWidth - bw) / 2;
       byy = window.innerHeight * 0.6;
     }
+    // Respect the HUD strip — never let the coachmark slide under the topbar.
+    const hudH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hud-h')) || 0;
     bxx = Math.max(margin, Math.min(bxx, window.innerWidth  - bw - margin));
-    byy = Math.max(margin, Math.min(byy, window.innerHeight - bh - margin));
+    byy = Math.max(hudH + margin, Math.min(byy, window.innerHeight - bh - margin));
     box.style.left = bxx + 'px';
     box.style.top  = byy + 'px';
   },
