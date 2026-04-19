@@ -5818,20 +5818,24 @@ runRpRowEl.addEventListener('click', () => {
 });
 
 // Double-click the WAVE block at ANY time to advance to the next wave.
-//   - During rest: just collapse the rest timer to 0.
-//   - During spawning/active: clear the remaining spawn queue + any living
-//     enemies + their projectiles, grant the wave-clear reward (so you're
-//     not penalized for skipping), then collapse the rest timer.
-// The loop's normal 'resting -> startWave(wave+1)' transition handles the
-// actual hand-off on its next tick.
+// Existing enemies STAY on the field — the next wave's enemies spawn on top
+// of them. This is intentional: stacking waves is the player's choice for
+// faster grinding (with the obvious risk).
+//   - Resting:           collapse the rest timer to 0; next wave kicks off.
+//   - Spawning / active: cancel the rest of the current wave's spawn queue,
+//     grant the wave-clear gold reward (no penalty for skipping), then
+//     collapse the rest timer so the next wave starts immediately. Living
+//     enemies are NOT cleared — they roll into the next wave.
 waveHudEl.addEventListener('dblclick', () => {
   if (gameOver || paused) return;
   if (_activeMidEvent) return;                      // mid-event modal is open — don't skip past it
   if (wavePhase !== 'resting') {
-    waveSpawnsLeft = 0;
-    enemies.length = 0;
-    if (typeof enemyProjectiles !== 'undefined') enemyProjectiles.length = 0;
+    waveSpawnsLeft = 0;                             // stop spawning the rest of THIS wave
     wavePhase = 'active';                           // ensure endWave's preconditions are met
+    // Temporarily empty enemies so endWave's natural caller (loop's
+    // 'active && enemies.length===0' branch) wouldn't conflict — but we call
+    // endWave directly here so we don't need to clear anything. Existing
+    // enemies stay alive and just blend with the incoming wave.
     if (typeof endWave === 'function') endWave();   // gold + totalWavesCleared + sets resting state
   }
   waveRestTimer = 0;                                // skip the rest no matter how we got here
