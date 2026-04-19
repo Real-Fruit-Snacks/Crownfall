@@ -375,16 +375,16 @@
     <rect x="6"  y="6"  width="948" height="148" fill="#1a0c00"/>
     <rect x="12" y="12" width="936" height="136" fill="url(#banner)"/>
 
-    <!-- title -->
-    <text x="480" y="78"
+    <!-- title (x shifted +4 to compensate for trailing letter-spacing in middle anchor) -->
+    <text x="484" y="78"
           text-anchor="middle"
           font-family="'Press Start 2P', 'Courier New', monospace"
           font-size="60" font-weight="bold"
           fill="#f5d889"
           letter-spacing="8"
           stroke="#1a0c00" stroke-width="3" paint-order="stroke">CROWNFALL</text>
-    <!-- subtitle -->
-    <text x="480" y="124"
+    <!-- subtitle (x shifted +2.5 to compensate for trailing letter-spacing) -->
+    <text x="482.5" y="124"
           text-anchor="middle"
           font-family="'Press Start 2P', 'Courier New', monospace"
           font-size="20"
@@ -392,8 +392,8 @@
           letter-spacing="5">AN INCREMENTAL DEFENSE</text>
   </g>
 
-  <!-- Tagline at very bottom -->
-  <text x="600" y="600"
+  <!-- Tagline at very bottom (x shifted +1.5 to compensate for trailing letter-spacing) -->
+  <text x="601.5" y="600"
         text-anchor="middle"
         font-family="'Press Start 2P', 'Courier New', monospace"
         font-size="14"
