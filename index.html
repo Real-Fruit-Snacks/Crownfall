@@ -790,38 +790,234 @@
     text-transform: uppercase;
   }
 
-  /* TUTORIAL — coachmark tooltip in pixel chrome */
+  /* WELCOME CARD — first-time intro modal */
+  #welcome-overlay {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(42,24,8,0.92) 0%, rgba(14,7,3,0.96) 80%);
+    z-index: 48;
+    font-family: 'Pixelify Sans', monospace;
+  }
+  #welcome-overlay.show { display: flex; }
+  #welcome-overlay .welcome-card {
+    position: relative;
+    background: #2a1a08;
+    color: #e8d9b8;
+    padding: 26px 32px 22px;
+    text-align: center;
+    max-width: 560px;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow:
+      inset 0 0 0 3px #6a4528,
+      inset 0 0 0 6px #1a0c00,
+      6px 6px 0 0 rgba(0,0,0,0.85);
+  }
+  #welcome-overlay .welcome-banner {
+    background: #3a2616;
+    padding: 14px 16px 10px;
+    margin-bottom: 18px;
+    box-shadow: inset 0 0 0 2px #6a4528, inset 0 0 0 4px #1a0c00;
+    color: #f5d889;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 0 #1a0c00;
+  }
+  #welcome-overlay .welcome-banner .sub {
+    display: block;
+    color: #c89030;
+    font-size: 9px;
+    letter-spacing: 2px;
+    margin-top: 8px;
+    text-shadow: 1px 1px 0 #1a0c00;
+  }
+  #welcome-overlay .welcome-section { text-align: left; margin-bottom: 14px; }
+  #welcome-overlay .welcome-section h3 {
+    color: #f5d889;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    margin: 0 0 6px;
+    text-shadow: 1px 1px 0 #1a0c00;
+  }
+  #welcome-overlay .welcome-section p {
+    color: #c0b090;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+  }
+  #welcome-overlay .welcome-section p .hl { color: #f5d889; font-weight: bold; }
+  #welcome-overlay .welcome-controls {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #1f1106;
+    box-shadow: inset 0 0 0 1px #4a352a;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 14px;
+    font-size: 13px;
+    color: #a89070;
+    align-items: center;
+    text-align: left;
+  }
+  #welcome-overlay .welcome-controls .key {
+    color: #f5d889;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    background: #3a2616;
+    padding: 5px 8px;
+    box-shadow: inset 0 0 0 1px #6a4528;
+    text-align: center;
+    min-width: 38px;
+  }
+  #welcome-overlay .welcome-actions {
+    display: flex; gap: 10px; justify-content: center;
+    margin-top: 18px;
+  }
+  #welcome-overlay .welcome-actions button {
+    background: #3a2616;
+    color: #f5d889;
+    border: 0; cursor: pointer;
+    padding: 12px 24px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px; letter-spacing: 2px;
+    box-shadow: inset 0 0 0 2px #6a4528, inset 0 0 0 4px #1a0c00, 3px 3px 0 0 #1a0c00;
+    transition: transform 0.06s, box-shadow 0.06s;
+  }
+  #welcome-overlay .welcome-actions button:hover {
+    transform: translate(-1px,-1px);
+    box-shadow: inset 0 0 0 2px #ffd060, inset 0 0 0 4px #1a0c00, 4px 4px 0 0 #1a0c00;
+  }
+  #welcome-overlay .welcome-actions .skip-btn {
+    background: transparent;
+    color: #8a7a60;
+    box-shadow: inset 0 0 0 2px #4a352a;
+    font-size: 10px;
+  }
+  #welcome-overlay .welcome-actions .skip-btn:hover {
+    color: #c0b090;
+    box-shadow: inset 0 0 0 2px #6a5a3a;
+    transform: none;
+  }
+
+  /* HELP BUTTON — small "?" pixel chip in top-right */
+  #help-btn {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: 38px; height: 38px;
+    background: #2a1a08;
+    color: #f5d889;
+    border: 0; cursor: pointer;
+    padding: 0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    z-index: 11;
+    box-shadow:
+      inset 0 0 0 2px #6a4528,
+      inset 0 0 0 4px #1a0c00,
+      3px 3px 0 0 rgba(0,0,0,0.7);
+    transition: transform 0.06s, box-shadow 0.06s;
+  }
+  #help-btn:hover {
+    transform: translate(-1px,-1px);
+    color: #ffd060;
+    box-shadow:
+      inset 0 0 0 2px #ffd060,
+      inset 0 0 0 4px #1a0c00,
+      4px 4px 0 0 rgba(0,0,0,0.7);
+  }
+
+  /* TUTORIAL — spotlight + coachmark with action waiting */
   #tutorial-overlay {
     position: fixed; inset: 0; display: none;
     z-index: 45;
     pointer-events: none;
   }
   #tutorial-overlay.show { display: block; }
+  /* Spotlight — a transparent rect with a giant outset shadow that dims everything around it */
+  #tut-hole {
+    position: fixed;
+    pointer-events: none;
+    border: 3px solid #f5d889;
+    box-shadow:
+      0 0 0 9999px rgba(10,6,2,0.72),
+      0 0 0 6px rgba(245,216,137,0.18);
+    border-radius: 4px;
+    transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+    animation: tut-pulse 1.4s ease-in-out infinite;
+    display: none;
+  }
+  #tut-hole.show { display: block; }
+  @keyframes tut-pulse {
+    0%, 100% { border-color: #f5d889; }
+    50%      { border-color: #ffd060; }
+  }
+  /* Animated arrow chevron */
+  #tut-arrow {
+    position: fixed;
+    pointer-events: none;
+    width: 32px; height: 32px;
+    display: none;
+    z-index: 46;
+    animation: tut-arrow-bounce 1.0s ease-in-out infinite;
+  }
+  #tut-arrow.show { display: block; }
+  @keyframes tut-arrow-bounce {
+    0%, 100% { translate: 0 0; }
+    50%      { translate: var(--bx, 6px) var(--by, 0); }
+  }
   #tutorial-overlay .tut-box {
-    position: absolute;
+    position: fixed;
     background: #2a1a08;
     color: #e8d9b8;
     padding: 14px 16px 12px;
-    width: 270px; max-width: 80vw;
+    width: 290px; max-width: 80vw;
     pointer-events: auto;
     box-shadow:
       inset 0 0 0 2px #6a4528,
       inset 0 0 0 4px #1a0c00,
       4px 4px 0 0 rgba(0,0,0,0.85);
     font-family: 'Pixelify Sans', monospace;
+    z-index: 47;
+  }
+  #tutorial-overlay .tut-step-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
   }
   #tutorial-overlay .tut-step {
     color: #c0a070;
     font-family: 'Press Start 2P', monospace;
     font-size: 9px;
     letter-spacing: 1.5px;
-    margin-bottom: 8px;
+  }
+  #tutorial-overlay .tut-wait {
+    color: #ffba40;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    letter-spacing: 1px;
+    animation: tut-blink 1.2s ease-in-out infinite;
+  }
+  @keyframes tut-blink {
+    0%, 100% { opacity: 0.45; }
+    50%      { opacity: 1.0; }
   }
   #tutorial-overlay .tut-text {
     color: #f5d889;
     font-size: 14px;
     line-height: 1.5;
     margin-bottom: 12px;
+  }
+  #tutorial-overlay .tut-text .key {
+    color: #ffd060;
+    background: #1a0c00;
+    padding: 2px 6px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    box-shadow: inset 0 0 0 1px #6a4528;
   }
   #tutorial-overlay .tut-actions { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
   #tutorial-overlay button {
@@ -838,6 +1034,7 @@
     transform: translate(-1px,-1px);
     box-shadow: inset 0 0 0 2px #ffd060, inset 0 0 0 4px #1a0c00, 3px 3px 0 0 #1a0c00;
   }
+  #tutorial-overlay button.hidden { display: none; }
   #tutorial-overlay .tut-skip {
     background: transparent;
     color: #8a7a60;
@@ -1735,9 +1932,68 @@
     </div>
   </div>
 
+  <div id="welcome-overlay">
+    <div class="welcome-card">
+      <div class="welcome-banner">
+        WELCOME, COMMANDER
+        <span class="sub">A QUICK PRIMER</span>
+      </div>
+      <div class="welcome-section">
+        <h3>&#9733; THE LOOP</h3>
+        <p>Defend the wall. <span class="hl">Hire heroes</span>, upgrade them, cast skills. When your wall hits zero HP, the run ends.</p>
+      </div>
+      <div class="welcome-section">
+        <h3>&#9733; EVERY DEATH MATTERS</h3>
+        <p>You bank <span class="hl">Research Points</span> and <span class="hl">Crowns</span> from every run &mdash; spend them in the Research Book to permanently upgrade your fortress and unlock heroes, elements, skills, hazards, and skins.</p>
+      </div>
+      <div class="welcome-section">
+        <h3>&#9733; EXPECT TO DIE</h3>
+        <p>You will die many times. <span class="hl">That's the game.</span> Each run makes the next one stronger.</p>
+      </div>
+      <div class="welcome-controls">
+        <span class="key">CLICK</span><span>Hire / upgrade / collect coins</span>
+        <span class="key">1&ndash;4</span><span>Cast skill in slot N</span>
+        <span class="key">Q</span><span>End run, bank RP</span>
+        <span class="key">R</span><span>Open research book</span>
+        <span class="key">SPACE</span><span>Pause / resume</span>
+        <span class="key">M</span><span>Mute sound</span>
+      </div>
+      <div class="welcome-actions">
+        <button onclick="welcomeBegin()">BEGIN</button>
+        <button class="skip-btn" onclick="welcomeSkip()">Skip tutorial</button>
+      </div>
+    </div>
+  </div>
+
+  <button id="help-btn" onclick="openWelcome(true)" title="Help / Controls" aria-label="Help">?</button>
+
   <div id="tutorial-overlay">
+    <div id="tut-hole"></div>
+    <div id="tut-arrow">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges">
+        <g fill="#1a0c00">
+          <rect x="0"  y="6"  width="13" height="4"/>
+          <rect x="5"  y="2"  width="2"  height="2"/>
+          <rect x="7"  y="4"  width="2"  height="2"/>
+          <rect x="9"  y="5"  width="2"  height="6"/>
+          <rect x="7"  y="10" width="2"  height="2"/>
+          <rect x="5"  y="12" width="2"  height="2"/>
+        </g>
+        <g fill="#f5d889">
+          <rect x="1"  y="7"  width="11" height="2"/>
+          <rect x="6"  y="3"  width="2"  height="2"/>
+          <rect x="8"  y="5"  width="2"  height="2"/>
+          <rect x="10" y="7"  width="1"  height="2"/>
+          <rect x="8"  y="9"  width="2"  height="2"/>
+          <rect x="6"  y="11" width="2"  height="2"/>
+        </g>
+      </svg>
+    </div>
     <div class="tut-box" id="tut-box">
-      <div class="tut-step" id="tut-step">1 / 3</div>
+      <div class="tut-step-row">
+        <span class="tut-step" id="tut-step">1 / 7</span>
+        <span class="tut-wait" id="tut-wait"></span>
+      </div>
       <div class="tut-text" id="tut-text"></div>
       <div class="tut-actions">
         <button onclick="tutorialNext()" id="tut-next-btn">Got it</button>
@@ -2555,6 +2811,7 @@ function endRunForResearch() {
   bumpStat('totalGoldEarned', totalGoldEarned);
   pendingNewRun = true;
   window.openResearch();
+  if (typeof Tutorial !== 'undefined') Tutorial.notify('endrun');
 }
 
 window.resetRun = function () {
@@ -4498,6 +4755,11 @@ window.openResearch = function () {
 
 window.closeResearch = function () {
   document.getElementById('research-overlay').classList.remove('show');
+  // If the tutorial was on the final step (close-the-book), it's done.
+  if (typeof Tutorial !== 'undefined' && Tutorial.active
+      && Tutorial.current === Tutorial.steps.length - 1) {
+    Tutorial.end();
+  }
   if (pendingNewRun) {
     pendingNewRun = false;
     window.resetRun();
@@ -4530,6 +4792,7 @@ function buyResearchNode(id) {
   saveResearch();
   renderResearch();
   Audio.sfx.research();
+  if (typeof Tutorial !== 'undefined') Tutorial.notify('research');
 }
 
 window.toggleNode = function (id) {
@@ -5396,6 +5659,7 @@ window.buyHero = function (idx, typeId, skinId) {
   s.hero = makeHero(typeId, skinId);
   Audio.sfx.buy();
   updateUI();
+  if (typeof Tutorial !== 'undefined') Tutorial.notify('hire');
 };
 
 function imbueCost(elementId) {
@@ -5434,6 +5698,7 @@ window.upgrade = function (idx, type) {
   if (type === 'rng') h.range  += 20;
   if (type === 'spd') h.fireRate = Math.max(0.20, h.fireRate * 0.92);
   updateUI();
+  if (typeof Tutorial !== 'undefined') Tutorial.notify('upgrade');
 };
 
 window.closePanel = function () {
@@ -7034,6 +7299,7 @@ canvas.addEventListener('pointerdown', e => {
     const ix = coins.indexOf(coin);
     if (ix !== -1) coins.splice(ix, 1);
     Audio.sfx.coin();
+    if (typeof Tutorial !== 'undefined') Tutorial.notify('coin');
     return;
   }
   const en = enemyAt(x, y);
@@ -8261,9 +8527,11 @@ updateUI();
 renderSkillBar();
 
 // =====================================================================
-//  TITLE SCREEN + 3-STEP TUTORIAL
+//  TITLE SCREEN + WELCOME CARD + INTERACTIVE TUTORIAL
 // =====================================================================
-const titleEl = document.getElementById('title-overlay');
+const titleEl   = document.getElementById('title-overlay');
+const welcomeEl = document.getElementById('welcome-overlay');
+
 window.titlePlay         = function () { hideTitle(true); };
 window.titleOpenResearch = function () { hideTitle(false); window.openResearch(); };
 window.titleOpenSettings = function () { hideTitle(false); window.openSettings(); };
@@ -8272,7 +8540,7 @@ function hideTitle(playing) {
   try { localStorage.setItem('castleSeenTitle', '1'); } catch {}
   Audio.init();
   if (playing && localStorage.getItem('castleTutorialDone') !== '1') {
-    setTimeout(Tutorial.start, 250);
+    window.openWelcome(false);   // open immediately — no deferred timer
   }
 }
 function maybeShowTitle() {
@@ -8285,34 +8553,117 @@ titleEl.addEventListener('pointerdown', e => {
   if (e.target === titleEl) window.titlePlay();
 });
 
+// ----- Welcome card (intro modal) -----
+window.openWelcome = function (forceReshow) {
+  welcomeEl.classList.add('show');
+  welcomeEl._isReshow = !!forceReshow;
+  Audio.sfx.click && Audio.sfx.click();
+};
+window.welcomeBegin = function () {
+  welcomeEl.classList.remove('show');
+  Audio.sfx.click && Audio.sfx.click();
+  // Only auto-launch the tutorial if this is the first-time flow (not a help-button reshow)
+  if (!welcomeEl._isReshow && localStorage.getItem('castleTutorialDone') !== '1') {
+    setTimeout(() => Tutorial.start(), 200);
+  }
+  welcomeEl._isReshow = false;
+};
+window.welcomeSkip = function () {
+  welcomeEl.classList.remove('show');
+  Audio.sfx.click && Audio.sfx.click();
+  // Mark tutorial done so we don't pester the player again
+  try { localStorage.setItem('castleTutorialDone', '1'); } catch {}
+  welcomeEl._isReshow = false;
+};
+
+// ----- anchor helpers -----
+function slotRect(idx) {
+  const s = SLOTS[idx];
+  if (!s) return null;
+  const r = canvas.getBoundingClientRect();
+  // SLOTS use canvas-pixel coords; convert to viewport coords
+  const sx = r.left + (s.cx / W) * r.width;
+  const sy = r.top  + (s.cy / H) * r.height;
+  // box ~ 50 game-px wide x 80 game-px tall around slot center
+  const halfW = (28 / W) * r.width;
+  const halfH = (38 / H) * r.height;
+  return { x: sx - halfW, y: sy - halfH, w: halfW * 2, h: halfH * 2 };
+}
+function elRect(id, childSelector) {
+  let el = document.getElementById(id);
+  if (!el) return null;
+  if (childSelector) {
+    const c = el.querySelector(childSelector);
+    if (c) el = c;
+  }
+  const r = el.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return null;
+  return { x: r.left, y: r.top, w: r.width, h: r.height };
+}
+function firstResearchNodeRect() {
+  // Prefer a buyable node so the spotlight points at something actionable
+  const buyable = document.querySelector('#research-overlay .node-entry:not(.locked):not(.owned)');
+  if (buyable) {
+    const r = buyable.getBoundingClientRect();
+    if (r.width > 0) return { x: r.left, y: r.top, w: r.width, h: r.height };
+  }
+  // Otherwise highlight any node, or fall back to the whole book
+  const any = document.querySelector('#research-overlay .node-entry');
+  if (any) {
+    const r = any.getBoundingClientRect();
+    if (r.width > 0) return { x: r.left, y: r.top, w: r.width, h: r.height };
+  }
+  return elRect('research-overlay', '#research-book') || elRect('research-overlay');
+}
+
 const Tutorial = {
   steps: [
     {
-      msg: 'Tap an empty hero slot on the wall (left side) to recruit your first defender.',
-      anchor: () => {
-        // anchor the tooltip near the first slot pixel coords on screen
-        const r = canvas.getBoundingClientRect();
-        const s = SLOTS[0];
-        const sx = r.left + (s.cx / W) * r.width;
-        const sy = r.top  + (s.cy / H) * r.height;
-        return { left: sx + 50, top: sy - 30 };
-      }
+      msg: 'Tap an empty hero slot on the wall to hire your first defender.',
+      anchor: () => slotRect(0),
+      arrow: 'right',
+      wait: 'hire',
+      waitLabel: 'WAITING: HIRE A HERO'
     },
     {
-      msg: 'Coins drop from kills. Tap them to collect gold (or research auto-collect later).',
-      anchor: () => {
-        const el = document.getElementById('gold');
-        const r  = el.getBoundingClientRect();
-        return { left: r.right + 12, top: r.top };
-      }
+      msg: 'Heroes drop coins when they kill enemies. Tap a coin on the field to collect gold.',
+      anchor: () => elRect('gold'),
+      arrow: 'down',
+      wait: 'coin',
+      waitLabel: 'WAITING: COLLECT A COIN'
     },
     {
-      msg: 'Click the +RP block at the top to end your run anytime and bank Research Points to spend in the book.',
-      anchor: () => {
-        const el = document.getElementById('run-rp-row');
-        const r  = el.getBoundingClientRect();
-        return { left: r.left - 290, top: r.bottom + 10 };
-      }
+      msg: 'Click your hero to open the slot panel, then spend gold on <span class="key">+1</span> Damage, Range, or Speed.',
+      anchor: () => slotRect(0),
+      arrow: 'right',
+      wait: 'upgrade',
+      waitLabel: 'WAITING: BUY AN UPGRADE'
+    },
+    {
+      msg: 'This is your wall HP. If it hits zero, the run ends &mdash; but enemies have to break through your heroes first.',
+      anchor: () => elRect('topbar', '.tb-block.hp'),
+      arrow: 'down',
+      wait: null
+    },
+    {
+      msg: 'Press <span class="key">Q</span> or click the <span class="key">+RP</span> block any time to end your run early and bank Research Points.',
+      anchor: () => elRect('run-rp-row'),
+      arrow: 'down',
+      wait: 'endrun',
+      waitLabel: 'WAITING: END YOUR RUN'
+    },
+    {
+      msg: 'Spend RP on a research node to permanently upgrade your fortress. Buy any one to continue.',
+      anchor: () => firstResearchNodeRect(),
+      arrow: null,
+      wait: 'research',
+      waitLabel: 'WAITING: BUY A NODE'
+    },
+    {
+      msg: 'Done! Close the research book and your next run starts &mdash; stronger than the last. Good luck, Commander.',
+      anchor: () => elRect('research-close'),
+      arrow: 'left',
+      wait: null
     }
   ],
   current: -1,
@@ -8328,19 +8679,86 @@ const Tutorial = {
     if (!step) { this.end(); return; }
     document.getElementById('tutorial-overlay').classList.add('show');
     document.getElementById('tut-step').textContent = `${this.current + 1} / ${this.steps.length}`;
-    document.getElementById('tut-text').textContent = step.msg;
+    document.getElementById('tut-wait').textContent = step.wait ? (step.waitLabel || 'WAITING...') : '';
+    document.getElementById('tut-text').innerHTML  = step.msg;
     const btn = document.getElementById('tut-next-btn');
-    btn.textContent = (this.current === this.steps.length - 1) ? 'Begin!' : 'Got it';
-    // place after a tick so layout is correct
-    requestAnimationFrame(() => {
-      const box = document.getElementById('tut-box');
-      const a = step.anchor();
-      const margin = 12;
-      const maxX = window.innerWidth  - box.offsetWidth  - margin;
-      const maxY = window.innerHeight - box.offsetHeight - margin;
-      box.style.left = Math.max(margin, Math.min(a.left, maxX)) + 'px';
-      box.style.top  = Math.max(margin, Math.min(a.top,  maxY)) + 'px';
-    });
+    if (step.wait) {
+      btn.classList.add('hidden');
+    } else {
+      btn.classList.remove('hidden');
+      btn.textContent = (this.current === this.steps.length - 1) ? 'Done!' : 'Got it';
+    }
+    // Double rAF so style recalc has run and the overlay has dimensions before we measure.
+    requestAnimationFrame(() => requestAnimationFrame(() => this.layout(step)));
+    // And re-layout once more after any transitions / research-render settle (for steps 6+).
+    setTimeout(() => { if (this.active && this.current === Tutorial.steps.indexOf(step)) this.layout(step); }, 120);
+  },
+  layout(step) {
+    const a = step.anchor && step.anchor();
+    const hole  = document.getElementById('tut-hole');
+    const arrow = document.getElementById('tut-arrow');
+    const box   = document.getElementById('tut-box');
+    if (a && a.w > 0 && a.h > 0) {
+      const pad = 6;
+      hole.classList.add('show');
+      hole.style.left   = (a.x - pad) + 'px';
+      hole.style.top    = (a.y - pad) + 'px';
+      hole.style.width  = (a.w + pad * 2) + 'px';
+      hole.style.height = (a.h + pad * 2) + 'px';
+    } else {
+      hole.classList.remove('show');
+    }
+    // Arrow position
+    if (step.arrow && a) {
+      arrow.classList.add('show');
+      const cx = a.x + a.w / 2, cy = a.y + a.h / 2;
+      let ax, ay, rot, bx = 6, by = 0;
+      if (step.arrow === 'right')      { ax = a.x + a.w + 14; ay = cy - 16; rot = 0;   bx = 6;  by = 0; }
+      else if (step.arrow === 'left')  { ax = a.x - 46;       ay = cy - 16; rot = 180; bx = -6; by = 0; }
+      else if (step.arrow === 'down')  { ax = cx - 16;        ay = a.y + a.h + 14; rot = 90;  bx = 0;  by = 6; }
+      else                             { ax = cx - 16;        ay = a.y - 46;       rot = -90; bx = 0;  by = -6; }
+      arrow.style.left = ax + 'px';
+      arrow.style.top  = ay + 'px';
+      arrow.style.transform = `rotate(${rot}deg)`;
+      arrow.style.setProperty('--bx', bx + 'px');
+      arrow.style.setProperty('--by', by + 'px');
+    } else {
+      arrow.classList.remove('show');
+    }
+    // Coachmark box position — pick a side that doesn't overlap the spotlight
+    const margin = 14;
+    const bw = box.offsetWidth, bh = box.offsetHeight;
+    let bxx, byy;
+    if (a) {
+      // Try below first; if no room, try right; then left; then above.
+      const trySpots = [
+        { x: a.x + a.w / 2 - bw / 2, y: a.y + a.h + 50 },                 // below
+        { x: a.x + a.w + 50,         y: a.y },                              // right
+        { x: a.x - bw - 50,          y: a.y },                              // left
+        { x: a.x + a.w / 2 - bw / 2, y: a.y - bh - 50 }                     // above
+      ];
+      const fits = (s) => s.x >= margin && s.y >= margin
+                       && s.x + bw <= window.innerWidth - margin
+                       && s.y + bh <= window.innerHeight - margin;
+      let chosen = trySpots.find(fits) || trySpots[0];
+      bxx = chosen.x; byy = chosen.y;
+    } else {
+      bxx = (window.innerWidth - bw) / 2;
+      byy = window.innerHeight * 0.6;
+    }
+    bxx = Math.max(margin, Math.min(bxx, window.innerWidth  - bw - margin));
+    byy = Math.max(margin, Math.min(byy, window.innerHeight - bh - margin));
+    box.style.left = bxx + 'px';
+    box.style.top  = byy + 'px';
+  },
+  notify(event) {
+    if (!this.active) return;
+    const step = this.steps[this.current];
+    if (!step || step.wait !== event) return;
+    Audio.sfx.click && Audio.sfx.click();
+    this.current++;
+    if (this.current >= this.steps.length) this.end();
+    else this.show();
   },
   end() {
     this.active = false;
@@ -8351,12 +8769,23 @@ const Tutorial = {
 };
 window.tutorialNext = function () {
   if (!Tutorial.active) return;
+  const step = Tutorial.steps[Tutorial.current];
+  if (step && step.wait) return;   // shouldn't happen — Got it button is hidden — but be safe
   Audio.sfx.click && Audio.sfx.click();
   Tutorial.current++;
   if (Tutorial.current >= Tutorial.steps.length) Tutorial.end();
   else Tutorial.show();
 };
 window.tutorialSkip = function () { Tutorial.end(); };
+
+// Re-layout tutorial spotlight on resize, and when overlays open/close
+window.addEventListener('resize', () => {
+  if (Tutorial.active) {
+    const step = Tutorial.steps[Tutorial.current];
+    if (step) requestAnimationFrame(() => Tutorial.layout(step));
+  }
+});
+
 maybeShowTitle();
 
 // =====================================================================
