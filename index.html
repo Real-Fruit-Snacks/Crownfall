@@ -4136,47 +4136,47 @@ function shapeSvg(kind, fill, stroke) {
     </svg>`;
   }
   if (kind === 'coffers') {
-    // STACK OF COINS
+    // TREASURE CHEST — domed lid with iron bands, a lock, and gold spilling out the front
     return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges">
       <g fill="${stroke}">
-        <!-- top coin -->
-        <rect x="4" y="2" width="8" height="1"/>
-        <rect x="3" y="3" width="1" height="1"/>
-        <rect x="12" y="3" width="1" height="1"/>
+        <!-- lid dome outline -->
+        <rect x="3" y="3" width="10" height="1"/>
         <rect x="2" y="4" width="1" height="2"/>
         <rect x="13" y="4" width="1" height="2"/>
-        <rect x="3" y="6" width="1" height="1"/>
-        <rect x="12" y="6" width="1" height="1"/>
-        <rect x="4" y="7" width="8" height="1"/>
-        <!-- middle coin sides -->
-        <rect x="2" y="8" width="1" height="2"/>
-        <rect x="13" y="8" width="1" height="2"/>
-        <rect x="3" y="10" width="1" height="1"/>
-        <rect x="12" y="10" width="1" height="1"/>
-        <rect x="4" y="11" width="8" height="1"/>
-        <!-- bottom coin sides -->
-        <rect x="2" y="12" width="1" height="1"/>
-        <rect x="13" y="12" width="1" height="1"/>
-        <rect x="3" y="13" width="1" height="1"/>
-        <rect x="12" y="13" width="1" height="1"/>
-        <rect x="4" y="14" width="8" height="1"/>
+        <!-- chest body outline -->
+        <rect x="1" y="6" width="1" height="8"/>
+        <rect x="14" y="6" width="1" height="8"/>
+        <rect x="2" y="13" width="12" height="1"/>
+        <!-- lid/body separator (hinge line) -->
+        <rect x="2" y="8" width="12" height="1"/>
       </g>
       <g fill="${fill}">
-        <!-- top coin face -->
-        <rect x="4" y="3" width="8" height="1"/>
-        <rect x="3" y="4" width="10" height="2"/>
-        <rect x="4" y="6" width="8" height="1"/>
-        <!-- middle coin face -->
-        <rect x="3" y="8" width="10" height="2"/>
-        <rect x="4" y="10" width="8" height="1"/>
-        <!-- bottom coin face -->
-        <rect x="3" y="12" width="10" height="1"/>
-        <rect x="4" y="13" width="8" height="1"/>
+        <!-- lid body (curved top) -->
+        <rect x="3" y="4" width="10" height="1"/>
+        <rect x="2" y="5" width="12" height="1"/>
+        <rect x="2" y="6" width="12" height="2"/>
+        <!-- chest lower body -->
+        <rect x="2" y="9" width="12" height="4"/>
       </g>
-      <!-- $ marks on top coin -->
       <g fill="${stroke}">
-        <rect x="7" y="4" width="2" height="1"/>
-        <rect x="7" y="5" width="2" height="1"/>
+        <!-- iron bands (vertical reinforcements on body) -->
+        <rect x="4" y="9" width="1" height="4"/>
+        <rect x="11" y="9" width="1" height="4"/>
+        <!-- iron strap on lid -->
+        <rect x="4" y="5" width="1" height="3"/>
+        <rect x="11" y="5" width="1" height="3"/>
+        <!-- lock plate -->
+        <rect x="7" y="8" width="2" height="3"/>
+      </g>
+      <!-- gold highlight on lid + lock stud -->
+      <g fill="#f0c94a">
+        <!-- lid shine -->
+        <rect x="3" y="5" width="1" height="1"/>
+        <rect x="6" y="5" width="1" height="1"/>
+        <rect x="9" y="5" width="1" height="1"/>
+        <rect x="12" y="5" width="1" height="1"/>
+        <!-- lock keyhole dot (gold clasp) -->
+        <rect x="7" y="9" width="2" height="1"/>
       </g>
     </svg>`;
   }
