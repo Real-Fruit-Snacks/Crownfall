@@ -4173,36 +4173,45 @@ function shapeSvg(kind, fill, stroke) {
     </svg>`;
   }
   if (kind === 'pacts') {
-    // SCROLL with rolled ends
+    // SCROLL with rolled ends + wax seal (pact / contract)
     return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges">
       <g fill="${stroke}">
-        <!-- left roll outline -->
-        <rect x="0" y="4" width="3" height="1"/>
-        <rect x="0" y="11" width="3" height="1"/>
-        <rect x="0" y="5" width="1" height="6"/>
-        <rect x="2" y="5" width="1" height="6"/>
+        <!-- left roll outline (top + bottom caps) -->
+        <rect x="0" y="3" width="3" height="1"/>
+        <rect x="0" y="12" width="3" height="1"/>
+        <!-- left roll sides -->
+        <rect x="0" y="4" width="1" height="8"/>
+        <rect x="2" y="4" width="1" height="8"/>
         <!-- right roll outline -->
-        <rect x="13" y="4" width="3" height="1"/>
-        <rect x="13" y="11" width="3" height="1"/>
-        <rect x="13" y="5" width="1" height="6"/>
-        <rect x="15" y="5" width="1" height="6"/>
+        <rect x="13" y="3" width="3" height="1"/>
+        <rect x="13" y="12" width="3" height="1"/>
+        <rect x="13" y="4" width="1" height="8"/>
+        <rect x="15" y="4" width="1" height="8"/>
         <!-- top + bottom edges of paper -->
-        <rect x="3" y="4" width="10" height="1"/>
-        <rect x="3" y="11" width="10" height="1"/>
+        <rect x="3" y="3" width="10" height="1"/>
+        <rect x="3" y="12" width="10" height="1"/>
       </g>
       <g fill="${fill}">
         <!-- paper body -->
-        <rect x="3" y="5" width="10" height="6"/>
+        <rect x="3" y="4" width="10" height="8"/>
         <!-- left roll inner -->
-        <rect x="1" y="5" width="1" height="6"/>
+        <rect x="1" y="4" width="1" height="8"/>
         <!-- right roll inner -->
-        <rect x="14" y="5" width="1" height="6"/>
+        <rect x="14" y="4" width="1" height="8"/>
       </g>
       <g fill="${stroke}">
         <!-- text lines -->
-        <rect x="4" y="6" width="8" height="1"/>
-        <rect x="4" y="8" width="6" height="1"/>
-        <rect x="4" y="9" width="8" height="1"/>
+        <rect x="4" y="5" width="8" height="1"/>
+        <rect x="4" y="7" width="4" height="1"/>
+      </g>
+      <!-- wax seal (hardcoded red accent) -->
+      <g fill="#c83020">
+        <rect x="9" y="8" width="3" height="3"/>
+        <rect x="8" y="9" width="1" height="1"/>
+      </g>
+      <!-- seal highlight -->
+      <g fill="#ffd060">
+        <rect x="10" y="9" width="1" height="1"/>
       </g>
     </svg>`;
   }
