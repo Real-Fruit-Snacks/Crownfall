@@ -1,10 +1,21 @@
-# Crownfall: An Incremental Defense
+<p align="center">
+  <a href="https://real-fruit-snacks.github.io/Crownfall/">
+    <img src="og-image.svg" alt="Crownfall: An Incremental Defense" width="100%">
+  </a>
+</p>
 
-> **A pixel-art medieval wave defense built as a single HTML file. Hold the wall, bank Research and Crowns, return stronger.**
+<h1 align="center">Crownfall: An Incremental Defense</h1>
 
-[![Play Now](https://img.shields.io/badge/Play-Now-c89030?style=for-the-badge)](https://Real-Fruit-Snacks.github.io/crownfall/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
-![No Build Required](https://img.shields.io/badge/Build-Not%20Required-success?style=for-the-badge)
+<p align="center">
+  <em>A pixel-art medieval wave defense built as a single HTML file.<br>
+  Hold the wall, bank Research and Crowns, return stronger.</em>
+</p>
+
+<p align="center">
+  <a href="https://real-fruit-snacks.github.io/Crownfall/"><img src="https://img.shields.io/badge/Play-Now-c89030?style=for-the-badge" alt="Play Now"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/Build-Not%20Required-success?style=for-the-badge" alt="No Build Required">
+</p>
 
 ---
 
