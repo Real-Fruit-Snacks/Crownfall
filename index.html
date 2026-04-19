@@ -4070,29 +4070,42 @@ function shapeSvg(kind, fill, stroke) {
     </svg>`;
   }
   if (kind === 'fortifications') {
-    // CASTLE TOWER WITH BATTLEMENTS
+    // CRENELLATED KEEP — tall tower with merlons, arrow slits, arched gate
     return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges">
+      <g fill="${stroke}">
+        <!-- merlon outlines (crenellations) -->
+        <rect x="2" y="1" width="3" height="1"/>
+        <rect x="1" y="2" width="1" height="2"/>
+        <rect x="5" y="2" width="1" height="2"/>
+        <rect x="6" y="1" width="4" height="1"/>
+        <rect x="10" y="2" width="1" height="2"/>
+        <rect x="14" y="2" width="1" height="2"/>
+        <rect x="11" y="1" width="3" height="1"/>
+        <!-- continuous parapet line under merlons -->
+        <rect x="1" y="4" width="14" height="1"/>
+        <!-- tower side outlines -->
+        <rect x="1" y="5" width="1" height="10"/>
+        <rect x="14" y="5" width="1" height="10"/>
+        <!-- base / ground line -->
+        <rect x="1" y="15" width="14" height="1"/>
+      </g>
       <g fill="${fill}">
-        <!-- battlements (4 merlons) -->
-        <rect x="1" y="3" width="2" height="2"/>
-        <rect x="5" y="3" width="2" height="2"/>
-        <rect x="9" y="3" width="2" height="2"/>
-        <rect x="13" y="3" width="2" height="2"/>
-        <!-- main wall body -->
-        <rect x="1" y="5" width="14" height="8"/>
+        <!-- merlon bodies -->
+        <rect x="2" y="2" width="3" height="2"/>
+        <rect x="6" y="2" width="4" height="2"/>
+        <rect x="11" y="2" width="3" height="2"/>
+        <!-- tower body -->
+        <rect x="2" y="5" width="12" height="10"/>
       </g>
       <g fill="${stroke}">
-        <!-- top edge / merlon shadow -->
-        <rect x="1" y="5" width="14" height="1"/>
-        <!-- arrow slit (vertical, center) -->
-        <rect x="7" y="6" width="2" height="4"/>
-        <!-- mortar line / horizontal bricks -->
-        <rect x="1" y="9" width="14" height="1"/>
-        <!-- bottom shadow -->
-        <rect x="1" y="12" width="14" height="1"/>
-        <!-- side outline -->
-        <rect x="0" y="3" width="1" height="10"/>
-        <rect x="15" y="3" width="1" height="10"/>
+        <!-- arrow slits (two flanking) -->
+        <rect x="4" y="7" width="1" height="3"/>
+        <rect x="11" y="7" width="1" height="3"/>
+        <!-- mortar / brick band across middle -->
+        <rect x="2" y="11" width="12" height="1"/>
+        <!-- arched gateway -->
+        <rect x="7" y="10" width="2" height="1"/>
+        <rect x="6" y="11" width="4" height="4"/>
       </g>
     </svg>`;
   }
