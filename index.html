@@ -5861,15 +5861,20 @@ waveHudEl.addEventListener('dblclick', () => {
   if (gameOver || paused) return;
   if (_activeMidEvent) return;                      // don't skip past a decision modal
   if (wavePhase !== 'resting') {
-    // Cancel the rest of this wave's spawn queue
-    waveSpawnsLeft = 0;
-    // Compute this wave's gold reward (same formula as endWave) and DEFER it
-    // until the last enemy from this wave actually dies. If no enemies of this
-    // wave are on the field (skipped before any spawned, OR they all already
-    // died and the resting transition just hasn't happened yet), the reward
-    // is FORFEIT — pay nothing. This closes the spam-skip exploit cleanly:
-    // you can only collect a wave's gold by fighting at least one of its
-    // enemies.
+    // FORCE-SPAWN everything still queued for this wave, all at once. Players
+    // expect a wave's full roster to actually show up — and binding the
+    // deferred reward to a real living count of enemies is what closes the
+    // spam-skip exploit (you literally cannot collect the gold until that
+    // count drops to zero by killing them).
+    while (waveSpawnsLeft > 0) {
+      const isBossSpawn = (wave % 10 === 0) && !bossSpawned;
+      spawnEnemy(wave, isBossSpawn);
+      if (isBossSpawn) bossSpawned = true;
+      waveSpawnsLeft--;
+    }
+    // Now defer this wave's gold reward — bound to every enemy of this wave
+    // currently alive (which is now ALL of them, since we just force-spawned
+    // any missing ones).
     const aliveFromThisWave = enemies.reduce((n, e) => n + ((e.spawnedAtWave === wave && e.hp > 0) ? 1 : 0), 0);
     if (aliveFromThisWave > 0) {
       const reward = Math.floor((3 + wave * 2) * effects.waveRewardMul * (1 + (runState.waveRewardBonus || 0)));
@@ -5877,9 +5882,6 @@ waveHudEl.addEventListener('dblclick', () => {
       if (typeof spawnFloatingText === 'function') {
         spawnFloatingText(WALL_W + 12, H / 2 + 10, '+' + reward + 'g held \u00b7 W' + wave, '#a89070');
       }
-    } else if (typeof spawnFloatingText === 'function') {
-      // Visual feedback for the forfeit so the player knows why they got nothing
-      spawnFloatingText(WALL_W + 12, H / 2 + 10, 'reward forfeit \u00b7 W' + wave, '#a8413a');
     }
     // Non-gold bookkeeping that endWave would normally do
     totalWavesCleared++;
