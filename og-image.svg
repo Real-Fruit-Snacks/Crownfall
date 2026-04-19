@@ -366,9 +366,9 @@
   </defs>
 
   <!-- soft dark band behind the plate so it reads against the scene -->
-  <rect x="0" y="420" width="1200" height="210" fill="rgba(10,6,2,0.65)"/>
+  <rect x="0" y="415" width="1200" height="215" fill="rgba(10,6,2,0.65)"/>
 
-  <g transform="translate(120, 440)">
+  <g transform="translate(120, 425)">
     <!-- triple-inset chunky pixel border -->
     <rect x="-6" y="-6" width="972" height="172" fill="#1a0c00"/>
     <rect x="0"  y="0"  width="960" height="160" fill="#6a4528"/>
@@ -392,8 +392,8 @@
           letter-spacing="5">AN INCREMENTAL DEFENSE</text>
   </g>
 
-  <!-- Tagline at very bottom (x shifted +1.5 to compensate for trailing letter-spacing) -->
-  <text x="601.5" y="600"
+  <!-- Tagline below the title plate (x shifted +1.5 to compensate for trailing letter-spacing) -->
+  <text x="601.5" y="614"
         text-anchor="middle"
         font-family="'Press Start 2P', 'Courier New', monospace"
         font-size="14"
