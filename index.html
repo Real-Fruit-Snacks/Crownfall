@@ -797,6 +797,15 @@
     color: #ffe080;
     box-shadow: inset 0 0 0 2px #ffd060, inset 0 0 0 4px #1a0c00, 4px 4px 0 0 #1a0c00;
   }
+  #title-overlay .title-actions .prestige-btn {
+    color: #ffd060;
+    background: #4a2a0a;
+    box-shadow: inset 0 0 0 2px #c89030, inset 0 0 0 4px #1a0c00, 3px 3px 0 0 #1a0c00;
+  }
+  #title-overlay .title-actions .prestige-btn:hover {
+    color: #ffe080;
+    box-shadow: inset 0 0 0 2px #ffd060, inset 0 0 0 4px #1a0c00, 4px 4px 0 0 #1a0c00;
+  }
   #title-overlay .title-daily-best {
     margin-top: 12px;
     color: #c89030;
@@ -807,6 +816,172 @@
     text-align: center;
   }
   #title-overlay .title-daily-best b { color: #ffd060; }
+
+  /* PRESTIGE OVERLAY — crown-themed meta progression */
+  #prestige-overlay {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(48,24,8,0.92) 0%, rgba(14,7,3,0.96) 80%);
+    z-index: 48;
+    font-family: 'Pixelify Sans', monospace;
+  }
+  #prestige-overlay.show { display: flex; }
+  #prestige-overlay .prestige-card {
+    position: relative;
+    background: #2a1a08;
+    color: #e8d9b8;
+    padding: 22px 28px 18px;
+    max-width: 640px;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow:
+      inset 0 0 0 3px #c89030,
+      inset 0 0 0 6px #1a0c00,
+      6px 6px 0 0 rgba(0,0,0,0.85);
+  }
+  #prestige-overlay .prestige-banner {
+    background: #3a2616;
+    padding: 12px 14px 8px;
+    margin-bottom: 14px;
+    text-align: center;
+    box-shadow: inset 0 0 0 2px #c89030, inset 0 0 0 4px #1a0c00;
+    color: #ffd060;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 0 #1a0c00;
+  }
+  #prestige-overlay .prestige-banner .sub {
+    display: block;
+    color: #c89030;
+    font-size: 9px;
+    letter-spacing: 2px;
+    margin-top: 6px;
+    text-shadow: 1px 1px 0 #1a0c00;
+  }
+  #prestige-overlay .prestige-hud {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px;
+    background: #1f1106;
+    box-shadow: inset 0 0 0 2px #6a4528, inset 0 0 0 4px #1a0c00;
+  }
+  #prestige-overlay .prestige-hud .hud-row {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+  }
+  #prestige-overlay .prestige-hud .hud-lbl {
+    color: #a89070;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  #prestige-overlay .prestige-hud b {
+    color: #ffd060;
+    font-size: 15px;
+    letter-spacing: 1px;
+  }
+  #prestige-overlay .prestige-blurb {
+    color: #c0b090;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    background: #1a0c00;
+    box-shadow: inset 0 0 0 1px #4a352a;
+  }
+  #prestige-overlay .prestige-blurb .hl { color: #ffd060; font-weight: bold; }
+  #prestige-overlay .prestige-blurb .warn { color: #ff8070; }
+  #prestige-overlay .prestige-tree {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  #prestige-overlay .p-node {
+    padding: 8px 10px;
+    background: #1f1106;
+    box-shadow: inset 0 0 0 2px #4a352a;
+    cursor: pointer;
+    transition: transform 0.06s, box-shadow 0.06s;
+  }
+  #prestige-overlay .p-node:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: inset 0 0 0 2px #c89030, 3px 3px 0 0 #1a0c00;
+  }
+  #prestige-overlay .p-node.owned { box-shadow: inset 0 0 0 2px #6a8a30; }
+  #prestige-overlay .p-node.maxed { box-shadow: inset 0 0 0 2px #6a8a30; opacity: 0.75; cursor: default; }
+  #prestige-overlay .p-node.maxed:hover { transform: none; box-shadow: inset 0 0 0 2px #6a8a30; }
+  #prestige-overlay .p-node.too-expensive { opacity: 0.55; cursor: not-allowed; }
+  #prestige-overlay .p-node.too-expensive:hover { transform: none; box-shadow: inset 0 0 0 2px #4a352a; }
+  #prestige-overlay .p-node .p-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 3px;
+  }
+  #prestige-overlay .p-node .p-name {
+    color: #f5d889;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+  #prestige-overlay .p-node .p-cost {
+    color: #ffd060;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+  #prestige-overlay .p-node .p-desc {
+    color: #a89070;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  #prestige-overlay .p-node .p-stacks {
+    color: #c89030;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    letter-spacing: 1px;
+    margin-top: 3px;
+  }
+  #prestige-overlay .prestige-actions {
+    display: flex; gap: 10px; justify-content: center;
+  }
+  #prestige-overlay button {
+    background: #3a2616;
+    color: #f5d889;
+    border: 0; cursor: pointer;
+    padding: 10px 20px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px; letter-spacing: 1.5px;
+    box-shadow: inset 0 0 0 2px #6a4528, inset 0 0 0 4px #1a0c00, 3px 3px 0 0 #1a0c00;
+    transition: transform 0.06s, box-shadow 0.06s;
+  }
+  #prestige-overlay button:hover {
+    transform: translate(-1px,-1px);
+    box-shadow: inset 0 0 0 2px #ffd060, inset 0 0 0 4px #1a0c00, 4px 4px 0 0 #1a0c00;
+  }
+  #prestige-overlay button:disabled {
+    opacity: 0.4; cursor: not-allowed;
+    transform: none !important;
+  }
+  #prestige-overlay button.danger {
+    color: #ff8070; box-shadow: inset 0 0 0 2px #a8413a, inset 0 0 0 4px #1a0c00, 3px 3px 0 0 #1a0c00;
+  }
+  #prestige-overlay button.danger:hover {
+    color: #ffa090; box-shadow: inset 0 0 0 2px #d47070, inset 0 0 0 4px #1a0c00, 4px 4px 0 0 #1a0c00;
+  }
+  #prestige-overlay button.close {
+    background: transparent;
+    color: #8a7a60;
+    box-shadow: inset 0 0 0 2px #4a352a;
+  }
+  #prestige-overlay button.close:hover {
+    color: #c0b090;
+    box-shadow: inset 0 0 0 2px #6a5a3a;
+    transform: none;
+  }
 
   /* WELCOME CARD — first-time intro modal */
   #welcome-overlay {
@@ -2041,6 +2216,7 @@
         <button onclick="pauseOpenStats()">Stats</button>
         <button onclick="pauseOpenSettings()">Settings</button>
         <button onclick="pauseOpenTitle()">Main Menu</button>
+        <button id="pause-prestige-btn" style="display:none" onclick="pauseOpenPrestige()">Prestige</button>
         <button onclick="pauseEndRun()">End Run</button>
       </div>
       <div class="hint">Press SPACE or ESC to resume</div>
@@ -2111,11 +2287,32 @@
       <div class="title-actions">
         <button onclick="titlePlay()">PLAY</button>
         <button class="daily-btn" onclick="titleStartDaily()">TODAY&rsquo;S CHALLENGE</button>
+        <button id="title-prestige-btn" class="prestige-btn" style="display:none" onclick="titleOpenPrestige()">PRESTIGE</button>
         <button onclick="titleOpenResearch()">RESEARCH</button>
         <button onclick="titleOpenSettings()">SETTINGS</button>
       </div>
       <div class="title-daily-best" id="title-daily-best"></div>
       <div class="title-foot">v9 &middot; click anywhere to begin</div>
+    </div>
+  </div>
+
+  <div id="prestige-overlay">
+    <div class="prestige-card">
+      <div class="prestige-banner">
+        &#9818; PRESTIGE
+        <span class="sub">A CROWN FOR A CROWN</span>
+      </div>
+      <div class="prestige-hud">
+        <div class="hud-row"><span class="hud-lbl">Crown Shards</span><b id="pr-shards">0</b></div>
+        <div class="hud-row"><span class="hud-lbl">Times Prestiged</span><b id="pr-count">0</b></div>
+        <div class="hud-row"><span class="hud-lbl">Next prestige gives</span><b id="pr-next">+0 shards</b></div>
+      </div>
+      <div class="prestige-blurb" id="prestige-blurb"></div>
+      <div class="prestige-tree" id="prestige-tree"></div>
+      <div class="prestige-actions">
+        <button class="danger prestige-go-btn" id="prestige-go-btn" onclick="doPrestige()">Prestige Now</button>
+        <button class="close" onclick="closePrestige()">Close</button>
+      </div>
     </div>
   </div>
 
@@ -2957,7 +3154,8 @@ function currentRpEarned() {
   const fromKills  = Math.floor(totalKills / 60);
   const base = fromWaves + fromBosses + fromKills;
   const scaled = Math.floor(base * (effects.rpMul || 1));
-  return Math.max(0, scaled + (runState.rpBonus || 0));
+  // Prestige "Scholar's Mind" adds flat RP per run (stacks)
+  return Math.max(0, scaled + (runState.rpBonus || 0) + (effects.rpFlatBonus || 0));
 }
 
 let pendingNewRun = false;
@@ -3117,6 +3315,11 @@ window.resetRun = function (opts) {
   updateUI();
   // Place all unlocked field hazards (deterministic per run)
   if (typeof placeHazards === 'function') placeHazards();
+  // Prestige bonus: Veteran Squad — slot 1 starts with a free Archer already hired
+  if (effects.autoHireSlot0 && SLOTS[0] && !SLOTS[0].filled && typeof makeHero === 'function') {
+    SLOTS[0].filled = true;
+    SLOTS[0].hero   = makeHero('archer');
+  }
   startWave(effects.startingWave || 1);
   // Let commanders auto-hire / imbue / upgrade with the starting purse
   if (typeof runCommanderAutomation === 'function') runCommanderAutomation();
@@ -3363,6 +3566,58 @@ let research = {
   disabled:     new Set(),     // owned + toggleable nodes the player has switched OFF
   repeatCounts: {}             // current stack count per repeatable node id
 };
+
+// ---------- PRESTIGE ----------
+// A meta-layer above research: after reaching a milestone in total-RP-earned,
+// the player can PRESTIGE, wiping research progress in exchange for Crown Shards
+// that buy permanent bonuses applied to every future run.
+let prestige = {
+  shards:             0,   // current spendable shards
+  totalShardsEarned:  0,   // lifetime shards
+  prestigeCount:      0,   // number of times prestiged
+  purchased:          {}   // { bonusId: stackCount }
+};
+const PRESTIGE_UNLOCK_RP = 500;   // totalRp threshold to unlock the feature
+function prestigeShardsFor(totalRp) {
+  return Math.max(1, Math.floor(Math.sqrt(totalRp / 50)));
+}
+function loadPrestige() {
+  try {
+    const raw = localStorage.getItem('castlePrestige');
+    if (!raw) return;
+    const p = JSON.parse(raw);
+    prestige.shards            = p.shards            || 0;
+    prestige.totalShardsEarned = p.totalShardsEarned || 0;
+    prestige.prestigeCount     = p.prestigeCount     || 0;
+    prestige.purchased         = p.purchased         || {};
+  } catch {}
+}
+function savePrestige() {
+  try { localStorage.setItem('castlePrestige', JSON.stringify(prestige)); } catch {}
+}
+
+const PRESTIGE_BONUSES = [
+  { id: 'royalPurse',      name: 'Royal Purse',       cost: 1,  desc: '+50 starting gold per run.',
+    effect: { startGold: 50 } },
+  { id: 'veteranSquad',    name: 'Veteran Squad',     cost: 2,  desc: 'Slot 1 starts each run with an Archer already hired.',
+    effect: { autoHireSlot0: true } },
+  { id: 'sharpenedEdge',   name: 'Sharpened Edge',    cost: 3,  desc: '+5% hero damage (stacks up to 5).', maxStacks: 5,
+    effect: { dmgMul: 0.05 } },
+  { id: 'quickCoffers',    name: 'Quick Coffers',     cost: 3,  desc: '+10% wave-clear gold (stacks up to 5).', maxStacks: 5,
+    effect: { waveRewardMul: 0.10 } },
+  { id: 'reinforcedWalls', name: 'Reinforced Walls',  cost: 3,  desc: '+25 starting wall HP (stacks up to 4).', maxStacks: 4,
+    effect: { wallHp: 25 } },
+  { id: 'scholarsMind',    name: 'Scholar\u2019s Mind', cost: 2,  desc: '+1 flat RP banked at end of run (stacks up to 5).', maxStacks: 5,
+    effect: { rpFlatBonus: 1 } },
+  { id: 'sovereignsFavor', name: 'Sovereign\u2019s Favor', cost: 5, desc: 'Bosses drop +1 Crown.',
+    effect: { bossCrownAdd: 1 } },
+  { id: 'echoOfConquest',  name: 'Echo of Conquest',  cost: 8,  desc: 'Start each run at wave 5 instead of 1.',
+    effect: { startingWave: 5 } },
+  { id: 'goldenTouch',     name: 'Golden Touch',      cost: 10, desc: 'Base kill-gold permanently doubled.',
+    effect: { killGoldMul: 2 } },
+  { id: 'crownedLegacy',   name: 'Crowned Legacy',    cost: 10, desc: '+1% hero damage per prior prestige (stacks up to 5).', maxStacks: 5,
+    effect: { dmgMulPerPrestige: 0.01 } }
+];
 // Per-run flags reset each run (not persisted)
 let runState = {
   crownsThisRun: 0,
@@ -3575,6 +3830,27 @@ function applyResearch() {
       if (newTier > curTier) effects.wallMaterial = e.wallMaterial;
     }
   }
+  // ----- PRESTIGE BONUSES layered on TOP of research -----
+  effects.autoHireSlot0 = false;
+  effects.killGoldMul   = 1;
+  effects.rpFlatBonus   = 0;
+  for (const b of PRESTIGE_BONUSES) {
+    const stacks = prestige.purchased[b.id] || 0;
+    if (stacks === 0) continue;
+    const pe = b.effect || {};
+    if (pe.startGold)      effects.startGold     += pe.startGold      * stacks;
+    if (pe.dmgMul)         effects.dmgMul        += pe.dmgMul         * stacks;
+    if (pe.waveRewardMul)  effects.waveRewardMul += pe.waveRewardMul  * stacks;
+    if (pe.wallHp)         effects.wallMaxHp     += pe.wallHp         * stacks;
+    if (pe.rpFlatBonus)    effects.rpFlatBonus   += pe.rpFlatBonus    * stacks;
+    if (pe.bossCrownAdd)   effects.bossCrownAdd  += pe.bossCrownAdd   * stacks;
+    if (pe.startingWave)   effects.startingWave  = Math.max(effects.startingWave, pe.startingWave);
+    if (pe.autoHireSlot0)  effects.autoHireSlot0 = true;
+    if (pe.killGoldMul)    effects.killGoldMul   *= pe.killGoldMul;          // multiplicative
+    if (pe.dmgMulPerPrestige) effects.dmgMul     += pe.dmgMulPerPrestige * stacks * prestige.prestigeCount;
+  }
+  // Apply multiplicative killGold AFTER research additions
+  effects.killGold = Math.max(1, Math.floor(effects.killGold * effects.killGoldMul));
 }
 
 function saveResearch() {
@@ -8822,6 +9098,113 @@ window.settingsWipe = function () {
 };
 
 // =====================================================================
+//  PRESTIGE MODULE — overlay, tree render, buy, wipe-and-credit action
+// =====================================================================
+const prestigeEl = document.getElementById('prestige-overlay');
+
+function prestigeIsUnlocked() {
+  return (research.totalRp || 0) >= PRESTIGE_UNLOCK_RP || prestige.prestigeCount > 0;
+}
+
+window.openPrestige = function () {
+  if (!prestigeIsUnlocked()) return;
+  renderPrestige();
+  prestigeEl.classList.add('show');
+  Audio.sfx.click && Audio.sfx.click();
+};
+window.closePrestige = function () {
+  prestigeEl.classList.remove('show');
+};
+
+function renderPrestige() {
+  document.getElementById('pr-shards').textContent = prestige.shards;
+  document.getElementById('pr-count').textContent  = prestige.prestigeCount;
+  const wouldGive = prestigeShardsFor(research.totalRp || 0);
+  document.getElementById('pr-next').textContent = '+' + wouldGive + ' shards';
+  // Blurb explaining current state
+  const blurb = document.getElementById('prestige-blurb');
+  if (prestige.prestigeCount === 0) {
+    blurb.innerHTML = '<span class="hl">First prestige!</span> Prestiging resets all research, RP, Crowns, and purchased nodes. In exchange you earn <span class="hl">Crown Shards</span> to spend on permanent bonuses that apply to every future run. Stats and achievements are kept.';
+  } else {
+    blurb.innerHTML = 'You have prestiged <span class="hl">' + prestige.prestigeCount + '</span> time' + (prestige.prestigeCount === 1 ? '' : 's') + '. <span class="warn">Prestiging again wipes your current research and Crowns.</span> Stats and previously-purchased prestige bonuses are kept.';
+  }
+  // Tree
+  const tree = document.getElementById('prestige-tree');
+  tree.innerHTML = PRESTIGE_BONUSES.map(b => {
+    const stacks = prestige.purchased[b.id] || 0;
+    const max    = b.maxStacks || 1;
+    const atMax  = stacks >= max;
+    const canBuy = !atMax && prestige.shards >= b.cost;
+    const stateClass = atMax ? 'maxed' : (stacks > 0 ? 'owned' : '') + (canBuy ? '' : ' too-expensive');
+    const stackLine = (max > 1)
+      ? `<div class="p-stacks">${stacks} / ${max}</div>`
+      : (stacks > 0 ? `<div class="p-stacks">OWNED</div>` : '');
+    const clickAttr = atMax ? '' : `onclick="buyPrestigeBonus('${b.id}')"`;
+    return `<div class="p-node ${stateClass}" ${clickAttr}>
+      <div class="p-head">
+        <span class="p-name">${b.name}</span>
+        <span class="p-cost">${atMax ? 'MAX' : b.cost + '\u25C6'}</span>
+      </div>
+      <div class="p-desc">${b.desc}</div>
+      ${stackLine}
+    </div>`;
+  }).join('');
+  // Prestige-now button: disable if there's nothing to prestige for
+  const goBtn = document.getElementById('prestige-go-btn');
+  const canPrestige = (research.totalRp || 0) >= PRESTIGE_UNLOCK_RP;
+  goBtn.disabled = !canPrestige;
+  goBtn.textContent = canPrestige
+    ? 'Prestige Now (+' + wouldGive + ' \u25C6)'
+    : 'Need ' + PRESTIGE_UNLOCK_RP + ' total RP earned';
+}
+
+window.buyPrestigeBonus = function (id) {
+  const b = PRESTIGE_BONUSES.find(x => x.id === id);
+  if (!b) return;
+  const stacks = prestige.purchased[id] || 0;
+  const max    = b.maxStacks || 1;
+  if (stacks >= max) return;
+  if (prestige.shards < b.cost) return;
+  prestige.shards -= b.cost;
+  prestige.purchased[id] = stacks + 1;
+  savePrestige();
+  applyResearch();
+  Audio.sfx.research && Audio.sfx.research();
+  renderPrestige();
+};
+
+window.doPrestige = function () {
+  const gain = prestigeShardsFor(research.totalRp || 0);
+  if ((research.totalRp || 0) < PRESTIGE_UNLOCK_RP) return;
+  window.showConfirm({
+    title:    'Prestige?',
+    message:  'This wipes ALL research nodes, banked RP, and Crowns. You will gain ' + gain + ' Crown Shards to spend on permanent bonuses. Your stats and prestige bonuses are kept. Continue?',
+    yesLabel: 'Prestige (+' + gain + ' \u25C6)',
+    danger:   true,
+    onYes: () => {
+      // Credit shards
+      prestige.shards            += gain;
+      prestige.totalShardsEarned += gain;
+      prestige.prestigeCount     += 1;
+      savePrestige();
+      // Wipe research
+      research = { rp: 0, totalRp: 0, crowns: 0, totalCrowns: 0,
+                   purchased: new Set(['root']), disabled: new Set(), repeatCounts: {} };
+      try { localStorage.removeItem('castleResearch'); } catch {}
+      // Re-apply effects (now with fresh research + existing prestige bonuses)
+      applyResearch();
+      // Re-render research if it's open
+      if (typeof renderResearch === 'function') renderResearch();
+      // Stats bump
+      bumpStat('prestiges', 1);
+      // Reset current run and re-render prestige
+      window.resetRun();
+      renderPrestige();
+    }
+  });
+};
+
+// =====================================================================
 //  SAVE EXPORT / IMPORT — base64-encoded JSON of all castle* localStorage keys
 // =====================================================================
 const SAVE_FORMAT = 'crownfall-save-v1';
@@ -8957,9 +9340,15 @@ window.addEventListener('keydown', (e) => {
 loadResearch();
 loadStats();
 loadCommanders();
+loadPrestige();
 applyResearch();
 gold   = effects.startGold;
 wallHP = effects.wallMaxHp;
+// Prestige bonus: Veteran Squad — auto-hire slot 0 on boot if owned
+if (effects.autoHireSlot0 && SLOTS[0] && !SLOTS[0].filled && typeof makeHero === 'function') {
+  SLOTS[0].filled = true;
+  SLOTS[0].hero   = makeHero('archer');
+}
 startWave(effects.startingWave || 1);
 resize();
 updateUI();
@@ -8974,6 +9363,7 @@ const welcomeEl = document.getElementById('welcome-overlay');
 window.titlePlay         = function () { hideTitle(true); };
 window.titleOpenResearch = function () { hideTitle(false); window.openResearch(); };
 window.titleOpenSettings = function () { hideTitle(false); window.openSettings(); };
+window.titleOpenPrestige = function () { titleEl.classList.remove('show'); try { localStorage.setItem('castleSeenTitle', '1'); } catch {} Audio.init(); window.openPrestige(); };
 window.titleStartDaily   = function () {
   // Drop title overlay, dismiss any welcome card, then kick off a seeded run
   titleEl.classList.remove('show');
@@ -8996,6 +9386,9 @@ function refreshTitleDailyBest() {
   } else {
     el.innerHTML = 'No daily attempt yet today.';
   }
+  // Show Prestige button only once unlocked
+  const prestigeBtn = document.getElementById('title-prestige-btn');
+  if (prestigeBtn) prestigeBtn.style.display = prestigeIsUnlocked() ? '' : 'none';
 }
 function hideTitle(playing) {
   titleEl.classList.remove('show');
@@ -9289,12 +9682,16 @@ window.togglePause = function () {
   if (paused) { exitPause(); Audio.sfx.click && Audio.sfx.click(); return; }
   paused = true;
   refreshPauseStats();
+  // Show the Prestige button only if the feature is unlocked
+  const prBtn = document.getElementById('pause-prestige-btn');
+  if (prBtn) prBtn.style.display = prestigeIsUnlocked() ? '' : 'none';
   pauseOverlayEl.classList.add('show');
   _pauseStatsT = setInterval(refreshPauseStats, 250);
   Audio.sfx.click && Audio.sfx.click();
 };
 window.pauseOpenResearch = function () { exitPause(); window.openResearch(); };
 window.pauseOpenSettings = function () { exitPause(); window.openSettings(); };
+window.pauseOpenPrestige = function () { exitPause(); window.openPrestige(); };
 window.pauseEndRun       = function () { exitPause(); endRunForResearch(); };
 window.pauseOpenTitle    = function () {
   exitPause();
