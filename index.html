@@ -169,6 +169,11 @@
   .tb-block.rp { cursor: pointer; transition: background 0.08s; }
   .tb-block.rp:hover { background: rgba(245,160,64,0.14); }
   .tb-block.rp:hover .tb-big { color: #ffba60; }
+  /* Wave block is interactive at any time — double-click to skip ahead.
+     Cursor + hover highlight always visible so players see it's clickable. */
+  .tb-block.wave { cursor: pointer; transition: background 0.08s; }
+  .tb-block.wave:hover { background: rgba(120,200,255,0.10); }
+  .tb-block.wave:hover .tb-state { color: #80c8ff; }
   #gameover { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(10,6,2,0.88); z-index: 30; animation: fadein 0.3s; font-family: 'Pixelify Sans', monospace; }
   #gameover.show { display: flex; }
   #gameover .card {
@@ -2156,7 +2161,7 @@
         <div class="bar"><div id="wallhp-fill" class="fill" style="width:100%"></div></div>
       </div>
     </div>
-    <div class="tb-block wave" id="wavehud">
+    <div class="tb-block wave" id="wavehud" title="Double-click to skip to the next wave (works mid-fight too)">
       <div class="tb-label">Wave</div>
       <div class="tb-big" id="wave-num">1</div>
       <div class="tb-state" id="wave-state">incoming</div>
@@ -5811,6 +5816,31 @@ runRpRowEl.addEventListener('click', () => {
     onYes:    () => endRunForResearch()
   });
 });
+
+// Double-click the WAVE block at ANY time to advance to the next wave.
+//   - During rest: just collapse the rest timer to 0.
+//   - During spawning/active: clear the remaining spawn queue + any living
+//     enemies + their projectiles, grant the wave-clear reward (so you're
+//     not penalized for skipping), then collapse the rest timer.
+// The loop's normal 'resting -> startWave(wave+1)' transition handles the
+// actual hand-off on its next tick.
+waveHudEl.addEventListener('dblclick', () => {
+  if (gameOver || paused) return;
+  if (_activeMidEvent) return;                      // mid-event modal is open — don't skip past it
+  if (wavePhase !== 'resting') {
+    waveSpawnsLeft = 0;
+    enemies.length = 0;
+    if (typeof enemyProjectiles !== 'undefined') enemyProjectiles.length = 0;
+    wavePhase = 'active';                           // ensure endWave's preconditions are met
+    if (typeof endWave === 'function') endWave();   // gold + totalWavesCleared + sets resting state
+  }
+  waveRestTimer = 0;                                // skip the rest no matter how we got here
+  Audio.sfx.click && Audio.sfx.click();
+  if (typeof updateWaveHud === 'function') updateWaveHud();
+});
+// Suppress double-click text-selection on the wave block (default browser
+// behavior of selecting "Wave 5" / "incoming" looks ugly mid-click)
+waveHudEl.addEventListener('mousedown', e => { if (e.detail > 1) e.preventDefault(); });
 
 function updateWaveHud() {
   waveNumEl.textContent = wave;
