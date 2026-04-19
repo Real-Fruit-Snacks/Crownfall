@@ -1062,6 +1062,8 @@
     border: 0; border-radius: 0;
     padding: 22px 26px;
     min-width: 340px; max-width: 460px;
+    max-height: 92vh;
+    overflow-y: auto;
     color: #e8d9b8;
     font-family: 'Pixelify Sans', monospace;
     font-size: 14px;
@@ -1745,6 +1747,92 @@
   #gameover .research-btn:hover { box-shadow: inset 0 0 0 2px #f5d889, 4px 4px 0 0 #1a0c00; }
   #gameover .actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
   #gameover .actions button { margin-top: 0; }
+
+  /* ==========================================================================
+     LANDSCAPE PHONE BREAKPOINT — viewport heights of common phone landscapes
+     are ~320-430px. Compact every overlay so it fits without overflowing
+     and stays scrollable when content is long. The game is landscape-only
+     (a #rotate prompt covers portrait), so we don't need a portrait branch.
+     ========================================================================== */
+  @media (max-height: 500px) {
+    /* Overlays scroll at the OVERLAY level on short viewports — flex centering
+       can push tall cards above the viewport, so swap to top-aligned + scroll. */
+    #title-overlay, #welcome-overlay, #settings-overlay, #confirm-overlay,
+    #stats-overlay, #commander-overlay, #midevent-overlay, #gameover {
+      align-items: flex-start;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    /* Top-right + top-left buttons shrink slightly */
+    #help-btn, #pause-btn { width: 36px; height: 36px; top: 6px; }
+    #help-btn { right: 54px; font-size: 14px; }
+    #pause-btn { right: 10px; }
+    #gold { padding: 4px 10px; font-size: 12px; top: 6px; left: 6px; }
+    #gold .icon { width: 14px; height: 14px; }
+
+    /* Topbar tightens */
+    #topbar { top: 6px; padding: 2px; }
+    .tb-block { padding: 5px 9px; gap: 5px; }
+    .tb-label { font-size: 8px; }
+    .tb-num   { font-size: 13px; }
+    .tb-big   { font-size: 16px; }
+    .tb-state { font-size: 8px; }
+    .tb-block .icon { width: 16px; height: 18px; }
+
+    /* Title card (logo screen) */
+    #title-overlay .title-card { padding: 14px 22px 12px; max-height: 96vh; overflow-y: auto; }
+    #title-overlay .title-banner { padding: 10px 14px 8px; margin-bottom: 10px; }
+    #title-overlay .title-logo-line { font-size: 24px; letter-spacing: 3px; }
+    #title-overlay .title-logo-sub  { font-size: 9px;  letter-spacing: 2px; margin-top: 6px; }
+    #title-overlay .title-sub  { font-size: 11px; margin-bottom: 10px; }
+    #title-overlay .title-foot { margin-top: 8px; font-size: 9px; }
+    #title-overlay .title-actions { gap: 6px; }
+    #title-overlay .title-actions button { padding: 8px 16px; font-size: 11px; }
+
+    /* Welcome card (intro modal) */
+    #welcome-overlay .welcome-card { padding: 14px 20px 14px; max-height: 96vh; }
+    #welcome-overlay .welcome-banner { padding: 10px 12px 7px; margin-bottom: 10px; font-size: 14px; letter-spacing: 2px; }
+    #welcome-overlay .welcome-banner .sub { font-size: 8px; margin-top: 5px; }
+    #welcome-overlay .welcome-section { margin-bottom: 8px; }
+    #welcome-overlay .welcome-section h3 { font-size: 9px; margin-bottom: 4px; }
+    #welcome-overlay .welcome-section p  { font-size: 12px; line-height: 1.4; }
+    #welcome-overlay .welcome-controls { padding: 6px 8px; gap: 4px 10px; font-size: 11px; }
+    #welcome-overlay .welcome-controls .key { font-size: 8px; padding: 3px 6px; min-width: 32px; }
+    #welcome-overlay .welcome-actions { margin-top: 10px; gap: 8px; }
+    #welcome-overlay .welcome-actions button { padding: 8px 16px; font-size: 10px; letter-spacing: 1.5px; }
+
+    /* Settings overlay */
+    #settings-overlay .card { padding: 14px 18px; max-height: 96vh; }
+    #settings-overlay h2 { font-size: 14px; margin-bottom: 8px; padding-bottom: 6px; }
+    #settings-overlay .item { margin: 8px 0; }
+    #settings-overlay .item .name { font-size: 12px; margin-bottom: 2px; }
+    #settings-overlay .item .desc { font-size: 11px; margin-bottom: 6px; line-height: 1.35; }
+    #settings-overlay .item button { padding: 6px 12px; font-size: 11px; }
+    #settings-overlay .save-blob { height: 50px; font-size: 10px; }
+
+    /* Confirm modal */
+    #confirm-overlay .card { padding: 14px 18px; max-height: 90vh; }
+    #confirm-overlay h3 { font-size: 13px; margin-bottom: 8px; }
+    #confirm-overlay p  { font-size: 12px; margin-bottom: 12px; }
+    #confirm-overlay button { padding: 7px 14px; font-size: 11px; }
+
+    /* Game-over card */
+    #gameover .card { padding: 18px 22px; max-height: 92vh; overflow-y: auto; }
+    #gameover h2 { font-size: 18px; margin: 0 0 10px; }
+    #gameover .row { font-size: 12px; margin: 6px 0; }
+    #gameover .actions { margin-top: 12px; }
+    #gameover .actions button { padding: 8px 14px; font-size: 11px; }
+
+    /* Achievement popup — keep visible but smaller */
+    #ach-popup .ach-card { padding: 14px 18px; max-width: 90vw; }
+
+    /* Tutorial coachmark */
+    #tutorial-overlay .tut-box { width: 250px; padding: 10px 12px 10px; }
+    #tutorial-overlay .tut-text { font-size: 12px; line-height: 1.4; margin-bottom: 8px; }
+    #tutorial-overlay .tut-step { font-size: 8px; }
+    #tutorial-overlay .tut-wait { font-size: 7px; }
+    #tutorial-overlay button { padding: 5px 10px; font-size: 9px; }
+  }
 </style>
 </head>
 <body>
