@@ -4055,22 +4055,52 @@ function shapeSvg(kind, fill, stroke) {
     </svg>`;
   }
   if (kind === 'clerics') {
-    // SUN-CROSS emblem
+    // CHALICE crowned by a HOLY CROSS
     return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges">
       <g fill="${stroke}">
-        <!-- vertical arm -->
-        <rect x="6" y="2" width="4" height="12"/>
-        <!-- horizontal arm -->
-        <rect x="2" y="6" width="12" height="4"/>
-        <!-- corner rays -->
-        <rect x="1" y="1" width="2" height="2"/>
-        <rect x="13" y="1" width="2" height="2"/>
-        <rect x="1" y="13" width="2" height="2"/>
-        <rect x="13" y="13" width="2" height="2"/>
+        <!-- cross vertical arm -->
+        <rect x="7" y="0" width="2" height="6"/>
+        <!-- cross horizontal arm -->
+        <rect x="5" y="2" width="6" height="2"/>
+        <!-- chalice rim top -->
+        <rect x="1" y="6" width="14" height="1"/>
+        <!-- chalice rim walls -->
+        <rect x="1" y="7" width="1" height="1"/>
+        <rect x="14" y="7" width="1" height="1"/>
+        <!-- bowl outer walls (stepping inward) -->
+        <rect x="2" y="8" width="1" height="1"/>
+        <rect x="13" y="8" width="1" height="1"/>
+        <rect x="3" y="9" width="1" height="1"/>
+        <rect x="12" y="9" width="1" height="1"/>
+        <!-- bowl bottom curve into stem -->
+        <rect x="4" y="10" width="2" height="1"/>
+        <rect x="10" y="10" width="2" height="1"/>
+        <!-- stem sides -->
+        <rect x="6" y="11" width="1" height="2"/>
+        <rect x="9" y="11" width="1" height="2"/>
+        <!-- base top edge -->
+        <rect x="3" y="13" width="10" height="1"/>
+        <!-- base side walls -->
+        <rect x="3" y="14" width="1" height="1"/>
+        <rect x="12" y="14" width="1" height="1"/>
+        <!-- base bottom edge -->
+        <rect x="3" y="15" width="10" height="1"/>
       </g>
       <g fill="${fill}">
-        <rect x="7" y="3" width="2" height="10"/>
-        <rect x="3" y="7" width="10" height="2"/>
+        <!-- chalice rim interior -->
+        <rect x="2" y="7" width="12" height="1"/>
+        <!-- bowl body -->
+        <rect x="3" y="8" width="10" height="1"/>
+        <rect x="4" y="9" width="8" height="1"/>
+        <rect x="6" y="10" width="4" height="1"/>
+        <!-- stem core -->
+        <rect x="7" y="11" width="2" height="2"/>
+        <!-- base interior -->
+        <rect x="4" y="14" width="8" height="1"/>
+      </g>
+      <!-- holy rim shine -->
+      <g fill="#ffffff" opacity="0.7">
+        <rect x="3" y="7" width="2" height="1"/>
       </g>
     </svg>`;
   }
