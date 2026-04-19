@@ -5771,6 +5771,15 @@ const EVENT_WAVES = {
     chipColor: '#6aa030',
     sfx: () => { Audio.sfx.frost && Audio.sfx.frost(); },
     onSpawn: (e, w) => { e.eventPlague = true; }
+  },
+  siege: {
+    id: 'siege', name: 'Siege Engines', short: 'SIEGE',
+    blurb: 'Battering rams approach. Stop them before they reach the wall — each hit shakes the foundations.',
+    tint: 'rgba(60, 40, 20, 0.20)',
+    chipColor: '#7a4818',
+    countMul: 0,                  // suppress the normal spawn loop entirely
+    spawnRams: 2,                 // handled in the spawn loop: spawns N rams at staggered positions
+    sfx: () => { Audio.sfx.bossDie && Audio.sfx.bossDie(); }
   }
 };
 let currentEvent = null;          // EVENT_WAVES entry or null
@@ -5782,9 +5791,10 @@ function pickWaveEvent(w) {
   if (w % 10 === 0) return null;
   if (w < 4) return null;
   if (runRng.next() > 0.12) return null;
-  // weighted pick — Champion is rarer
+  // weighted pick — Champion + Siege are rarer; Siege only from wave 8 (it's brutal)
   const pool = ['bloodMoon','night','horde','plague'];
   if (runRng.next() < 0.20) pool.push('champion');
+  if (w >= 8 && runRng.next() < 0.18) pool.push('siege');
   return EVENT_WAVES[pool[Math.floor(runRng.next() * pool.length)]];
 }
 
@@ -5793,6 +5803,7 @@ function waveEnemyCount(w) {
   let n = 5 + Math.floor(w * 1.1);
   if (currentEvent) {
     if (currentEvent.spawnElite) return 1;
+    if (currentEvent.spawnRams)  return currentEvent.spawnRams + Math.floor(w / 12);  // 2 base, +1 every 12 waves
     if (currentEvent.countMul) n = Math.max(1, Math.floor(n * currentEvent.countMul));
   }
   return n;
@@ -8165,11 +8176,14 @@ const ENEMY_KINDS = {
   shielded: { hpMul: 1.6,  spdMul: 0.55, dmgMul: 1.2,  sizeMul: 1.05, armor: 2, coinMul: 1.4 },
   archer:   { hpMul: 0.7,  spdMul: 0.9,  dmgMul: 0,    sizeMul: 1.0,  armor: 0, coinMul: 1.3, ranged: true,  rangedDmgMul: 1.2, fireEvery: 2.2, stopDist: 90 },
   healer:   { hpMul: 0.9,  spdMul: 0.7,  dmgMul: 0.4,  sizeMul: 1.0,  armor: 0, coinMul: 1.6, healEvery: 1.4, healPctOfTargetMax: 0.05, healRadius: 32 },
-  witch:    { hpMul: 0.85, spdMul: 0.75, dmgMul: 0.8,  sizeMul: 1.05, armor: 1, coinMul: 1.7, auraRadius: 30, auraReduce: 0.5 }
+  witch:    { hpMul: 0.85, spdMul: 0.75, dmgMul: 0.8,  sizeMul: 1.05, armor: 1, coinMul: 1.7, auraRadius: 30, auraReduce: 0.5 },
+  // Battering ram — siege engine. Slow, very tanky, devastating wall damage.
+  // Mostly seen as a 10th-wave boss or during the SIEGE event.
+  ram:      { hpMul: 4.0,  spdMul: 0.4,  dmgMul: 5.0,  sizeMul: 1.5,  armor: 4, coinMul: 3.0 }
 };
 
 // Bosses every 10 waves — random kind from the same archetypes as minions
-const BOSS_KINDS = ['goblin', 'charger', 'shielded', 'archer', 'healer', 'witch'];
+const BOSS_KINDS = ['goblin', 'charger', 'shielded', 'archer', 'healer', 'witch', 'ram'];
 function pickBossKind(w) {
   return BOSS_KINDS[Math.floor(runRng.next() * BOSS_KINDS.length)];
 }
@@ -8401,7 +8415,14 @@ function spawnEnemy(w, asBoss) {
     x = WALL_W + 50 + Math.random() * (W - WALL_W - 60);
   }
 
-  const kind = asBoss ? pickBossKind(w) : pickEnemyKind(w);
+  // SIEGE event forces every spawn (non-boss) to be a ram. The waveEnemyCount
+  // already returns just 2-3 spawns for siege so this gives a "wave of rams".
+  let kind;
+  if (currentEvent && currentEvent.spawnRams && !asBoss) {
+    kind = 'ram';
+  } else {
+    kind = asBoss ? pickBossKind(w) : pickEnemyKind(w);
+  }
   const km = ENEMY_KINDS[kind];
   const s = enemyStats(w, asBoss);
 
@@ -8629,6 +8650,131 @@ function drawGoblin(e) {
   const lunge = e.lungeT > 0 ? -2 : 0;
   const px = Math.round(e.x) + lunge;
   const py = Math.round(e.y) + bob;
+
+  // ===== BATTERING RAM — completely custom render (siege engine on wheels) =====
+  if (e.kind === 'ram') {
+    const big = !!e.isBoss;            // boss ram is wider/taller than minion ram
+    const W2 = big ? 11 : 7;           // body half-extent (horizontal)
+    const H2 = big ? 4  : 3;           // body half-extent (vertical)
+    const headW = big ? 4 : 3;         // iron ram-head width
+    // Slow wheel-rotation animation: spokes flip every ~250ms
+    const wheelSpoke = (Math.floor(performance.now() / 250) + Math.floor(e.phase)) % 2;
+
+    // shadow under the cart
+    ctx.fillStyle = 'rgba(10,6,2,0.55)';
+    ctx.fillRect(px - W2 - 1, py + H2, W2 * 2 + 2, 1);
+
+    // Iron-banded log body — dark wood
+    ctx.fillStyle = '#3a1f10';
+    ctx.fillRect(px - W2, py - H2, W2 * 2, H2 * 2);
+    ctx.fillStyle = '#5a3018';   // mid-wood highlight (top half)
+    ctx.fillRect(px - W2, py - H2, W2 * 2, H2);
+    ctx.fillStyle = '#7a4a28';   // wood grain stripe
+    ctx.fillRect(px - W2 + 1, py - H2 + 1, W2 * 2 - 2, 1);
+    // Iron bands wrapping the log
+    ctx.fillStyle = '#3a3a40';
+    const bandPositions = big ? [-7, -3, 1, 5, 9] : [-4, -1, 2, 5];
+    for (const bx of bandPositions) {
+      if (px + bx > px - W2 && px + bx < px + W2) {
+        ctx.fillRect(px + bx, py - H2 - 1, 1, H2 * 2 + 1);
+      }
+    }
+    // Iron-band rivets (lighter dots)
+    ctx.fillStyle = '#7a7a82';
+    for (const bx of bandPositions) {
+      if (px + bx > px - W2 && px + bx < px + W2) {
+        ctx.fillRect(px + bx, py - H2, 1, 1);
+        ctx.fillRect(px + bx, py + H2 - 1, 1, 1);
+      }
+    }
+
+    // RAM HEAD — iron tip pointing toward the wall (left, since enemies move left)
+    const headX = px - W2 - headW;
+    // Dark outline
+    ctx.fillStyle = '#1a1a20';
+    ctx.fillRect(headX - 1, py - H2, 1, H2 * 2);
+    // Body of the head — heavy iron
+    ctx.fillStyle = '#5a5a62';
+    ctx.fillRect(headX, py - H2, headW, H2 * 2);
+    // Bright top sheen
+    ctx.fillStyle = '#9aa0ac';
+    ctx.fillRect(headX, py - H2, headW, 1);
+    // Pointed tip — angled to suggest a ram
+    ctx.fillStyle = '#3a3a40';
+    ctx.fillRect(headX - 2, py - 1, 2, 2);
+    ctx.fillStyle = '#7a7a82';
+    ctx.fillRect(headX - 1, py,     1, 1);
+    // Optional ram-skull motif on the side (boss only — feels mythic)
+    if (big) {
+      ctx.fillStyle = '#e8d9a8';
+      // tiny skull on the side of the log
+      ctx.fillRect(px - 2, py - 1, 3, 2);
+      ctx.fillStyle = '#1a0c00';
+      ctx.fillRect(px - 1, py,     1, 1);
+      ctx.fillRect(px + 1, py,     1, 1);
+      // horns
+      ctx.fillStyle = '#a89070';
+      ctx.fillRect(px - 3, py - 1, 1, 1);
+      ctx.fillRect(px + 1, py - 1, 1, 1);
+    }
+
+    // WHEELS — two on each side
+    function drawWheel(wx, wy) {
+      ctx.fillStyle = '#1a0c00';
+      ctx.fillRect(wx - 1, wy, 3, 2);          // tire (dark outline)
+      ctx.fillStyle = '#3a2618';
+      ctx.fillRect(wx, wy + 1, 1, 1);          // hub
+      // animated spokes
+      ctx.fillStyle = '#5a3a1a';
+      if (wheelSpoke === 0) {
+        ctx.fillRect(wx - 1, wy + 1, 1, 1);
+        ctx.fillRect(wx + 1, wy + 1, 1, 1);
+      } else {
+        ctx.fillRect(wx,     wy,     1, 1);
+        ctx.fillRect(wx,     wy + 2, 1, 1);
+      }
+    }
+    drawWheel(px - W2 + 1, py + H2);
+    drawWheel(px + W2 - 2, py + H2);
+    if (big) drawWheel(px, py + H2);   // boss ram has 3rd center wheel
+
+    // Pushers — small goblin handlers on the back-right side
+    const pusherCount = big ? 2 : 1;
+    ctx.fillStyle = '#2c4a10';   // goblin body (dark green)
+    for (let i = 0; i < pusherCount; i++) {
+      const gx = px + W2 + 1 + i * 2;
+      ctx.fillRect(gx, py - 2, 1, 3);          // body
+      ctx.fillStyle = '#4a8a28';
+      ctx.fillRect(gx, py - 3, 1, 1);          // head
+      ctx.fillStyle = '#ff3030';
+      ctx.fillRect(gx, py - 3, 1, 1);          // glowing eye dot
+      ctx.fillStyle = '#2c4a10';
+    }
+
+    // Hit flash
+    if (e.hitFlash > 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillRect(px - W2 - headW - 1, py - H2 - 1, W2 * 2 + headW + 3, H2 * 2 + 2);
+    }
+    // HP bar
+    if (e.hp < e.maxHp) {
+      const bw = big ? 18 : 12;
+      const fw = Math.max(0, Math.ceil((e.hp / e.maxHp) * bw));
+      ctx.fillStyle = '#3a0a0a';
+      ctx.fillRect(px - bw / 2, py - H2 - 4, bw, 2);
+      ctx.fillStyle = '#6edc4a';
+      ctx.fillRect(px - bw / 2, py - H2 - 4, fw, 2);
+    }
+    // Boss crown if it's the wave-10 ram boss
+    if (big) {
+      ctx.fillStyle = '#f5d889';
+      ctx.fillRect(px - 3, py - H2 - 7, 7, 1);
+      ctx.fillRect(px - 3, py - H2 - 8, 1, 1);
+      ctx.fillRect(px,     py - H2 - 8, 1, 1);
+      ctx.fillRect(px + 3, py - H2 - 8, 1, 1);
+    }
+    return;
+  }
 
   if (e.isBoss) {
     // ----- BOSS: larger, kind-themed -----
