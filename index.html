@@ -3149,9 +3149,15 @@ let damageFlashT = 0;
 
 function currentRpEarned() {
   if (totalWavesCleared === 0 && totalKills === 0) return 0;
-  const fromWaves  = Math.floor(totalWavesCleared * 0.4);
-  const fromBosses = Math.floor(totalWavesCleared / 10);
-  const fromKills  = Math.floor(totalKills / 60);
+  // Start-wave perks (research nodes + prestige Echo of Conquest) used to
+  // PUNISH RP earnings: starting at a higher wave meant fewer "waves cleared"
+  // for the same end state. Treat the skipped waves as already cleared so
+  // RP scales with the wave you REACH, not the count you played.
+  const startWaveSkip   = Math.max(0, (effects.startingWave || 1) - 1);
+  const effectiveCleared = totalWavesCleared + startWaveSkip;
+  const fromWaves  = Math.floor(effectiveCleared * 0.4);
+  const fromBosses = Math.floor(effectiveCleared / 10);
+  const fromKills  = Math.floor(totalKills / 60);   // kills stay run-only — actual effort
   const base = fromWaves + fromBosses + fromKills;
   const scaled = Math.floor(base * (effects.rpMul || 1));
   // Prestige "Scholar's Mind" adds flat RP per run (stacks)
