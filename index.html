@@ -8560,13 +8560,17 @@ window.openWelcome = function (forceReshow) {
   Audio.sfx.click && Audio.sfx.click();
 };
 window.welcomeBegin = function () {
+  // Capture reshow flag BEFORE clearing, so the test below sees the right value
+  const wasReshow = !!welcomeEl._isReshow;
   welcomeEl.classList.remove('show');
-  Audio.sfx.click && Audio.sfx.click();
-  // Only auto-launch the tutorial if this is the first-time flow (not a help-button reshow)
-  if (!welcomeEl._isReshow && localStorage.getItem('castleTutorialDone') !== '1') {
-    setTimeout(() => Tutorial.start(), 200);
-  }
   welcomeEl._isReshow = false;
+  Audio.sfx.click && Audio.sfx.click();
+  // Only auto-launch the tutorial on the first-time flow (not a help-button reshow),
+  // and only if the tutorial hasn't already been completed.
+  if (!wasReshow && localStorage.getItem('castleTutorialDone') !== '1') {
+    // rAF gives the welcome overlay time to hide before the spotlight paints behind it
+    requestAnimationFrame(() => Tutorial.start());
+  }
 };
 window.welcomeSkip = function () {
   welcomeEl.classList.remove('show');
@@ -8584,9 +8588,9 @@ function slotRect(idx) {
   // SLOTS use canvas-pixel coords; convert to viewport coords
   const sx = r.left + (s.cx / W) * r.width;
   const sy = r.top  + (s.cy / H) * r.height;
-  // box ~ 50 game-px wide x 80 game-px tall around slot center
-  const halfW = (28 / W) * r.width;
-  const halfH = (38 / H) * r.height;
+  // box ~ 28 game-px wide x 22 game-px tall around slot center (snug fit)
+  const halfW = (14 / W) * r.width;
+  const halfH = (11 / H) * r.height;
   return { x: sx - halfW, y: sy - halfH, w: halfW * 2, h: halfH * 2 };
 }
 function elRect(id, childSelector) {
