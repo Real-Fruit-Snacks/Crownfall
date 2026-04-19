@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Background gradient — radial dark warm -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="55%" r="80%">
+      <stop offset="0%"  stop-color="#3a2410"/>
+      <stop offset="60%" stop-color="#1a0e05"/>
+      <stop offset="100%" stop-color="#0a0500"/>
+    </radialGradient>
+    <linearGradient id="banner" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#5a3a18"/>
+      <stop offset="100%" stop-color="#3a2616"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Pixelated tile grid hint (subtle) -->
+  <g fill="#1a0c00" opacity="0.3">
+    <rect x="0"   y="100" width="1200" height="2"/>
+    <rect x="0"   y="528" width="1200" height="2"/>
+  </g>
+
+  <!-- Big crown silhouette (centered, scaled up) -->
+  <g transform="translate(540, 100) scale(8)" shape-rendering="crispEdges">
+    <g fill="#1a0c00">
+      <rect x="1"  y="3" width="1" height="1"/>
+      <rect x="7"  y="2" width="1" height="1"/>
+      <rect x="13" y="3" width="1" height="1"/>
+      <rect x="0"  y="4" width="1" height="6"/>
+      <rect x="14" y="4" width="1" height="6"/>
+    </g>
+    <g fill="#ffd060">
+      <rect x="1"  y="4" width="1" height="6"/>
+      <rect x="2"  y="6" width="1" height="4"/>
+      <rect x="3"  y="7" width="3" height="3"/>
+      <rect x="6"  y="4" width="3" height="6"/>
+      <rect x="9"  y="7" width="3" height="3"/>
+      <rect x="12" y="6" width="1" height="4"/>
+      <rect x="13" y="4" width="1" height="6"/>
+    </g>
+    <g fill="#c83020"><rect x="7" y="6" width="1" height="1"/></g>
+    <g fill="#80c8ff"><rect x="3" y="8" width="1" height="1"/><rect x="11" y="8" width="1" height="1"/></g>
+    <g fill="#fff8e0"><rect x="6" y="4" width="1" height="1"/></g>
+    <g fill="#1a0c00">
+      <rect x="1"  y="10" width="13" height="1"/>
+      <rect x="0"  y="11" width="15" height="1"/>
+      <rect x="0"  y="12" width="15" height="1"/>
+      <rect x="1"  y="13" width="13" height="1"/>
+    </g>
+    <g fill="#ffd060">
+      <rect x="1" y="11" width="13" height="1"/>
+      <rect x="1" y="12" width="13" height="1"/>
+    </g>
+  </g>
+
+  <!-- Title plate -->
+  <g transform="translate(150, 360)">
+    <rect x="0" y="0" width="900" height="160" fill="url(#banner)"/>
+    <rect x="0" y="0" width="900" height="6" fill="#6a4528"/>
+    <rect x="0" y="154" width="900" height="6" fill="#1a0c00"/>
+    <text x="450" y="80"
+          text-anchor="middle"
+          font-family="'Press Start 2P', monospace"
+          font-size="56"
+          fill="#f5d889"
+          letter-spacing="6"
+          stroke="#1a0c00" stroke-width="3" paint-order="stroke">CROWNFALL</text>
+    <text x="450" y="125"
+          text-anchor="middle"
+          font-family="'Press Start 2P', monospace"
+          font-size="20"
+          fill="#c89030"
+          letter-spacing="4">AN INCREMENTAL DEFENSE</text>
+  </g>
+
+  <!-- Tagline -->
+  <text x="600" y="565"
+        text-anchor="middle"
+        font-family="'Press Start 2P', monospace"
+        font-size="14"
+        fill="#8a7048"
+        letter-spacing="2">HOLD THE WALL  ·  BANK CROWNS  ·  RETURN STRONGER</text>
+</svg>

@@ -1,0 +1,33 @@
+# Local Claude Code workspace + tooling
+.claude/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local server / dev artifacts
+.cache/
+node_modules/
+dist/
+build/
+
+# Personal save backups
+*.bak
+*.backup
