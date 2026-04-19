@@ -4059,29 +4059,52 @@ function shapeSvg(kind, fill, stroke) {
     </svg>`;
   }
   if (kind === 'archers') {
-    // ARROW pointing right (with fletching)
+    // BOW drawn back with a nocked arrow — classic archer emblem
     return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges">
       <g fill="${stroke}">
-        <!-- fletching nock -->
-        <rect x="0" y="5" width="3" height="1"/>
-        <rect x="0" y="10" width="3" height="1"/>
-        <rect x="0" y="6" width="2" height="4"/>
-        <!-- shaft outline -->
-        <rect x="2" y="6" width="9" height="1"/>
-        <rect x="2" y="9" width="9" height="1"/>
-        <!-- arrowhead outline -->
-        <rect x="11" y="5" width="1" height="1"/>
-        <rect x="11" y="10" width="1" height="1"/>
-        <rect x="12" y="4" width="1" height="1"/>
-        <rect x="12" y="11" width="1" height="1"/>
-        <rect x="13" y="3" width="1" height="2"/>
-        <rect x="13" y="11" width="1" height="2"/>
-        <rect x="14" y="5" width="1" height="6"/>
+        <!-- bow outer outline: vertical C opening right, with recurve tip caps -->
+        <rect x="3" y="0" width="2" height="1"/>
+        <rect x="2" y="1" width="1" height="1"/>
+        <rect x="5" y="1" width="1" height="1"/>
+        <rect x="1" y="2" width="1" height="1"/>
+        <rect x="0" y="3" width="1" height="10"/>
+        <rect x="1" y="13" width="1" height="1"/>
+        <rect x="2" y="14" width="1" height="1"/>
+        <rect x="5" y="14" width="1" height="1"/>
+        <rect x="3" y="15" width="2" height="1"/>
+        <!-- bowstring drawn into a V, apex meeting the arrow nock -->
+        <rect x="5" y="2" width="1" height="2"/>
+        <rect x="6" y="4" width="1" height="2"/>
+        <rect x="5" y="12" width="1" height="2"/>
+        <rect x="6" y="10" width="1" height="2"/>
+        <!-- arrow shaft edges -->
+        <rect x="7" y="6" width="5" height="1"/>
+        <rect x="7" y="9" width="5" height="1"/>
+        <!-- arrowhead outline (triangle pointing right) -->
+        <rect x="12" y="5" width="1" height="1"/>
+        <rect x="12" y="10" width="1" height="1"/>
+        <rect x="13" y="4" width="1" height="1"/>
+        <rect x="13" y="11" width="1" height="1"/>
+        <rect x="14" y="3" width="1" height="2"/>
+        <rect x="14" y="11" width="1" height="2"/>
+        <rect x="15" y="5" width="1" height="6"/>
       </g>
       <g fill="${fill}">
-        <rect x="2" y="7" width="9" height="2"/>
-        <rect x="11" y="6" width="2" height="4"/>
-        <rect x="13" y="5" width="1" height="6"/>
+        <!-- bow body fill -->
+        <rect x="3" y="1" width="2" height="1"/>
+        <rect x="2" y="2" width="3" height="1"/>
+        <rect x="1" y="3" width="3" height="10"/>
+        <rect x="2" y="13" width="3" height="1"/>
+        <rect x="3" y="14" width="2" height="1"/>
+        <!-- arrow shaft body -->
+        <rect x="7" y="7" width="5" height="2"/>
+        <!-- arrowhead body -->
+        <rect x="12" y="6" width="2" height="4"/>
+        <rect x="14" y="5" width="1" height="6"/>
+      </g>
+      <!-- small sheen on the bow grip -->
+      <g fill="#ffffff" opacity="0.45">
+        <rect x="1" y="6" width="1" height="3"/>
       </g>
     </svg>`;
   }
