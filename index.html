@@ -2349,8 +2349,8 @@
         <button onclick="settingsReset()">Reset Run</button>
       </div>
       <div class="item">
-        <div class="name">Wipe All Research</div>
-        <div class="desc">Erases every purchased node and all banked RP. Cannot be undone.</div>
+        <div class="name">Wipe Everything</div>
+        <div class="desc">Full factory reset &mdash; erases all research, RP, Crowns, prestige progress, commanders, achievements, stats, and daily scores. You'll be sent back to the main menu and the tutorial will replay. Cannot be undone.</div>
         <button class="danger" onclick="settingsWipe()">Wipe Everything</button>
       </div>
       <div class="item save-mgmt">
@@ -9229,16 +9229,57 @@ confirmEl.addEventListener('click', (e) => { if (e.target === confirmEl) closeCo
 
 window.settingsWipe = function () {
   window.showConfirm({
-    title:   'Wipe All Research',
-    message: 'This erases every purchased node and all banked RP. This cannot be undone.',
+    title:   'Wipe Everything?',
+    message: 'Full factory reset. Erases all research, RP, Crowns, prestige progress, commanders, achievements, stats, daily scores, and tutorial state. You will be sent to the main menu and the tutorial will replay. This cannot be undone.',
     yesLabel: 'Wipe Everything',
     danger:  true,
     onYes: () => {
-      research = { rp: 0, totalRp: 0, purchased: new Set(['root']) };
-      try { localStorage.removeItem('castleResearch'); } catch {}
+      // Clear EVERY castle* localStorage key (research, stats, prestige,
+      // commanders, achievements, daily scores, seen-title flag, tutorial-done
+      // flag — everything except whatever the user's browser stores for other
+      // sites). Mute preference is also wiped — fresh-install behaviour.
+      try {
+        const toRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('castle')) toRemove.push(k);
+        }
+        toRemove.forEach(k => localStorage.removeItem(k));
+      } catch {}
+      // Reset in-memory state to fresh defaults
+      research  = { rp: 0, totalRp: 0, crowns: 0, totalCrowns: 0,
+                    purchased: new Set(['root']), disabled: new Set(), repeatCounts: {} };
+      prestige  = { shards: 0, totalShardsEarned: 0, prestigeCount: 0, purchased: {} };
+      if (typeof stats !== 'undefined') {
+        for (const k in stats) { if (typeof stats[k] === 'number') stats[k] = 0; }
+      }
+      if (typeof unlockedAchievements !== 'undefined' && unlockedAchievements.clear) unlockedAchievements.clear();
+      if (typeof COMMANDERS !== 'undefined') {
+        for (const c of COMMANDERS) { c.owned = false; c.autoHire = null; c.upgradePreset = 'roundRobin'; c.imbuePreset = null; c.skinPreset = null; }
+      }
+      // Clear daily-mode flags + body class so the chip disappears
+      if (typeof dailyMode !== 'undefined') {
+        dailyMode = false;
+        dailyDate = '';
+        if (typeof runRng !== 'undefined') runRng.clear();
+        document.body.classList.remove('daily-mode');
+        document.body.removeAttribute('data-daily-date');
+      }
+      // Re-apply effects (now empty) and reset the live run
       applyResearch();
       window.resetRun();
+      // Close all overlays + send the player to the title screen
       window.closeSettings();
+      try { document.getElementById('research-overlay').classList.remove('show'); } catch {}
+      try { document.getElementById('prestige-overlay').classList.remove('show'); } catch {}
+      try { document.getElementById('welcome-overlay').classList.remove('show'); } catch {}
+      try { document.getElementById('pause-overlay').classList.remove('show'); } catch {}
+      // Show the title screen + refresh its daily-best line (will say "no attempt")
+      titleEl.classList.add('show');
+      if (typeof refreshTitleDailyBest === 'function') refreshTitleDailyBest();
+      // The next time the player clicks PLAY, hideTitle() sees no
+      // castleTutorialDone flag and will open the welcome card -> tutorial
+      // automatically. No extra trigger needed.
     }
   });
 };
