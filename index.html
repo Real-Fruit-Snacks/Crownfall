@@ -1088,6 +1088,40 @@
   #settings-overlay .item button:active { transform: translate(0, 0); box-shadow: inset 0 0 0 2px #a87a3e, 2px 2px 0 0 #1a0c00; }
   #settings-overlay .item button.danger { color: #ff8070; background: #2a1008; box-shadow: inset 0 0 0 2px #a8413a, 3px 3px 0 0 #1a0c00; }
   #settings-overlay .item button.danger:hover { color: #ffa090; box-shadow: inset 0 0 0 2px #d47070, 4px 4px 0 0 #1a0c00; }
+  /* Save export/import controls — textareas & inline status, hidden until activated */
+  #settings-overlay .save-blob {
+    display: none;
+    width: 100%;
+    box-sizing: border-box;
+    height: 70px;
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: #1a0c00;
+    color: #f5d889;
+    border: 0;
+    box-shadow: inset 0 0 0 2px #6a4528;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.3;
+    resize: vertical;
+    word-break: break-all;
+  }
+  #settings-overlay .save-blob:focus { outline: 2px solid #c89030; }
+  #settings-overlay .save-blob.show { display: block; }
+  #settings-overlay .save-blob-btn { display: none; margin-top: 6px; margin-left: 0; }
+  #settings-overlay .save-blob-btn.show { display: inline-block; }
+  #settings-overlay .save-status {
+    display: none;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 6px 8px;
+    background: #1a0c00;
+    box-shadow: inset 0 0 0 1px #4a352a;
+  }
+  #settings-overlay .save-status.show { display: block; }
+  #settings-overlay .save-status.ok  { color: #9bd47b; box-shadow: inset 0 0 0 1px #3a6a1a; }
+  #settings-overlay .save-status.err { color: #ff8070; box-shadow: inset 0 0 0 1px #a8413a; }
   #settings-overlay .close {
     display: block; margin: 16px auto 0;
     background: transparent; color: #8a7a60;
@@ -1919,6 +1953,21 @@
         <div class="name">Wipe All Research</div>
         <div class="desc">Erases every purchased node and all banked RP. Cannot be undone.</div>
         <button class="danger" onclick="settingsWipe()">Wipe Everything</button>
+      </div>
+      <div class="item save-mgmt">
+        <div class="name">Export Save</div>
+        <div class="desc">Copy your full save to a code you can paste anywhere &mdash; useful for backups, browser changes, or new devices.</div>
+        <button onclick="settingsExport()">Export Save</button>
+        <textarea id="export-text" class="save-blob" readonly placeholder="(your encoded save will appear here)"></textarea>
+        <button id="export-copy-btn" class="save-blob-btn" onclick="settingsCopyExport()">Copy to Clipboard</button>
+      </div>
+      <div class="item save-mgmt">
+        <div class="name">Import Save</div>
+        <div class="desc">Paste a save code below to restore. <b>This overwrites your current save.</b></div>
+        <button onclick="settingsImportToggle()">Import Save</button>
+        <textarea id="import-text" class="save-blob" placeholder="paste save code here..."></textarea>
+        <button id="import-apply-btn" class="danger save-blob-btn" onclick="settingsApplyImport()">Overwrite My Save</button>
+        <div id="import-status" class="save-status"></div>
       </div>
       <button class="close" onclick="closeSettings()">Close</button>
     </div>
@@ -8453,7 +8502,16 @@ window.openSettings  = function () {
   const btn = document.getElementById('settings-mute-btn');
   if (btn) btn.textContent = Audio.isMuted() ? 'Sound: OFF' : 'Sound: ON';
 };
-window.closeSettings = function () { settingsOverlayEl.classList.remove('show'); };
+window.closeSettings = function () {
+  settingsOverlayEl.classList.remove('show');
+  // Reset save export/import UI so reopening settings starts clean
+  ['export-text', 'import-text', 'export-copy-btn', 'import-apply-btn'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.remove('show');
+  });
+  const exportTa = document.getElementById('export-text');   if (exportTa) exportTa.value = '';
+  const importTa = document.getElementById('import-text');   if (importTa) importTa.value = '';
+  const status   = document.getElementById('import-status'); if (status) { status.classList.remove('show', 'ok', 'err'); status.textContent = ''; }
+};
 window.settingsReset = function () {
   window.resetRun();
   window.closeSettings();
@@ -8508,6 +8566,128 @@ window.settingsWipe = function () {
       applyResearch();
       window.resetRun();
       window.closeSettings();
+    }
+  });
+};
+
+// =====================================================================
+//  SAVE EXPORT / IMPORT — base64-encoded JSON of all castle* localStorage keys
+// =====================================================================
+const SAVE_FORMAT = 'crownfall-save-v1';
+
+function _buildSaveBlob() {
+  const data = { format: SAVE_FORMAT, exportedAt: new Date().toISOString(), entries: {} };
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('castle')) {
+        data.entries[key] = localStorage.getItem(key);
+      }
+    }
+  } catch (e) { /* localStorage unavailable */ }
+  // base64 of UTF-8 bytes (binary-safe)
+  const json = JSON.stringify(data);
+  const utf8 = unescape(encodeURIComponent(json));
+  return btoa(utf8);
+}
+
+function _setSaveStatus(el, kind, text) {
+  el.classList.remove('show', 'ok', 'err');
+  el.classList.add('show', kind);
+  el.textContent = text;
+}
+
+window.settingsExport = function () {
+  const blob = _buildSaveBlob();
+  const ta   = document.getElementById('export-text');
+  const btn  = document.getElementById('export-copy-btn');
+  ta.value = blob;
+  ta.classList.add('show');
+  btn.classList.add('show');
+  // auto-select for easy manual copy on devices without clipboard API
+  try { ta.focus(); ta.select(); } catch {}
+};
+
+window.settingsCopyExport = function () {
+  const ta  = document.getElementById('export-text');
+  const btn = document.getElementById('export-copy-btn');
+  if (!ta.value) return;
+  let copied = false;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy to Clipboard', 1500);
+    }).catch(() => {/* fall through to execCommand */});
+    copied = true;
+  }
+  if (!copied) {
+    try {
+      ta.select();
+      document.execCommand && document.execCommand('copy');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy to Clipboard', 1500);
+    } catch {}
+  }
+};
+
+window.settingsImportToggle = function () {
+  document.getElementById('import-text').classList.add('show');
+  document.getElementById('import-apply-btn').classList.add('show');
+  const status = document.getElementById('import-status');
+  status.classList.remove('show', 'ok', 'err');
+  status.textContent = '';
+  try { document.getElementById('import-text').focus(); } catch {}
+};
+
+window.settingsApplyImport = function () {
+  const ta     = document.getElementById('import-text');
+  const status = document.getElementById('import-status');
+  const raw    = (ta.value || '').trim();
+  if (!raw) {
+    _setSaveStatus(status, 'err', 'Paste a save code first.');
+    return;
+  }
+  let data;
+  try {
+    const utf8 = atob(raw);
+    const json = decodeURIComponent(escape(utf8));
+    data = JSON.parse(json);
+  } catch (e) {
+    _setSaveStatus(status, 'err', 'Invalid save code \u2014 could not decode.');
+    return;
+  }
+  if (!data || data.format !== SAVE_FORMAT || !data.entries || typeof data.entries !== 'object') {
+    _setSaveStatus(status, 'err', 'Wrong format or unknown version. Need: ' + SAVE_FORMAT);
+    return;
+  }
+  const keys = Object.keys(data.entries).filter(k => k.startsWith('castle'));
+  if (keys.length === 0) {
+    _setSaveStatus(status, 'err', 'Save code is empty (no castle* entries found).');
+    return;
+  }
+  _setSaveStatus(status, 'ok', 'Save looks valid \u2014 ' + keys.length + ' entries. Confirm to overwrite\u2026');
+  window.showConfirm({
+    title:    'Overwrite Save?',
+    message:  'This will replace your current save with the imported one. Current progress (RP, Crowns, research, achievements, stats) will be lost. Continue?',
+    yesLabel: 'Overwrite',
+    danger:   true,
+    onYes: () => {
+      try {
+        // Clear current castle* keys, then apply imported
+        const toRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('castle')) toRemove.push(k);
+        }
+        toRemove.forEach(k => localStorage.removeItem(k));
+        for (const k of keys) {
+          localStorage.setItem(k, data.entries[k]);
+        }
+        _setSaveStatus(status, 'ok', 'Save imported \u2014 reloading\u2026');
+        setTimeout(() => location.reload(), 700);
+      } catch (e) {
+        _setSaveStatus(status, 'err', 'Failed to write save: ' + (e && e.message ? e.message : 'unknown error'));
+      }
     }
   });
 };
