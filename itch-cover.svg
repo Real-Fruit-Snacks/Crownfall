@@ -225,16 +225,16 @@
     <rect x="4"  y="4"  width="542" height="132" fill="#1a0c00"/>
     <rect x="8"  y="8"  width="534" height="124" fill="url(#banner)"/>
 
-    <!-- title -->
-    <text x="275" y="68"
+    <!-- title (x shifted +3 to compensate for trailing letter-spacing) -->
+    <text x="278" y="68"
           text-anchor="middle"
           font-family="'Press Start 2P', 'Courier New', monospace"
           font-size="44" font-weight="bold"
           fill="#f5d889"
           letter-spacing="6"
           stroke="#1a0c00" stroke-width="2.5" paint-order="stroke">CROWNFALL</text>
-    <!-- subtitle -->
-    <text x="275" y="106"
+    <!-- subtitle (x shifted +1.5 to compensate for trailing letter-spacing) -->
+    <text x="276.5" y="106"
           text-anchor="middle"
           font-family="'Press Start 2P', 'Courier New', monospace"
           font-size="14"
@@ -252,10 +252,12 @@
   <!-- ========================================================
        4 feature icons across — each fits in a 40x40 box at y=414..454.
        Labels sit at y=478 with a clear 24px gap above.
+       Icon centers: 105, 245, 385, 525 (140px between centers,
+       symmetric 85px margins on each side of the 630-wide image).
        ======================================================== -->
 
   <!-- ICON 1: Crown (Crowns currency) — 16x16 art scaled 2.5x = 40x40 -->
-  <g transform="translate(60, 414) scale(2.5)" shape-rendering="crispEdges">
+  <g transform="translate(85, 414) scale(2.5)" shape-rendering="crispEdges">
     <g fill="#1a0c00">
       <rect x="2" y="3" width="1" height="1"/>
       <rect x="0" y="4" width="1" height="6"/>
@@ -278,12 +280,12 @@
       <rect x="11" y="8" width="1" height="1"/>
     </g>
   </g>
-  <text x="80" y="478" text-anchor="middle"
+  <text x="105.5" y="478" text-anchor="middle"
         font-family="'Press Start 2P', monospace" font-size="8"
         fill="#c89030" letter-spacing="1">CROWNS</text>
 
   <!-- ICON 2: Sword + crossguard (heroes) — fits in 40x40 -->
-  <g transform="translate(200, 414)">
+  <g transform="translate(225, 414)">
     <!-- pommel -->
     <rect x="18" y="0" width="4" height="4" fill="#c89030"/>
     <!-- handle / grip -->
@@ -300,12 +302,12 @@
     <!-- crossguard rivet -->
     <rect x="19" y="11" width="2" height="2" fill="#c89030"/>
   </g>
-  <text x="220" y="478" text-anchor="middle"
+  <text x="245.5" y="478" text-anchor="middle"
         font-family="'Press Start 2P', monospace" font-size="8"
         fill="#c89030" letter-spacing="1">6 HEROES</text>
 
   <!-- ICON 3: Crystal orb on staff (elements + skills) — 40x40 -->
-  <g transform="translate(340, 414)">
+  <g transform="translate(365, 414)">
     <!-- staff -->
     <rect x="18" y="14" width="4" height="26" fill="#3a2418"/>
     <rect x="19" y="14" width="2" height="24" fill="#5a3a18"/>
@@ -320,12 +322,12 @@
     <!-- staff brackets -->
     <rect x="14" y="14" width="12" height="2" fill="#3a2418"/>
   </g>
-  <text x="360" y="478" text-anchor="middle"
+  <text x="385.5" y="478" text-anchor="middle"
         font-family="'Press Start 2P', monospace" font-size="8"
         fill="#c89030" letter-spacing="1">8 ELEMENTS</text>
 
   <!-- ICON 4: Castle tower with battlements (endless defense) — 40x40 -->
-  <g transform="translate(480, 414)">
+  <g transform="translate(505, 414)">
     <!-- merlons (4 across) -->
     <rect x="6"  y="4" width="6" height="6" fill="#5a606a"/>
     <rect x="14" y="4" width="6" height="6" fill="#5a606a"/>
@@ -353,7 +355,7 @@
     <rect x="6"  y="11" width="2" height="8" fill="#9aa0ac"/>
     <rect x="34" y="11" width="2" height="8" fill="#3a3e48"/>
   </g>
-  <text x="500" y="478" text-anchor="middle"
+  <text x="525.5" y="478" text-anchor="middle"
         font-family="'Press Start 2P', monospace" font-size="8"
         fill="#c89030" letter-spacing="1">ENDLESS</text>
 
