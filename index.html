@@ -23,25 +23,8 @@
   html, body { margin: 0; padding: 0; height: 100%; background: #1a0e05; overflow: hidden; font-family: -apple-system, Segoe UI, sans-serif; color: #d9c9a8; touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
   #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
   canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; touch-action: none; }
-  #gold {
-    position: fixed; top: 10px; left: 14px;
-    font-family: 'VT323', 'Courier New', monospace;
-    font-weight: 400; font-size: 24px;
-    color: #f5d889;
-    background: #2a1a08;
-    padding: 7px 14px 5px;
-    border: 0; border-radius: 0;
-    letter-spacing: 1px;
-    text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
-    z-index: 10;
-    display: flex; align-items: center; gap: 8px;
-    line-height: 1;
-    box-shadow:
-      inset 0 0 0 2px #6a4528,
-      inset 0 0 0 4px #1a0c00,
-      4px 4px 0 0 rgba(0,0,0,0.78);
-  }
-  #gold .icon { display: inline-block; flex-shrink: 0; image-rendering: pixelated; }
+  /* Gold readout sits inside the topbar as a .tb-block — give it a coin-yellow tint */
+  .tb-block.gold-block .tb-gold-num { color: #f0c94a; }
   /* Slot panel — pixel-art chunky frame */
   #panel {
     position: fixed; display: none;
@@ -1979,9 +1962,6 @@
     #help-btn, #pause-btn { width: 36px; height: 36px; top: 6px; }
     #help-btn { right: 54px; font-size: 14px; }
     #pause-btn { right: 10px; }
-    #gold { padding: 4px 10px; font-size: 12px; top: 6px; left: 6px; }
-    #gold .icon { width: 14px; height: 14px; }
-
     /* Topbar tightens */
     #topbar { top: 6px; padding: 2px; }
     .tb-block { padding: 5px 9px; gap: 5px; }
@@ -2049,10 +2029,6 @@
 </head>
 <body>
   <div id="wrap"><canvas id="game"></canvas></div>
-  <div id="gold">
-    <svg class="icon" width="18" height="18" viewBox="0 0 14 14" shape-rendering="crispEdges"><g fill="#6a4518"><rect x="3" y="1" width="8" height="1"/><rect x="1" y="2" width="2" height="1"/><rect x="11" y="2" width="2" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="13" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="6"/><rect x="13" y="4" width="1" height="6"/><rect x="0" y="10" width="1" height="1"/><rect x="13" y="10" width="1" height="1"/><rect x="1" y="11" width="2" height="1"/><rect x="11" y="11" width="2" height="1"/><rect x="3" y="12" width="8" height="1"/></g><rect x="3" y="2" width="8" height="10" fill="#d4a82e"/><rect x="1" y="3" width="12" height="8" fill="#d4a82e"/><rect x="3" y="2" width="7" height="1" fill="#f0c94a"/><rect x="1" y="3" width="10" height="5" fill="#f0c94a"/><rect x="1" y="5" width="2" height="2" fill="#fff3a0"/><rect x="3" y="3" width="2" height="1" fill="#fff3a0"/><rect x="5" y="5" width="4" height="4" fill="#b78418"/><rect x="6" y="6" width="2" height="2" fill="#6a4518"/></svg>
-    <span id="gold-num">0</span>
-  </div>
   <div id="topbar">
     <div class="tb-block hp">
       <svg class="icon" width="22" height="24" viewBox="0 0 12 14" shape-rendering="crispEdges"><g fill="#2a2a32"><rect x="1" y="0" width="10" height="1"/><rect x="0" y="1" width="1" height="7"/><rect x="11" y="1" width="1" height="7"/><rect x="1" y="8" width="1" height="2"/><rect x="10" y="8" width="1" height="2"/><rect x="2" y="10" width="1" height="2"/><rect x="9" y="10" width="1" height="2"/><rect x="3" y="12" width="1" height="1"/><rect x="8" y="12" width="1" height="1"/><rect x="4" y="13" width="4" height="1"/></g><rect x="1" y="1" width="10" height="7" fill="#8590a0"/><rect x="2" y="8" width="8" height="2" fill="#8590a0"/><rect x="3" y="10" width="6" height="2" fill="#8590a0"/><rect x="4" y="12" width="4" height="1" fill="#8590a0"/><rect x="1" y="1" width="8" height="1" fill="#b8c0cc"/><rect x="1" y="2" width="2" height="5" fill="#b8c0cc"/><rect x="5" y="3" width="2" height="6" fill="#b73a2a"/><rect x="3" y="5" width="6" height="2" fill="#b73a2a"/></svg>
@@ -2065,6 +2041,13 @@
       <div class="tb-label">Wave</div>
       <div class="tb-big" id="wave-num">1</div>
       <div class="tb-state" id="wave-state">incoming</div>
+    </div>
+    <div class="tb-block gold-block">
+      <svg class="icon" width="22" height="24" viewBox="0 0 14 14" shape-rendering="crispEdges"><g fill="#6a4518"><rect x="3" y="1" width="8" height="1"/><rect x="1" y="2" width="2" height="1"/><rect x="11" y="2" width="2" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="13" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="6"/><rect x="13" y="4" width="1" height="6"/><rect x="0" y="10" width="1" height="1"/><rect x="13" y="10" width="1" height="1"/><rect x="1" y="11" width="2" height="1"/><rect x="11" y="11" width="2" height="1"/><rect x="3" y="12" width="8" height="1"/></g><rect x="3" y="2" width="8" height="10" fill="#d4a82e"/><rect x="1" y="3" width="12" height="8" fill="#d4a82e"/><rect x="3" y="2" width="7" height="1" fill="#f0c94a"/><rect x="1" y="3" width="10" height="5" fill="#f0c94a"/><rect x="1" y="5" width="2" height="2" fill="#fff3a0"/><rect x="3" y="3" width="2" height="1" fill="#fff3a0"/><rect x="5" y="5" width="4" height="4" fill="#b78418"/><rect x="6" y="6" width="2" height="2" fill="#6a4518"/></svg>
+      <div class="tb-stack">
+        <div class="tb-label">Gold</div>
+        <div class="tb-big tb-gold-num"><span id="gold-num">0</span></div>
+      </div>
     </div>
     <div class="tb-block rp" id="run-rp-row" title="Click to end run and bank RP">
       <div class="tb-label">RP</div>
