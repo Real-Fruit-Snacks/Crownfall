@@ -3943,28 +3943,39 @@ function shapeSvg(kind, fill, stroke) {
     </svg>`;
   }
   if (kind === 'bards') {
-    // LUTE — round body + slim neck with frets
+    // EIGHTH NOTE — rounded note head + stem + flag (reads instantly as music)
     return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges">
       <g fill="${stroke}">
-        <rect x="3" y="6" width="6" height="1"/>
-        <rect x="3" y="13" width="6" height="1"/>
-        <rect x="2" y="7" width="1" height="6"/>
-        <rect x="9" y="7" width="1" height="6"/>
-        <!-- neck -->
-        <rect x="9" y="3" width="1" height="4"/>
-        <rect x="11" y="2" width="1" height="2"/>
-        <!-- tuning pegs -->
-        <rect x="12" y="1" width="2" height="1"/>
-        <rect x="12" y="3" width="2" height="1"/>
+        <!-- flag top + right curl outline -->
+        <rect x="8" y="1" width="3" height="1"/>
+        <rect x="11" y="2" width="1" height="1"/>
+        <rect x="12" y="3" width="1" height="2"/>
+        <rect x="11" y="5" width="1" height="1"/>
+        <rect x="10" y="6" width="1" height="1"/>
+        <!-- stem left + right edges -->
+        <rect x="7" y="2" width="1" height="10"/>
+        <rect x="9" y="7" width="1" height="5"/>
+        <!-- note head outline -->
+        <rect x="3" y="10" width="3" height="1"/>
+        <rect x="1" y="11" width="2" height="1"/>
+        <rect x="6" y="11" width="1" height="1"/>
+        <rect x="0" y="12" width="1" height="2"/>
+        <rect x="1" y="14" width="1" height="1"/>
+        <rect x="2" y="15" width="5" height="1"/>
+        <rect x="7" y="12" width="1" height="3"/>
       </g>
       <g fill="${fill}">
-        <rect x="3" y="7" width="6" height="6"/>
-        <rect x="10" y="3" width="1" height="4"/>
-        <rect x="11" y="3" width="1" height="1"/>
-      </g>
-      <!-- soundhole -->
-      <g fill="${stroke}">
-        <rect x="5" y="9" width="2" height="2"/>
+        <!-- flag fill -->
+        <rect x="8" y="2" width="3" height="1"/>
+        <rect x="8" y="3" width="4" height="2"/>
+        <rect x="8" y="5" width="3" height="1"/>
+        <rect x="8" y="6" width="2" height="1"/>
+        <!-- stem fill -->
+        <rect x="8" y="7" width="1" height="5"/>
+        <!-- note head fill -->
+        <rect x="3" y="11" width="3" height="1"/>
+        <rect x="1" y="12" width="6" height="2"/>
+        <rect x="2" y="14" width="5" height="1"/>
       </g>
     </svg>`;
   }
