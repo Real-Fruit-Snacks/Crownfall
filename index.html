@@ -4181,33 +4181,45 @@ function shapeSvg(kind, fill, stroke) {
     </svg>`;
   }
   if (kind === 'command') {
-    // BANNER ON A POLE
+    // COMMANDER'S BANNER — pole with spearhead finial, forked banner, crown emblem
     return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges">
       <g fill="${stroke}">
+        <!-- spearhead finial tip + wings -->
+        <rect x="2" y="0" width="1" height="1"/>
+        <rect x="1" y="1" width="3" height="1"/>
         <!-- pole -->
-        <rect x="1" y="1" width="2" height="14"/>
-        <!-- pole finial (top knob) -->
-        <rect x="0" y="0" width="4" height="1"/>
+        <rect x="2" y="2" width="1" height="14"/>
+        <!-- pole base / crossbar -->
+        <rect x="1" y="15" width="3" height="1"/>
       </g>
+      <!-- banner body fill -->
       <g fill="${fill}">
-        <!-- banner main -->
-        <rect x="3" y="2" width="11" height="9"/>
-        <!-- banner forked tail -->
-        <rect x="3" y="11" width="3" height="2"/>
-        <rect x="11" y="11" width="3" height="2"/>
-        <rect x="6" y="11" width="5" height="1"/>
+        <rect x="3" y="3" width="11" height="8"/>
+        <!-- left tail -->
+        <rect x="3" y="11" width="4" height="2"/>
+        <!-- right tail -->
+        <rect x="10" y="11" width="4" height="2"/>
       </g>
       <g fill="${stroke}">
-        <!-- banner edges -->
-        <rect x="3" y="2" width="11" height="1"/>
-        <rect x="3" y="10" width="11" height="1"/>
-        <rect x="14" y="2" width="1" height="9"/>
-        <rect x="3" y="11" width="1" height="2"/>
-        <rect x="13" y="11" width="1" height="2"/>
-        <!-- emblem (cross) on banner -->
-        <rect x="7" y="4" width="3" height="1"/>
-        <rect x="8" y="4" width="1" height="5"/>
-        <rect x="7" y="6" width="3" height="1"/>
+        <!-- banner edges: top, right, tail bottoms, V notch -->
+        <rect x="3" y="2" width="12" height="1"/>
+        <rect x="14" y="3" width="1" height="10"/>
+        <rect x="3" y="13" width="4" height="1"/>
+        <rect x="10" y="13" width="4" height="1"/>
+        <rect x="7" y="12" width="3" height="1"/>
+        <rect x="8" y="11" width="1" height="1"/>
+        <!-- crown emblem: 3 merlons, sides, top band, base band -->
+        <rect x="6" y="5" width="1" height="1"/>
+        <rect x="8" y="5" width="1" height="1"/>
+        <rect x="10" y="5" width="1" height="1"/>
+        <rect x="5" y="6" width="1" height="3"/>
+        <rect x="11" y="6" width="1" height="3"/>
+        <rect x="6" y="6" width="5" height="1"/>
+        <rect x="5" y="9" width="7" height="1"/>
+      </g>
+      <!-- central jewel accent -->
+      <g fill="#ffd060">
+        <rect x="8" y="7" width="1" height="2"/>
       </g>
     </svg>`;
   }
