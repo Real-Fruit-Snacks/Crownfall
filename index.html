@@ -21,7 +21,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; padding: 0; height: 100%; background: #1a0e05; overflow: hidden; font-family: -apple-system, Segoe UI, sans-serif; color: #d9c9a8; touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
-  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  /* HUD strip: a dedicated band at the top of the viewport for the topbar and
+     help/pause buttons. The canvas (#wrap) starts BELOW this band so the
+     playing field is never covered by HUD chrome. */
+  :root { --hud-h: 100px; }
+  @media (max-height: 500px) { :root { --hud-h: 64px; } }
+  #wrap { position: fixed; top: var(--hud-h); left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; }
+  /* Subtle separator line under the HUD band so the playing field has a
+     visual edge against the dark background of the HUD area. */
+  body::after {
+    content: '';
+    position: fixed;
+    top: calc(var(--hud-h) - 2px);
+    left: 0; right: 0;
+    height: 2px;
+    background: #3a2616;
+    box-shadow: 0 1px 0 #1a0c00;
+    z-index: 9;
+    pointer-events: none;
+  }
   canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; touch-action: none; }
   /* Gold readout sits inside the topbar as a .tb-block — give it a coin-yellow tint */
   .tb-block.gold-block .tb-gold-num { color: #f0c94a; }
@@ -2650,9 +2668,15 @@ function resize() {
   if (rotateEl) rotateEl.classList.toggle('show', tooPortrait);
   if (tooPortrait) return;
 
+  // The HUD band reserves vertical space at the top — the playing field lives
+  // BELOW it (#wrap is offset by var(--hud-h)). Read the actual computed value
+  // so the JS picks up the @media-controlled mobile override automatically.
+  const hudH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hud-h')) || 100;
+  const playH = Math.max(120, vh - hudH);
+
   // Pick scale so we land near ~200 logical rows. Clamp so pixels stay chunky.
-  scale = Math.max(2, Math.min(8, Math.round(vh / 200)));
-  H = Math.max(140, Math.floor(vh / scale));
+  scale = Math.max(2, Math.min(8, Math.round(playH / 200)));
+  H = Math.max(140, Math.floor(playH / scale));
   W = Math.max(180, Math.floor(vw / scale));
 
   canvas.width  = W;
