@@ -25,7 +25,8 @@
      help/pause buttons. The canvas (#wrap) starts BELOW this band so the
      playing field is never covered by HUD chrome. */
   :root { --hud-h: 100px; }
-  @media (max-height: 500px) { :root { --hud-h: 64px; } }
+  /* Catch any short OR narrow viewport — covers most phones in landscape */
+  @media (max-height: 650px), (max-width: 900px) { :root { --hud-h: 48px; } }
   #wrap { position: fixed; top: var(--hud-h); left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; }
   /* Subtle separator line under the HUD band so the playing field has a
      visual edge against the dark background of the HUD area. */
@@ -1115,6 +1116,44 @@
     body.daily-mode::before { top: 50px; font-size: 9px; padding: 3px 10px; }
   }
 
+  /* FULLSCREEN BUTTON — top-LEFT corner (mirrors pause-btn on the right) */
+  #fs-btn {
+    position: fixed;
+    top: 10px;
+    left: 14px;
+    width: 44px; height: 44px;
+    background: #2a1a08;
+    color: #f5d889;
+    border: 0; cursor: pointer;
+    padding: 0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow:
+      inset 0 0 0 2px #6a4528,
+      inset 0 0 0 4px #1a0c00,
+      4px 4px 0 0 rgba(0,0,0,0.78);
+    transition: transform 0.08s, box-shadow 0.08s;
+  }
+  #fs-btn:hover {
+    transform: translate(-1px,-1px);
+    color: #ffd060;
+    box-shadow:
+      inset 0 0 0 2px #8a6428,
+      inset 0 0 0 4px #1a0c00,
+      5px 5px 0 0 rgba(0,0,0,0.78);
+  }
+  #fs-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow:
+      inset 0 0 0 2px #6a4528,
+      inset 0 0 0 4px #1a0c00,
+      2px 2px 0 0 rgba(0,0,0,0.78);
+  }
+  /* Hide on devices that don't support the fullscreen API gracefully via JS */
+  #fs-btn.unsupported { display: none; }
+
   /* HELP BUTTON — sits to the LEFT of #pause-btn in top-right (pause is at right:14, w:44 → help at right:66) */
   #help-btn {
     position: fixed;
@@ -1962,12 +2001,12 @@
   #gameover .actions button { margin-top: 0; }
 
   /* ==========================================================================
-     LANDSCAPE PHONE BREAKPOINT — viewport heights of common phone landscapes
-     are ~320-430px. Compact every overlay so it fits without overflowing
-     and stays scrollable when content is long. The game is landscape-only
-     (a #rotate prompt covers portrait), so we don't need a portrait branch.
+     LANDSCAPE PHONE BREAKPOINT — fires on any phone-ish viewport (short OR
+     narrow). Compacts every overlay so it fits without overflowing and stays
+     scrollable when content is long. The game is landscape-only (a #rotate
+     prompt covers portrait), so we don't need a portrait branch.
      ========================================================================== */
-  @media (max-height: 500px) {
+  @media (max-height: 650px), (max-width: 900px) {
     /* Overlays scroll at the OVERLAY level on short viewports — flex centering
        can push tall cards above the viewport, so swap to top-aligned + scroll. */
     #title-overlay, #welcome-overlay, #settings-overlay, #confirm-overlay,
@@ -1976,18 +2015,19 @@
       overflow-y: auto;
       padding: 8px 0;
     }
-    /* Top-right + top-left buttons shrink slightly */
-    #help-btn, #pause-btn { width: 36px; height: 36px; top: 6px; }
-    #help-btn { right: 54px; font-size: 14px; }
-    #pause-btn { right: 10px; }
-    /* Topbar tightens */
-    #topbar { top: 6px; padding: 2px; }
-    .tb-block { padding: 5px 9px; gap: 5px; }
-    .tb-label { font-size: 8px; }
-    .tb-num   { font-size: 13px; }
-    .tb-big   { font-size: 16px; }
-    .tb-state { font-size: 8px; }
-    .tb-block .icon { width: 16px; height: 18px; }
+    /* Top corner buttons — keep small + flush */
+    #help-btn, #pause-btn, #fs-btn { width: 32px; height: 32px; top: 4px; }
+    #fs-btn   { left: 4px;  font-size: 14px; }
+    #help-btn { right: 42px; font-size: 14px; }
+    #pause-btn { right: 4px; }
+    /* Topbar tightens — small font, compact padding, fits in ~40px tall */
+    #topbar { top: 4px; padding: 1px; }
+    .tb-block { padding: 3px 7px; gap: 4px; }
+    .tb-label { font-size: 7px; }
+    .tb-num   { font-size: 11px; }
+    .tb-big   { font-size: 13px; }
+    .tb-state { font-size: 7px; }
+    .tb-block .icon { width: 14px; height: 16px; }
 
     /* Title card (logo screen) */
     #title-overlay .title-card { padding: 14px 22px 12px; max-height: 96vh; overflow-y: auto; }
@@ -2342,6 +2382,8 @@
       </div>
     </div>
   </div>
+
+  <button id="fs-btn" onclick="toggleFullscreen()" title="Fullscreen (uses your phone's whole screen)" aria-label="Fullscreen"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" width="20" height="20"><g fill="#f5d889"><rect x="0" y="0" width="6" height="2"/><rect x="0" y="0" width="2" height="6"/><rect x="10" y="0" width="6" height="2"/><rect x="14" y="0" width="2" height="6"/><rect x="0" y="14" width="6" height="2"/><rect x="0" y="10" width="2" height="6"/><rect x="10" y="14" width="6" height="2"/><rect x="14" y="10" width="2" height="6"/></g></svg></button>
 
   <button id="help-btn" onclick="openWelcome(true)" title="Help / Controls" aria-label="Help">?</button>
 
@@ -9097,6 +9139,55 @@ window.settingsWipe = function () {
     }
   });
 };
+
+// =====================================================================
+//  FULLSCREEN — claim every device pixel (especially valuable on phones
+//  where the URL bar otherwise eats ~80px of viewport height)
+// =====================================================================
+(function setupFullscreen() {
+  const btn = document.getElementById('fs-btn');
+  if (!btn) return;
+  const supported = !!(document.fullscreenEnabled
+                    || document.webkitFullscreenEnabled
+                    || document.body.requestFullscreen
+                    || document.body.webkitRequestFullscreen);
+  if (!supported) { btn.classList.add('unsupported'); return; }
+  function isFs() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+  function setIcon(active) {
+    // Two icon states: corners-out (enter) vs corners-in (exit)
+    if (active) {
+      btn.innerHTML = '<svg viewBox="0 0 16 16" shape-rendering="crispEdges" width="20" height="20"><g fill="#ffd060">' +
+        '<rect x="4" y="0" width="2" height="6"/><rect x="0" y="4" width="6" height="2"/>' +
+        '<rect x="10" y="0" width="2" height="6"/><rect x="10" y="4" width="6" height="2"/>' +
+        '<rect x="4" y="10" width="2" height="6"/><rect x="0" y="10" width="6" height="2"/>' +
+        '<rect x="10" y="10" width="2" height="6"/><rect x="10" y="10" width="6" height="2"/>' +
+        '</g></svg>';
+    } else {
+      btn.innerHTML = '<svg viewBox="0 0 16 16" shape-rendering="crispEdges" width="20" height="20"><g fill="#f5d889">' +
+        '<rect x="0" y="0" width="6" height="2"/><rect x="0" y="0" width="2" height="6"/>' +
+        '<rect x="10" y="0" width="6" height="2"/><rect x="14" y="0" width="2" height="6"/>' +
+        '<rect x="0" y="14" width="6" height="2"/><rect x="0" y="10" width="2" height="6"/>' +
+        '<rect x="10" y="14" width="6" height="2"/><rect x="14" y="10" width="2" height="6"/>' +
+        '</g></svg>';
+    }
+  }
+  document.addEventListener('fullscreenchange',       () => { setIcon(isFs()); resize(); });
+  document.addEventListener('webkitfullscreenchange', () => { setIcon(isFs()); resize(); });
+  window.toggleFullscreen = function () {
+    Audio.sfx.click && Audio.sfx.click();
+    if (isFs()) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) exit.call(document);
+    } else {
+      const el  = document.documentElement;
+      const req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (req) req.call(el).catch(() => { /* user denied */ });
+    }
+  };
+  setIcon(isFs());
+})();
 
 // =====================================================================
 //  PRESTIGE MODULE — overlay, tree render, buy, wipe-and-credit action
