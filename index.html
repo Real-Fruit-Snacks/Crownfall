@@ -3919,26 +3919,60 @@ function shapeSvg(kind, fill, stroke) {
     </svg>`;
   }
   if (kind === 'skills') {
-    // SPARK / LIGHTNING bolt
+    // LIGHTNING BOLT — chunky zig-zag with belly kink
     return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges">
       <g fill="${stroke}">
-        <rect x="8" y="0" width="3" height="2"/>
-        <rect x="6" y="2" width="4" height="2"/>
-        <rect x="4" y="4" width="6" height="2"/>
-        <rect x="6" y="6" width="6" height="2"/>
-        <rect x="3" y="8" width="6" height="2"/>
-        <rect x="5" y="10" width="4" height="2"/>
-        <rect x="6" y="12" width="3" height="2"/>
-        <rect x="7" y="14" width="2" height="2"/>
+        <!-- upper slab outline (down-left diagonal) -->
+        <rect x="8"  y="0" width="1" height="1"/>
+        <rect x="7"  y="1" width="1" height="1"/>
+        <rect x="6"  y="2" width="1" height="1"/>
+        <rect x="5"  y="3" width="1" height="1"/>
+        <rect x="4"  y="4" width="1" height="2"/>
+        <rect x="12" y="1" width="1" height="1"/>
+        <rect x="11" y="2" width="1" height="2"/>
+        <rect x="10" y="4" width="2" height="1"/>
+        <!-- belly outline (kink widens right) -->
+        <rect x="3"  y="6" width="1" height="3"/>
+        <rect x="12" y="5" width="1" height="2"/>
+        <rect x="11" y="7" width="1" height="1"/>
+        <rect x="9"  y="8" width="2" height="1"/>
+        <!-- lower slab outline (down-left to point) -->
+        <rect x="3"  y="9" width="1" height="1"/>
+        <rect x="2"  y="10" width="1" height="2"/>
+        <rect x="1"  y="12" width="1" height="2"/>
+        <rect x="2"  y="14" width="1" height="1"/>
+        <rect x="3"  y="15" width="1" height="1"/>
+        <rect x="8"  y="9" width="1" height="2"/>
+        <rect x="7"  y="11" width="1" height="1"/>
+        <rect x="6"  y="12" width="1" height="1"/>
+        <rect x="5"  y="13" width="1" height="1"/>
+        <rect x="4"  y="14" width="1" height="1"/>
       </g>
       <g fill="${fill}">
-        <rect x="8" y="1" width="2" height="1"/>
-        <rect x="7" y="3" width="2" height="1"/>
-        <rect x="5" y="5" width="4" height="1"/>
-        <rect x="7" y="7" width="4" height="1"/>
+        <!-- upper slab body -->
+        <rect x="9" y="0" width="3" height="1"/>
+        <rect x="8" y="1" width="4" height="1"/>
+        <rect x="7" y="2" width="4" height="1"/>
+        <rect x="6" y="3" width="5" height="1"/>
+        <rect x="5" y="4" width="5" height="1"/>
+        <!-- belly body -->
+        <rect x="5" y="5" width="7" height="1"/>
+        <rect x="4" y="6" width="8" height="1"/>
+        <rect x="4" y="7" width="7" height="1"/>
+        <!-- lower slab body (tapers to point) -->
+        <rect x="4" y="8" width="5" height="1"/>
         <rect x="4" y="9" width="4" height="1"/>
-        <rect x="6" y="11" width="2" height="1"/>
-        <rect x="7" y="13" width="1" height="1"/>
+        <rect x="3" y="10" width="5" height="1"/>
+        <rect x="3" y="11" width="4" height="1"/>
+        <rect x="2" y="12" width="4" height="1"/>
+        <rect x="2" y="13" width="3" height="1"/>
+        <rect x="3" y="14" width="1" height="1"/>
+      </g>
+      <!-- white spark highlight along upper-left edge -->
+      <g fill="#ffffff" opacity="0.75">
+        <rect x="9" y="1" width="1" height="1"/>
+        <rect x="7" y="3" width="1" height="1"/>
+        <rect x="5" y="6" width="1" height="1"/>
       </g>
     </svg>`;
   }
