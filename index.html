@@ -3397,6 +3397,7 @@ window.resetRun = function (opts) {
   firePatches.length   = 0;
   floatingTexts.length = 0;
   PLAGUE_CLOUDS.length = 0;
+  pendingWaveRewards.length = 0;       // any unpaid skip-rewards die with the run
   currentEvent  = null;
   eventBannerT  = 0;
   screenFlashT = 0;
@@ -5687,6 +5688,30 @@ let wavePhase = 'spawning';   // 'spawning' | 'active' | 'resting'
 let waveSpawnsLeft = 0;
 let waveSpawnTimer = 0.3;
 let waveRestTimer = 0;
+// Deferred wave rewards: when the player skips a wave via the WAVE-block
+// dblclick, the gold reward isn't paid immediately — it's held in this queue
+// keyed by which wave it belonged to, then paid out only when the LAST
+// surviving enemy from that wave finally dies. This stops the spam-skip
+// exploit (would otherwise let a player accumulate infinite gold by skipping
+// repeatedly without fighting).
+//   shape: [{ wave: N, reward: G, remaining: count }, ...]
+let pendingWaveRewards = [];
+function payPendingForDeadEnemy(deadE) {
+  if (!deadE || deadE.spawnedAtWave == null) return;
+  const idx = pendingWaveRewards.findIndex(p => p.wave === deadE.spawnedAtWave);
+  if (idx < 0) return;
+  pendingWaveRewards[idx].remaining--;
+  if (pendingWaveRewards[idx].remaining <= 0) {
+    const p = pendingWaveRewards[idx];
+    gold            += p.reward;
+    totalGoldEarned += p.reward;
+    goldDirty = true;
+    if (typeof spawnFloatingText === 'function') {
+      spawnFloatingText(WALL_W + 12, H / 2 - 10, '+' + p.reward + 'g \u00b7 W' + p.wave + ' clear', '#f5d889');
+    }
+    pendingWaveRewards.splice(idx, 1);
+  }
+}
 let totalWavesCleared = 0;
 let bossSpawned = false;       // tracks whether the boss for this boss-wave has been spawned
 
@@ -5818,27 +5843,57 @@ runRpRowEl.addEventListener('click', () => {
 });
 
 // Double-click the WAVE block at ANY time to advance to the next wave.
-// Existing enemies STAY on the field — the next wave's enemies spawn on top
-// of them. This is intentional: stacking waves is the player's choice for
-// faster grinding (with the obvious risk).
-//   - Resting:           collapse the rest timer to 0; next wave kicks off.
-//   - Spawning / active: cancel the rest of the current wave's spawn queue,
-//     grant the wave-clear gold reward (no penalty for skipping), then
-//     collapse the rest timer so the next wave starts immediately. Living
-//     enemies are NOT cleared — they roll into the next wave.
+// Existing enemies STAY on the field — the next wave's enemies spawn on top.
+//
+// IMPORTANT: the wave-clear gold reward is DEFERRED, not paid immediately.
+// It only pays out when the LAST enemy from THAT wave actually dies. This
+// closes the spam-skip exploit (otherwise: skip 100 times, get 100 wave
+// rewards instantly, infinite gold without fighting).
+//
+//   - Resting:           collapse the rest timer; next wave starts.
+//   - Spawning / active: cancel the rest of THIS wave's spawn queue, push
+//     the wave's reward into pendingWaveRewards keyed by wave number, do
+//     the non-gold endWave bookkeeping inline (totalWavesCleared, wall
+//     regen, mid-event-buff tickdowns, stats, achievement check), then
+//     collapse the rest timer. Living enemies stay; they'll trigger the
+//     payout when the last one dies.
 waveHudEl.addEventListener('dblclick', () => {
   if (gameOver || paused) return;
-  if (_activeMidEvent) return;                      // mid-event modal is open — don't skip past it
+  if (_activeMidEvent) return;                      // don't skip past a decision modal
   if (wavePhase !== 'resting') {
-    waveSpawnsLeft = 0;                             // stop spawning the rest of THIS wave
-    wavePhase = 'active';                           // ensure endWave's preconditions are met
-    // Temporarily empty enemies so endWave's natural caller (loop's
-    // 'active && enemies.length===0' branch) wouldn't conflict — but we call
-    // endWave directly here so we don't need to clear anything. Existing
-    // enemies stay alive and just blend with the incoming wave.
-    if (typeof endWave === 'function') endWave();   // gold + totalWavesCleared + sets resting state
+    // Cancel the rest of this wave's spawn queue
+    waveSpawnsLeft = 0;
+    // Compute this wave's gold reward (same formula as endWave) and DEFER it
+    // until the last enemy from this wave actually dies. If no enemies of this
+    // wave are on the field (skipped before any spawned, OR they all already
+    // died and the resting transition just hasn't happened yet), the reward
+    // is FORFEIT — pay nothing. This closes the spam-skip exploit cleanly:
+    // you can only collect a wave's gold by fighting at least one of its
+    // enemies.
+    const aliveFromThisWave = enemies.reduce((n, e) => n + ((e.spawnedAtWave === wave && e.hp > 0) ? 1 : 0), 0);
+    if (aliveFromThisWave > 0) {
+      const reward = Math.floor((3 + wave * 2) * effects.waveRewardMul * (1 + (runState.waveRewardBonus || 0)));
+      pendingWaveRewards.push({ wave, reward, remaining: aliveFromThisWave });
+      if (typeof spawnFloatingText === 'function') {
+        spawnFloatingText(WALL_W + 12, H / 2 + 10, '+' + reward + 'g held \u00b7 W' + wave, '#a89070');
+      }
+    } else if (typeof spawnFloatingText === 'function') {
+      // Visual feedback for the forfeit so the player knows why they got nothing
+      spawnFloatingText(WALL_W + 12, H / 2 + 10, 'reward forfeit \u00b7 W' + wave, '#a8413a');
+    }
+    // Non-gold bookkeeping that endWave would normally do
+    totalWavesCleared++;
+    if (effects.wallRegenPerWave > 0 && wallHP < effects.wallMaxHp) {
+      wallHP = Math.min(effects.wallMaxHp, wallHP + effects.wallRegenPerWave);
+      if (typeof updateWallHp === 'function') updateWallHp();
+    }
+    if (runState.dmgBuffWaves  > 0) runState.dmgBuffWaves--;
+    if (runState.coinBuffWaves > 0) runState.coinBuffWaves--;
+    if (typeof bumpStat === 'function') bumpStat('totalWavesCleared', 1);
+    // Transition to resting; main loop's resting branch starts the next wave
+    wavePhase = 'resting';
   }
-  waveRestTimer = 0;                                // skip the rest no matter how we got here
+  waveRestTimer = 0;                                // skip the rest in either case
   Audio.sfx.click && Audio.sfx.click();
   if (typeof updateWaveHud === 'function') updateWaveHud();
 });
@@ -8392,7 +8447,11 @@ function spawnEnemy(w, asBoss) {
     healAmtPct:  km.healPctOfTargetMax ? km.healPctOfTargetMax * (asBoss ? 1.6 : 1) : 0,
     healRadius:  km.healRadius ? km.healRadius + (asBoss ? 20 : 0) : 0,
     // witch
-    auraRadius:  km.auraRadius ? km.auraRadius + bossAuraBonus : 0
+    auraRadius:  km.auraRadius ? km.auraRadius + bossAuraBonus : 0,
+    // Tag every enemy with the wave it spawned in. Used by the deferred
+    // wave-reward queue: when a wave is skipped via the WAVE-block dblclick,
+    // its gold is held back until the LAST enemy from that wave actually dies.
+    spawnedAtWave: w
   });
   // Apply event-wave modifiers to the just-pushed enemy
   if (currentEvent && !asBoss) {
@@ -8462,6 +8521,9 @@ function updateEnemies(dt) {
       // Lifetime stats
       bumpStat('totalKills', 1);
       if (e.isBoss) bumpStat('bossesKilled', 1);
+      // If this enemy belonged to a previously-skipped wave whose reward is
+      // still pending, decrement that wave's count and pay out when it hits 0.
+      payPendingForDeadEnemy(e);
       enemies.splice(i, 1);
       totalKills++;
       continue;
