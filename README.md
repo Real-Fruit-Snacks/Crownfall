@@ -107,10 +107,9 @@ The `.nojekyll` file at the root tells Pages not to process the site through Jek
 ```
 .
 ├── index.html              # The entire game (HTML + CSS + JS in one file)
-├── game-design.html        # Early visual design questionnaire (history)
-├── research-design.html    # Research tree layout exploration (history)
 ├── favicon.svg             # Tiny pixel-art crown
-├── og-image.svg            # Social share preview
+├── og-image.svg            # Social share preview / README banner
+├── itch-cover.svg          # itch.io cover image
 ├── README.md               # This file
 ├── LICENSE                 # MIT
 ├── CHANGELOG.md            # Version history
