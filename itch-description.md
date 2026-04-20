@@ -20,7 +20,7 @@ You will die. A lot. Every run makes the next one stronger.
 ## Controls
 
 - **Click** — hire heroes, buy upgrades, collect coins
-- **1–4** — cast skill in slot N
+- **1–5** — cast skill in slot N
 - **Q** — end run, bank Research Points
 - **R** — open research book
 - **Space** — pause/resume

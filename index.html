@@ -1921,15 +1921,18 @@
     cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' shape-rendering='crispEdges'><g fill='%231a0c00'><rect x='1' y='1' width='9' height='2'/><rect x='1' y='1' width='2' height='9'/><rect x='22' y='1' width='9' height='2'/><rect x='29' y='1' width='2' height='9'/><rect x='1' y='29' width='9' height='2'/><rect x='1' y='22' width='2' height='9'/><rect x='22' y='29' width='9' height='2'/><rect x='29' y='22' width='2' height='9'/><rect x='12' y='12' width='8' height='8'/></g><g fill='%23ffe060'><rect x='2' y='2' width='7' height='1'/><rect x='2' y='2' width='1' height='7'/><rect x='23' y='2' width='7' height='1'/><rect x='29' y='2' width='1' height='7'/><rect x='2' y='29' width='7' height='1'/><rect x='2' y='23' width='1' height='7'/><rect x='23' y='29' width='7' height='1'/><rect x='29' y='23' width='1' height='7'/><rect x='13' y='13' width='6' height='6'/></g><rect x='15' y='15' width='2' height='2' fill='%23c83020'/></svg>") 16 16, crosshair !important;
   }
 
-  /* skill buy / details popup — same chrome as #panel */
+  /* skill buy / details popup — same chrome as #panel.
+     Sized narrow + short so it overlays as little of the battlefield as
+     possible (review feedback: "skill menu covers part of the screen,
+     hiding enemies"). Mobile shrinks it further via the media query below. */
   #skill-panel {
     position: fixed; display: none;
     background: #2a1a08;
-    padding: 12px;
+    padding: 10px;
     color: #e8d9b8;
     font-family: 'Pixelify Sans', monospace;
-    font-size: 13px;
-    min-width: 240px; max-width: 280px; max-height: 70vh;
+    font-size: 12px;
+    min-width: 200px; max-width: 230px; max-height: 48vh;
     overflow-y: auto;
     z-index: 21;
     box-shadow:
@@ -1937,8 +1940,8 @@
       inset 0 0 0 4px #1a0c00,
       4px 4px 0 0 rgba(0,0,0,0.78);
   }
-  #skill-panel h3 { margin: 0 0 10px; color: #f5d889; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 2px solid #6a4528; padding-bottom: 6px; text-align: center; }
-  #skill-panel .sk-opt { background: #3a2616; padding: 8px 10px; margin: 6px 0; box-shadow: inset 0 0 0 2px #6a4528, 2px 2px 0 0 #1a0c00; }
+  #skill-panel h3 { margin: 0 0 6px; color: #f5d889; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 2px solid #6a4528; padding-bottom: 4px; text-align: center; }
+  #skill-panel .sk-opt { background: #3a2616; padding: 6px 8px; margin: 4px 0; box-shadow: inset 0 0 0 2px #6a4528, 2px 2px 0 0 #1a0c00; }
   #skill-panel .sk-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 8px; }
   #skill-panel .sk-name { font-weight: 700; font-size: 12px; padding: 2px 7px; color: #fff; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.5); letter-spacing: 0.3px; }
   #skill-panel .sk-cost { color: #f5d889; font-family: 'VT323', monospace; font-size: 18px; letter-spacing: 1px; }
@@ -2103,6 +2106,27 @@
     #confirm-overlay h3 { font-size: 13px; margin-bottom: 8px; }
     #confirm-overlay p  { font-size: 12px; margin-bottom: 12px; }
     #confirm-overlay button { padding: 7px 14px; font-size: 11px; }
+
+    /* Skill bar shrinks so 5 slots don't overflow narrow phone screens.
+       5 × (44+5) = 245 logical px + padding 8 = fits 280px+ viewports. */
+    #skillbar { bottom: 6px; padding: 4px; gap: 5px; }
+    #skillbar .sk { width: 44px; height: 44px; }
+    #skillbar .sk .glyph { width: 30px; height: 30px; }
+    #skillbar .sk .label { font-size: 9px; }
+    #skillbar .sk .keybadge { font-size: 8px; }
+    #skillbar .sk .cost-tag { font-size: 9px; }
+
+    /* Skill buy popup — ultra compact on landscape mobile so it leaves the
+       field readable. Small screens MUST see the enemies behind the popup. */
+    #skill-panel { min-width: 170px; max-width: 200px; max-height: 42vh; padding: 8px; font-size: 11px; }
+    #skill-panel h3 { font-size: 11px; margin-bottom: 4px; padding-bottom: 3px; }
+    #skill-panel .sk-opt { padding: 5px 7px; margin: 3px 0; }
+    #skill-panel .sk-name { font-size: 10px; padding: 1px 5px; }
+    #skill-panel .sk-cost { font-size: 15px; }
+    #skill-panel .sk-desc { font-size: 10px; line-height: 1.3; margin-bottom: 4px; }
+    #skill-panel .sk-meta { font-size: 11px; margin-bottom: 4px; }
+    #skill-panel button { padding: 5px 10px; font-size: 10px; }
+    #skill-panel .close { font-size: 9px; padding: 4px; }
 
     /* Pause overlay — 7 buttons + 6 stat rows MUST fit in ~300px of content */
     #pause-overlay .card { padding: 12px 16px; max-height: 96vh; }
@@ -2768,6 +2792,13 @@ window.addEventListener('keydown',     _audioBoot);
 let W = 320, H = 180, scale = 1;    // placeholders — resize() sets real values
 
 function resize() {
+  // Browser-zoom guard — if the user is pinch-zoomed / Ctrl-+/-, visualViewport.scale
+  // deviates from 1. We used to re-derive W/H from innerWidth on every zoom tick,
+  // which visibly SHIFTED enemies (their x persists while the canvas shrank). Ignore
+  // zoom-induced resizes so coordinates stay stable; real orientation / window-drag
+  // changes still go through because they don't move visualViewport.scale.
+  if (window.visualViewport && Math.abs(window.visualViewport.scale - 1) > 0.02) return;
+
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
@@ -2783,6 +2814,11 @@ function resize() {
   const hudH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hud-h')) || 100;
   const playH = Math.max(120, vh - hudH);
 
+  // Remember old size so entity coords can be rescaled if the canvas genuinely
+  // resized (rotation, window drag). Without this, enemies/coins that were in
+  // the middle of the old canvas can end up past the right edge of the new one.
+  const oldW = W, oldH = H;
+
   // Pick scale so we land near ~200 logical rows. Clamp so pixels stay chunky.
   scale = Math.max(2, Math.min(8, Math.round(playH / 200)));
   H = Math.max(140, Math.floor(playH / scale));
@@ -2793,6 +2829,25 @@ function resize() {
   canvas.style.width  = (W * scale) + 'px';
   canvas.style.height = (H * scale) + 'px';
   ctx.imageSmoothingEnabled = false;
+
+  // Rescale all in-flight entity positions so they stay where they were
+  // relative to the play area. Without this, an enemy at x=250 on a 300-wide
+  // canvas would sit off-screen after shrinking to W=200.
+  if (oldW && oldH && (oldW !== W || oldH !== H)) {
+    const sx = W / oldW, sy = H / oldH;
+    const rescale = (o) => {
+      if (typeof o.x  === 'number') o.x  *= sx;
+      if (typeof o.y  === 'number') o.y  *= sy;
+      if (typeof o.vx === 'number') o.vx *= sx;
+      if (typeof o.vy === 'number') o.vy *= sy;
+      if (typeof o.tx === 'number') o.tx *= sx;
+      if (typeof o.ty === 'number') o.ty *= sy;
+    };
+    if (typeof enemies          !== 'undefined') enemies.forEach(rescale);
+    if (typeof projectiles      !== 'undefined') projectiles.forEach(rescale);
+    if (typeof enemyProjectiles !== 'undefined') enemyProjectiles.forEach(rescale);
+    if (typeof coins            !== 'undefined') coins.forEach(rescale);
+  }
 
   // Reposition hero slots for new H
   if (typeof SLOTS !== 'undefined') {
@@ -3264,9 +3319,13 @@ function currentRpEarned() {
   // RP scales with the wave you REACH, not the count you played.
   const startWaveSkip   = Math.max(0, (effects.startingWave || 1) - 1);
   const effectiveCleared = totalWavesCleared + startWaveSkip;
-  const fromWaves  = Math.floor(effectiveCleared * 0.4);
+  // Review feedback: "super grindy", "can't afford first skill in an hour".
+  // Boosted per-wave and per-kill RP yield so a new player clearing wave 10
+  // nets ~8 RP (up from ~6) and can unlock slot1 (2) + Smite (3) on their
+  // very first real run instead of after 2-3 run cycles.
+  const fromWaves  = Math.floor(effectiveCleared * 0.5);
   const fromBosses = Math.floor(effectiveCleared / 10);
-  const fromKills  = Math.floor(totalKills / 60);   // kills stay run-only — actual effort
+  const fromKills  = Math.floor(totalKills / 40);   // kills stay run-only — actual effort
   const base = fromWaves + fromBosses + fromKills;
   const scaled = Math.floor(base * (effects.rpMul || 1));
   // Prestige "Scholar's Mind" adds flat RP per run (stacks)
@@ -3615,12 +3674,12 @@ const RESEARCH_NODES = [
   // ===========================================================
   //  SKILLS — bottom-bar active abilities (slots + per-skill unlocks)
   // ===========================================================
-  { id:'sklSlot1', x:50, y:50, name:'Hand of the Lord',  desc:'Unlock the FIRST skill slot at the bottom of the screen.', cost:6, req:['root'],     effect:{ skillSlotsUnlocked:1 } },
-  { id:'sklSlot2', x:50, y:50, name:'Quick Hands',       desc:'Unlock the SECOND skill slot.',                            cost:14, req:['sklSlot1'], effect:{ skillSlotsUnlocked:2 } },
-  { id:'sklSlot3', x:50, y:50, name:'Master Caster',     desc:'Unlock the THIRD skill slot.',                             cost:22, req:['sklSlot2'], effect:{ skillSlotsUnlocked:3 } },
-  { id:'sklSlot4', x:50, y:50, name:'Archmage Reflex',   desc:'Unlock the FOURTH skill slot.',                            cost:0, crownCost:5, req:['sklSlot3'], effect:{ skillSlotsUnlocked:4 } },
+  { id:'sklSlot1', x:50, y:50, name:'Quick Hands',       desc:'Unlock the SECOND skill slot.',                            cost:2, req:['root'],     effect:{ skillSlotsUnlocked:2 } },
+  { id:'sklSlot2', x:50, y:50, name:'Master Caster',     desc:'Unlock the THIRD skill slot.',                             cost:12, req:['sklSlot1'], effect:{ skillSlotsUnlocked:3 } },
+  { id:'sklSlot3', x:50, y:50, name:'Archmage Reflex',   desc:'Unlock the FOURTH skill slot.',                            cost:20, req:['sklSlot2'], effect:{ skillSlotsUnlocked:4 } },
+  { id:'sklSlot4', x:50, y:50, name:'Grand Magus',       desc:'Unlock the FIFTH skill slot.',                             cost:0, crownCost:5, req:['sklSlot3'], effect:{ skillSlotsUnlocked:5 } },
 
-  { id:'sklSmite',     x:50, y:50, name:'Skill: Smite',      desc:'Click to arm, then click an enemy for 60 holy damage (2x vs bosses). Costs 25g per round.',          cost:6, req:['sklSlot1'], effect:{ unlockSkill:'smite' } },
+  { id:'sklSmite',     x:50, y:50, name:'Skill: Smite',      desc:'Click to arm, then click an enemy for 60 holy damage (2x vs bosses). Costs 15g per round.',          cost:3, req:['sklSlot1'], effect:{ unlockSkill:'smite' } },
   { id:'sklHeal',      x:50, y:50, name:'Skill: Heal Wall',  desc:'Restore 35 wall HP instantly. Costs 50g per round.',                                                cost:9, req:['sklSlot1'], effect:{ unlockSkill:'heal' } },
   { id:'sklRally',     x:50, y:50, name:'Skill: Rally',      desc:'All heroes fire 60% faster for 6 seconds. Costs 60g per round.',                                    cost:11, req:['sklSlot1'], effect:{ unlockSkill:'rally' } },
   { id:'sklFrost',     x:50, y:50, name:'Skill: Frost Nova', desc:'Chill every enemy on the field for 4 seconds. Costs 70g per round.',                                cost:11, req:['sklSlot2'], effect:{ unlockSkill:'frostNova' } },
@@ -3843,8 +3902,10 @@ const effects = {
   crossbowDmgMul: 1, crossbowRngAdd: 0, crossbowFireRateMul: 1,
   clericDmgMul: 1, clericHealAdd: 0, clericFireRateMul: 1,
   bardAuraAdd: 0, bardRngAdd: 0, bardDmgAuraAdd: 0,
-  // skills
-  skillSlotsUnlocked: 0,
+  // skills — start with 1 slot unlocked so the skill bar is visible on the
+  // very first run. Players used to not know skills existed until they
+  // opened the Research book; review feedback: "can't even afford first skill".
+  skillSlotsUnlocked: 1,
   unlockedSkills: new Set(),
   // hero skins
   unlockedSkins: new Set(),
@@ -3882,7 +3943,7 @@ function applyResearch() {
   effects.crossbowDmgMul = 1; effects.crossbowRngAdd = 0; effects.crossbowFireRateMul = 1;
   effects.clericDmgMul = 1; effects.clericHealAdd = 0; effects.clericFireRateMul = 1;
   effects.bardAuraAdd = 0; effects.bardRngAdd = 0; effects.bardDmgAuraAdd = 0;
-  effects.skillSlotsUnlocked = 0;
+  effects.skillSlotsUnlocked = 1;   // default 1 slot visible from start
   effects.unlockedSkills = new Set();
   effects.unlockedSkins  = new Set();
   effects.unlockedHazards = new Set();
@@ -4594,6 +4655,29 @@ function checkAchievements() {
     }
   }
 }
+
+// ---------- SAVE-ON-EXIT SAFETY NET ----------
+// saveStats / saveResearch / savePrestige / saveCommanders already fire on each
+// mutation, so a normal browser session is safe. But if the OS kills the tab
+// (crash, power loss, ctrl-W without confirmation) between a big kill spree and
+// the next save trigger, we want one more flush. These handlers do nothing
+// expensive — just re-persist the already-in-memory state.
+function flushAllSaves() {
+  try { saveStats(); } catch {}
+  try { saveResearch(); } catch {}
+  try { if (typeof savePrestige    === 'function') savePrestige();    } catch {}
+  try { if (typeof saveCommanders  === 'function') saveCommanders();  } catch {}
+  try { if (typeof saveDailyScores === 'function') saveDailyScores(); } catch {}
+}
+// visibilitychange fires before the tab is backgrounded / closed on mobile —
+// the most reliable save-on-exit hook. pagehide covers iOS Safari which skips
+// beforeunload. beforeunload is the desktop-browser safety net.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushAllSaves();
+});
+window.addEventListener('pagehide',     flushAllSaves);
+window.addEventListener('beforeunload', flushAllSaves);
+
 // ---------- Achievement popup (center-screen splash, queued) ----------
 const _achQueue = [];
 let _achPopupShown = false;
@@ -5680,7 +5764,7 @@ function renderNodeEntry(n) {
 }
 
 // ---------- waves ----------
-const BASE_WAVE_ENEMY_HP = 10;
+const BASE_WAVE_ENEMY_HP = 9;   // was 10 — slight early-wave nerf per review feedback
 const WAVE_REST = 2.5;
 
 let wave = 1;
@@ -6086,8 +6170,8 @@ const HERO_TYPES = {
   },
   cannoneer: {
     id: 'cannoneer', name: 'Cannoneer', cost: 40,
-    damage: 9, range: 95, fireRate: 2.0, projSpeed: 85,
-    splash: 22, splashDmg: 4,
+    damage: 10, range: 95, fireRate: 2.0, projSpeed: 85,
+    splash: 22, splashDmg: 5,
     bodyColor: '#6a2818', bodyHi: '#8a3820',
     hat: '#1a1a20', hatHi: '#3a3a40',
     flashColor: '#ffba40',
@@ -6105,7 +6189,7 @@ const HERO_TYPES = {
   },
   crossbow: {
     id: 'crossbow', name: 'Crossbow', cost: 35,
-    damage: 9, range: 120, fireRate: 1.6, projSpeed: 200,
+    damage: 10, range: 120, fireRate: 1.6, projSpeed: 200,
     bodyColor: '#3a3a44', bodyHi: '#5a5a64',
     hat: '#1a1a22', hatHi: '#3a3a40',
     flashColor: '#fff8c0',
@@ -6125,7 +6209,7 @@ const HERO_TYPES = {
   },
   cleric: {
     id: 'cleric', name: 'Cleric', cost: 50,
-    damage: 4, range: 130, fireRate: 1.5, projSpeed: 130,
+    damage: 5, range: 130, fireRate: 1.5, projSpeed: 130,
     bodyColor: '#d8c898', bodyHi: '#fff8e0',
     hat: '#c89b4a', hatHi: '#f5d889',
     flashColor: '#ffffff',
@@ -6263,7 +6347,7 @@ const SKILL_ART = {
 const SKILLS = {
   smite: {
     id: 'smite', name: 'Smite', short: 'SMITE',
-    cost: 25, cd: 6, target: 'enemy',
+    cost: 15, cd: 6, target: 'enemy',
     art: 'smite', palette: { b: '#fff8c0' }, tag: '#c83020',
     desc: 'Strike one enemy for 60 holy damage. Doubles vs bosses.'
   },
@@ -6347,7 +6431,7 @@ function lockIconHtml() {
   return pixelArtSvg(LOCK_ART, { a: '#3a2818', b: '#6a4528', c: '#1a0c00' });
 }
 
-const SKILL_SLOT_COUNT = 4;
+const SKILL_SLOT_COUNT = 5;    // max unlockable via sklSlot4 (crown cost)
 const SKILL_SLOTS = [];
 for (let i = 0; i < SKILL_SLOT_COUNT; i++) {
   SKILL_SLOTS.push({ index: i, skillId: null, cooldown: 0 });
@@ -7583,8 +7667,46 @@ function spawnProjectileFromHero(from, target, dmg, angleOffset) {
   const h = from.hero;
   const sx = from.cx + 3;
   const sy = from.cy;
-  const dx = target.x - sx;
-  const dy = target.y - sy;
+  // Lead the target — solve for intercept time so the arrow meets the enemy
+  // at their future position, not their current one. Without this, archers
+  // shooting at a moving charger aim behind the target and miss completely.
+  //   Want t such that |S * t| = |target(t) - shooter|
+  //   (tvx² + tvy² - S²)·t² + 2·(dx·tvx + dy·tvy)·t + (dx² + dy²) = 0
+  // Pick the smallest positive root. If no real root (target outruns arrow
+  // — only possible for stationary/slow projectiles), fall back to aiming
+  // at the current position.
+  const S    = h.projSpeed;
+  const tvx  = target.vx || 0;
+  const tvy  = target.vy || 0;
+  const baseDx = target.x - sx;
+  const baseDy = target.y - sy;
+  let aimX = target.x, aimY = target.y;
+  const a = tvx * tvx + tvy * tvy - S * S;
+  const b = 2 * (baseDx * tvx + baseDy * tvy);
+  const c = baseDx * baseDx + baseDy * baseDy;
+  // Numerically stable quadratic branches
+  let tIntercept = -1;
+  if (Math.abs(a) < 1e-4) {
+    // Linear case: target speed ~= projectile speed — rare edge
+    if (Math.abs(b) > 1e-4) tIntercept = -c / b;
+  } else {
+    const disc = b * b - 4 * a * c;
+    if (disc >= 0) {
+      const sq = Math.sqrt(disc);
+      const t1 = (-b - sq) / (2 * a);
+      const t2 = (-b + sq) / (2 * a);
+      // Smallest positive root
+      if (t1 > 0 && t2 > 0)      tIntercept = Math.min(t1, t2);
+      else if (t1 > 0)           tIntercept = t1;
+      else if (t2 > 0)           tIntercept = t2;
+    }
+  }
+  if (tIntercept > 0 && tIntercept < 3) {   // 3s sanity cap
+    aimX = target.x + tvx * tIntercept;
+    aimY = target.y + tvy * tIntercept;
+  }
+  const dx = aimX - sx;
+  const dy = aimY - sy;
   const d  = Math.hypot(dx, dy) || 1;
   let vx = (dx / d) * h.projSpeed;
   let vy = (dy / d) * h.projSpeed;
@@ -8081,8 +8203,15 @@ function enemyAt(mx, my) {
   let best = null, bestD = Infinity;
   for (const e of enemies) {
     if (e.hp <= 0) continue;
-    const r2 = e.isBoss ? 90 : 30;           // bosses get a bigger tap zone
-    const cy = e.isBoss ? (e.y - 6) : (e.y - 3);
+    // Tap radius scales with the enemy's actual sprite size — huge bosses (rams
+    // at 2.55x, event champions at 1.5x) used to have the same 9-logical-pixel
+    // hitbox as a tiny goblin, making them feel click-immune. Players clicked
+    // squarely on the visible body and nothing happened.
+    const sizeMul = e.sizeMul || 1;
+    const baseR   = e.isBoss ? 14 : 6;
+    const r       = baseR * Math.max(1, sizeMul);
+    const r2      = r * r;
+    const cy = e.isBoss ? (e.y - 4 * sizeMul) : (e.y - 3);
     const dx = e.x - mx, dy = cy - my;
     const d  = dx * dx + dy * dy;
     if (d < r2 && d < bestD) { bestD = d; best = e; }
@@ -8139,8 +8268,16 @@ canvas.addEventListener('pointerdown', e => {
   }
   const en = enemyAt(x, y);
   if (en) {
+    // Full tap damage regardless of armor — these are deliberate player clicks.
+    // Show a floating damage number so the player gets immediate confirmation
+    // that the click registered. Review feedback flagged that bosses felt
+    // "immune to clicks with no explanation" — the click WAS landing, just
+    // invisibly against their huge HP pool.
     en.hp -= TAP_DAMAGE;
     en.hitFlash = 0.08;
+    if (typeof spawnFloatingText === 'function') {
+      spawnFloatingText(en.x, en.y - 8, '-' + TAP_DAMAGE, '#ffe486');
+    }
     return;
   }
   const hit = slotAt(x, y);
@@ -8630,8 +8767,11 @@ function updateEnemies(dt) {
       continue;
     }
 
-    // Ranged enemies stop short of the wall
-    const arriveX = e.tx + (e.stopDist || 0);
+    // Ranged enemies stop short of the wall. Cap the stop-point to well
+    // inside the visible canvas so archer enemies (especially boss archers on
+    // narrow phone screens) never park off-screen and plink the wall from
+    // nowhere — the player can't see them to tap, and it feels cheesy.
+    const arriveX = Math.min(W - 18, e.tx + (e.stopDist || 0));
     if (e.x <= arriveX) {
       e.arrived = true;
       e.vx = e.vy = 0;
@@ -10196,7 +10336,7 @@ window.pauseOpenTitle    = function () {
 
 // =====================================================================
 //  KEYBOARD SHORTCUTS
-//   1-4  cast / arm skill in slot N
+//   1-5  cast / arm skill in slot N
 //   Q    end run (banks RP, opens research)
 //   R    toggle research book
 //   M    mute toggle
