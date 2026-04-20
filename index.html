@@ -3507,10 +3507,11 @@ const RESEARCH_NODES = [
   { id:'root', x:50, y:50, name:'Foundation', desc:'Your research journey begins.', cost:0 },
 
   // COMMAND — slot unlocks (west side)
-  { id:'slot2',   x:42, y:48, name:'Recruit Slot 2',    desc:'Unlock the second hero slot',        cost:4,  req:['root'],    effect:{ slotsUnlocked:2 } },
-  { id:'slot3',   x:34, y:44, name:'Recruit Slot 3',    desc:'Unlock the third hero slot',         cost:8,  req:['slot2'],   effect:{ slotsUnlocked:3 } },
-  { id:'slot4',   x:26, y:46, name:'Recruit Slot 4',    desc:'Unlock the fourth hero slot',        cost:14, req:['slot3'],   effect:{ slotsUnlocked:4 } },
-  { id:'slot5',   x:18, y:50, name:'Recruit Slot 5',    desc:'Unlock the final hero slot',         cost:22, req:['slot4'],   effect:{ slotsUnlocked:5 } },
+  // Slots 1-3 are open from run 1 — review feedback flagged the slot-unlock
+  // ladder as redundant with the gold cost curve. Slots 4-5 stay as research
+  // milestones; slot 6 is the crown6th Crown-cost capstone.
+  { id:'slot4',   x:26, y:46, name:'Recruit Slot 4',    desc:'Unlock the fourth hero slot',        cost:14, req:['root'],    effect:{ slotsUnlocked:4 } },
+  { id:'slot5',   x:18, y:50, name:'Recruit Slot 5',    desc:'Unlock the fifth hero slot',         cost:22, req:['slot4'],   effect:{ slotsUnlocked:5 } },
 
   // CANNONEERS — chapter
   { id:'hCannon', x:58, y:48, name:'Guild: Cannoneers', desc:'Unlocks the Cannoneer hero — slow fire, splash damage', cost:8, req:['root'],            effect:{ heroType:'cannoneer' } },
@@ -3661,7 +3662,7 @@ const RESEARCH_NODES = [
   { id:'matObs',    x:50, y:66, name:'Material: Obsidian Wall',    desc:'Dark crystalline stone laced with arcane glow. -32% wall damage taken.',         cost:0, crownCost:12, req:['matSteel'], keystone:true, effect:{ wallMaterial:'obsidian',  wallDamageMul:-0.32 } },
 
   // COMMAND — battle drums
-  { id:'drums',   x:30, y:40, name:'Battle Drums',        desc:'-10% fire cooldown for ALL heroes.',             cost:11, req:['slot3'],              effect:{ fireRateMul:-0.10 } },
+  { id:'drums',   x:30, y:40, name:'Battle Drums',        desc:'-10% fire cooldown for ALL heroes.',             cost:11, req:['root'],               effect:{ fireRateMul:-0.10 } },
 
   // ===========================================================
   //  CROWN NODES — paid in Crowns (\u265B) dropped by bosses
@@ -3898,7 +3899,7 @@ const effects = {
   dmgMul: 1, fireRateMul: 1, rngAdd: 0,
   wallMaxHp: 50, startGold: 25, killGold: 2, pierce: 0, autoCollect: false, autoTap: 0,
   startingWave: 1, waveRewardMul: 1,
-  slotsUnlocked: 1,
+  slotsUnlocked: 3,   // start with 3 hero slots open; gold cost still gates how many you can fill
   unlockedHeroTypes: new Set(['archer']),
   // per-hero specialization
   cannoneerDmgMul: 1, cannoneerSplashAdd: 0, cannoneerFireRateMul: 1,
@@ -3940,7 +3941,7 @@ function applyResearch() {
   effects.wallMaxHp = 50; effects.startGold = 25; effects.killGold = 2;
   effects.pierce = 0; effects.autoCollect = false; effects.autoTap = 0;
   effects.startingWave = 1; effects.waveRewardMul = 1;
-  effects.slotsUnlocked = 1;
+  effects.slotsUnlocked = 3;   // default 3 slots open from run 1
   effects.unlockedHeroTypes = new Set(['archer']);
   effects.cannoneerDmgMul = 1; effects.cannoneerSplashAdd = 0; effects.cannoneerFireRateMul = 1;
   effects.mageDmgMul = 1; effects.mageRngAdd = 0; effects.mageFireRateMul = 1;
