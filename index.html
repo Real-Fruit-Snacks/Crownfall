@@ -3358,6 +3358,8 @@ function triggerGameOver() {
   document.getElementById('go-gold').textContent  = totalGoldEarned;
   document.getElementById('go-rp').textContent    = rpEarned + (crownsEarned ? ` + ${crownsEarned} \u265B` : '');
   document.getElementById('gameover').classList.add('show');
+  // Nudge the player to export a save backup once they have a few runs of progress
+  if (typeof maybePromptSaveBackup === 'function') maybePromptSaveBackup();
 }
 
 // Voluntary end: bank RP, skip the wall-breach screen, and open research.
@@ -3385,6 +3387,33 @@ function endRunForResearch() {
   pendingNewRun = true;
   window.openResearch();
   if (typeof Tutorial !== 'undefined') Tutorial.notify('endrun');
+  maybePromptSaveBackup();
+}
+
+// One-time prompt: after a player has a few runs of progress banked, remind
+// them their save only lives in this browser and nudge them to export a
+// backup. Review feedback: "save was lost completely" after a restart —
+// the save file is fine, but browser eviction / clearing cookies nukes it
+// without warning. The fix on the code side is already a flush-on-exit net;
+// this is the UX side that gets the player a durable backup.
+function maybePromptSaveBackup() {
+  try {
+    if (localStorage.getItem('castleSaveBackupReminded') === '1') return;
+    if ((stats.totalRuns || 0) < 3) return;
+    localStorage.setItem('castleSaveBackupReminded', '1');
+  } catch { return; }
+  if (typeof window.showConfirm !== 'function') return;
+  // Delay slightly so the research book has time to open first — this card
+  // lands ON TOP of it and the player reads it before continuing.
+  setTimeout(() => {
+    window.showConfirm({
+      title:   'Back up your progress?',
+      message: 'Your save lives only in this browser\u2019s local storage. If you clear site data, switch browsers, or your browser evicts storage, it\u2019s gone. Open Settings \u2192 Export Save to copy a backup code you can paste back any time.',
+      yesLabel: 'Open Settings',
+      noLabel:  'Later',
+      onYes: () => { if (typeof window.openSettings === 'function') window.openSettings(); }
+    });
+  }, 400);
 }
 
 // =====================================================================
@@ -6186,7 +6215,7 @@ const HERO_TYPES = {
   },
   mage: {
     id: 'mage', name: 'Mage', cost: 30,
-    damage: 6, range: 160, fireRate: 1.4, projSpeed: 120,
+    damage: 7, range: 160, fireRate: 1.4, projSpeed: 120,
     bodyColor: '#4a2a6a', bodyHi: '#6a3a8a',
     hat: '#2a1038', hatHi: '#5a2a78',
     flashColor: '#e4b4ff',
