@@ -3304,6 +3304,7 @@ let goldDirty = true;
 let totalKills = 0;
 let totalGoldEarned = 0;
 let openSlot = null;
+let autoTapTimer = 0;     // Sentry Marksmen research — ticks down every frame
 
 // ---------- wall ----------
 let wallHP = 100;
@@ -3452,6 +3453,7 @@ window.resetRun = function (opts) {
   for (const sk of SKILL_SLOTS) { sk.skillId = null; sk.cooldown = 0; }
   armedSkill = null;
   rallyT = 0;
+  autoTapTimer = 0;
   skillFx.length       = 0;
   firePatches.length   = 0;
   floatingTexts.length = 0;
@@ -3578,6 +3580,8 @@ const RESEARCH_NODES = [
   { id:'e5',   x:66, y:80, name:'Coffers',           desc:'+40 starting gold',         cost:5, req:['e3'],         effect:{ startGold:40 } },
   { id:'e6',   x:50, y:82, name:'Mercantile',        desc:'+1 gold per kill',          cost:6, req:['e2','e3'],    effect:{ killGold:1 } },
   { id:'eauto',x:50, y:66, name:'Coin Magnet',       desc:'Coins fly to the wall on their own.', cost:9, req:['e2','e3'], effect:{ autoCollect:true } },
+  { id:'autoTap', x:44, y:62, name:'Sentry Marksmen', desc:'Wall guards auto-tap the closest enemy every 1.4s \u2014 no more clicking RSI.', cost:8, req:['e1'], effect:{ autoTap:1.4 } },
+  { id:'autoTap2', x:38, y:58, name:'Keen Sentries',  desc:'Sentries fire even faster \u2014 auto-tap every 0.8s.', cost:12, req:['autoTap'], effect:{ autoTap:0.8 } },
   { id:'ws1',  x:26, y:90, name:'Expeditionary',     desc:'Start each run at wave 3. Toggle off if you want to grind from wave 1.',     cost:9,  req:['e4'],         toggleable:true, effect:{ startingWave:3 } },
   { id:'ws2',  x:18, y:96, name:'Vanguard',          desc:'Start each run at wave 5. Toggle on/off any time.',                          cost:18, req:['ws1'],        toggleable:true, effect:{ startingWave:5 } },
   { id:'ws3',  x:14, y:80, name:'Veteran',           desc:'Start each run at wave 8.',                                                  cost:28, req:['ws2'],        toggleable:true, effect:{ startingWave:8 } },
@@ -3892,7 +3896,7 @@ function todaysBest() {
 
 const effects = {
   dmgMul: 1, fireRateMul: 1, rngAdd: 0,
-  wallMaxHp: 50, startGold: 25, killGold: 2, pierce: 0, autoCollect: false,
+  wallMaxHp: 50, startGold: 25, killGold: 2, pierce: 0, autoCollect: false, autoTap: 0,
   startingWave: 1, waveRewardMul: 1,
   slotsUnlocked: 1,
   unlockedHeroTypes: new Set(['archer']),
@@ -3934,7 +3938,7 @@ const effects = {
 function applyResearch() {
   effects.dmgMul = 1; effects.fireRateMul = 1; effects.rngAdd = 0;
   effects.wallMaxHp = 50; effects.startGold = 25; effects.killGold = 2;
-  effects.pierce = 0; effects.autoCollect = false;
+  effects.pierce = 0; effects.autoCollect = false; effects.autoTap = 0;
   effects.startingWave = 1; effects.waveRewardMul = 1;
   effects.slotsUnlocked = 1;
   effects.unlockedHeroTypes = new Set(['archer']);
@@ -3977,6 +3981,7 @@ function applyResearch() {
     if (e.killGold)             effects.killGold            += e.killGold            * m;
     if (e.pierce)               effects.pierce               = Math.max(effects.pierce, e.pierce);
     if (e.autoCollect)          effects.autoCollect          = true;
+    if (e.autoTap)              effects.autoTap              = effects.autoTap ? Math.min(effects.autoTap, e.autoTap) : e.autoTap;
     if (e.startingWave)         effects.startingWave         = Math.max(effects.startingWave, e.startingWave);
     if (e.waveRewardMul)        effects.waveRewardMul       += e.waveRewardMul       * m;
     if (e.slotsUnlocked)        effects.slotsUnlocked        = Math.max(effects.slotsUnlocked, e.slotsUnlocked);
@@ -4919,7 +4924,7 @@ function nodeChapter(n) {
   // meta economy / regen nodes
   if (e.rpMul || e.bossBountyMul || e.bossGoldDrop || e.bossCrownAdd) return 'coffers';
   if (e.wallRegenPerWave || e.wallSpikes || e.wallDamageMul || e.lastStandMul || e.phoenixWill || e.wallMaterial) return 'fortifications';
-  if (e.synergyDmgPerHero) return 'command';
+  if (e.synergyDmgPerHero || e.autoTap) return 'command';
   if (e.skillSlotsUnlocked || e.unlockSkill) return 'skills';
   if (e.unlockHazard || e.hazardUpgrade) return 'defenses';
   // generic effects
@@ -7728,7 +7733,14 @@ function spawnProjectileFromHero(from, target, dmg, angleOffset) {
     chains: h.type === 'mage' ? (2 + (effects.mageChainsAdd || 0)) : 0,
     element: h.element || null,
     elementDmg: dmg,
-    hitTargets: new Set()
+    hitTargets: new Set(),
+    // Cannon shells explode on a timer — even if the target dodged / was killed
+    // by another hero before we arrived. Review feedback flagged cannoneers as
+    // "almost worthless" because their slow shells would whiff a moving target
+    // and the splash never fired. Now we detonate at the PREDICTED impact point
+    // on time, so the splash always lands somewhere useful.
+    detonateT: (h.type === 'cannoneer' && tIntercept > 0 && tIntercept < 3)
+               ? Math.max(0.2, tIntercept) : -1
   });
 }
 
@@ -7753,6 +7765,29 @@ function fireArrow(from, target) {
 function updateProjectiles(dt) {
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
+
+    // Cannon shells — tick down to their scheduled detonation. If the timer
+    // hits 0 before a direct-hit collision triggers the splash path below,
+    // we force-detonate here so the player always SEES and FEELS the splash.
+    if (p.detonateT > 0) {
+      p.detonateT -= dt;
+      if (p.detonateT <= 0) {
+        const r2 = p.splash * p.splash;
+        for (const other of enemies) {
+          if (other.hp <= 0) continue;
+          const sdx = other.x - p.x;
+          const sdy = other.y - p.y;
+          if (sdx * sdx + sdy * sdy <= r2) {
+            applyDamage(other, Math.max(p.damage, p.splashDmg));
+            if (p.element) applyElement(other, p.element, p.elementDmg * 0.6);
+          }
+        }
+        if (typeof spawnExplosion === 'function') spawnExplosion(p.x, p.y, p.splash);
+        projectiles.splice(i, 1);
+        continue;
+      }
+    }
+
     const speed = Math.hypot(p.vx, p.vy);
     // sub-step so fast arrows can't tunnel past enemies this frame
     const steps = Math.max(1, Math.ceil(speed * dt / 2));
@@ -9527,6 +9562,32 @@ function loop(t) {
     updateHeroes(dt);
     updateProjectiles(dt);
     updateEnemies(dt);
+    // Auto-tap — the wall's stationed guards automatically chip at the closest
+    // live enemy on a timer. Review: "constantly click on the enemies and there
+    // seems to be no way to automate around that. That clicking gets tiresome
+    // soon." Locked behind a cheap Command research node so it's a progression
+    // milestone, not a starting gimmick.
+    if (effects.autoTap > 0 && !gameOver && enemies.length > 0) {
+      autoTapTimer -= dt;
+      if (autoTapTimer <= 0) {
+        autoTapTimer = effects.autoTap;
+        // Prefer the enemy closest to the wall — most dangerous one to thin out
+        let best = null, bestX = Infinity;
+        for (const e of enemies) {
+          if (e.hp <= 0) continue;
+          if (e.x < bestX) { bestX = e.x; best = e; }
+        }
+        if (best) {
+          best.hp -= TAP_DAMAGE;
+          best.hitFlash = 0.08;
+          if (typeof spawnFloatingText === 'function') {
+            spawnFloatingText(best.x, best.y - 8, '-' + TAP_DAMAGE, '#a8ffb0');
+          }
+        }
+      }
+    } else if (effects.autoTap <= 0) {
+      autoTapTimer = 0;
+    }
     updateEnemyProjectiles(dt);
     updateCoins(dt);
     updateBeams(dt);
@@ -10207,31 +10268,51 @@ const Tutorial = {
     } else {
       arrow.classList.remove('show');
     }
-    // Coachmark box position — pick a side that doesn't overlap the spotlight
+    // Coachmark box position — pick a side that neither falls off the viewport
+    // NOR overlaps the spotlight target. Review feedback: "can not finish the
+    // tutorial because the UI elements overlap each other and the things that
+    // you need to click". Old code picked "below" as a fallback and then
+    // clamped into viewport — which sometimes pulled the box ON TOP of the
+    // anchor, making the required click impossible.
     const margin = 14;
     const bw = box.offsetWidth, bh = box.offsetHeight;
+    const hudH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hud-h')) || 0;
     let bxx, byy;
     if (a) {
-      // Try below first; if no room, try right; then left; then above.
-      const trySpots = [
-        { x: a.x + a.w / 2 - bw / 2, y: a.y + a.h + 50 },                 // below
-        { x: a.x + a.w + 50,         y: a.y },                              // right
-        { x: a.x - bw - 50,          y: a.y },                              // left
-        { x: a.x + a.w / 2 - bw / 2, y: a.y - bh - 50 }                     // above
+      // 8 candidate spots — four sides, then each corner far from anchor.
+      const candidates = [
+        { x: a.x + a.w / 2 - bw / 2,           y: a.y + a.h + 50 },            // below
+        { x: a.x + a.w + 50,                   y: a.y + a.h / 2 - bh / 2 },    // right
+        { x: a.x - bw - 50,                    y: a.y + a.h / 2 - bh / 2 },    // left
+        { x: a.x + a.w / 2 - bw / 2,           y: a.y - bh - 50 },             // above
+        { x: margin,                           y: window.innerHeight - bh - margin },   // bottom-left
+        { x: window.innerWidth - bw - margin,  y: window.innerHeight - bh - margin },   // bottom-right
+        { x: margin,                           y: hudH + margin },                       // top-left
+        { x: window.innerWidth - bw - margin,  y: hudH + margin }                        // top-right
       ];
-      const fits = (s) => s.x >= margin && s.y >= margin
-                       && s.x + bw <= window.innerWidth - margin
-                       && s.y + bh <= window.innerHeight - margin;
-      let chosen = trySpots.find(fits) || trySpots[0];
+      // Clamp into viewport, then reject if the clamped rect overlaps the anchor.
+      const clamp = (c) => ({
+        x: Math.max(margin, Math.min(c.x, window.innerWidth  - bw - margin)),
+        y: Math.max(hudH + margin, Math.min(c.y, window.innerHeight - bh - margin))
+      });
+      const overlaps = (c) =>
+        !(c.x + bw   < a.x        - 8 ||
+          c.x        > a.x + a.w  + 8 ||
+          c.y + bh   < a.y        - 8 ||
+          c.y        > a.y + a.h  + 8);
+      let chosen = null;
+      for (const cand of candidates) {
+        const c = clamp(cand);
+        if (!overlaps(c)) { chosen = c; break; }
+      }
+      // Absolute last resort — center, accept overlap. Shouldn't happen because
+      // the corner candidates are guaranteed far from center.
+      if (!chosen) chosen = clamp({ x: (window.innerWidth - bw) / 2, y: window.innerHeight * 0.6 });
       bxx = chosen.x; byy = chosen.y;
     } else {
-      bxx = (window.innerWidth - bw) / 2;
-      byy = window.innerHeight * 0.6;
+      bxx = Math.max(margin, Math.min((window.innerWidth - bw) / 2, window.innerWidth - bw - margin));
+      byy = Math.max(hudH + margin, Math.min(window.innerHeight * 0.6, window.innerHeight - bh - margin));
     }
-    // Respect the HUD strip — never let the coachmark slide under the topbar.
-    const hudH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hud-h')) || 0;
-    bxx = Math.max(margin, Math.min(bxx, window.innerWidth  - bw - margin));
-    byy = Math.max(hudH + margin, Math.min(byy, window.innerHeight - bh - margin));
     box.style.left = bxx + 'px';
     box.style.top  = byy + 'px';
   },
