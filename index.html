@@ -1083,6 +1083,65 @@
   #title-overlay .title-daily-best b { color: #ffd060; }
 
   /* PRESTIGE OVERLAY — crown-themed meta progression */
+  /* ANCESTRY PICKER — modal that appears at prestige time if the Ancestry
+     bonus is owned. Lets the player pick N currently-owned research nodes to
+     preserve across the wipe. z-index sits ABOVE the prestige overlay. */
+  #ancestry-overlay {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(10,6,2,0.92);
+    z-index: 70;
+    font-family: 'Pixelify Sans', monospace;
+  }
+  #ancestry-overlay.show { display: flex; }
+  #ancestry-overlay .anc-card {
+    background: #2a1a08;
+    color: #f5d889;
+    padding: 16px 20px;
+    box-shadow: inset 0 0 0 3px #6a4528, 6px 6px 0 0 rgba(0,0,0,0.8);
+    min-width: 360px; max-width: 560px; max-height: 86vh; display: flex; flex-direction: column;
+  }
+  #ancestry-overlay h3 {
+    margin: 0 0 10px; font-size: 16px; letter-spacing: 1.5px; text-transform: uppercase;
+    text-align: center;
+  }
+  #ancestry-overlay .anc-hint {
+    margin: 0 0 10px; color: #c0b090; font-size: 12px; line-height: 1.45; text-align: center;
+  }
+  #ancestry-overlay .anc-budget { color: #ffd060; font-weight: bold; }
+  #ancestry-overlay .anc-list {
+    flex: 1; overflow-y: auto; max-height: 50vh;
+    box-shadow: inset 0 0 0 2px #6a4528;
+    padding: 8px; margin-bottom: 10px;
+  }
+  #ancestry-overlay .anc-opt {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; margin: 4px 0;
+    background: #3a2612; color: #f5d889;
+    cursor: pointer; font-size: 12px;
+    box-shadow: inset 0 0 0 2px #4a352a;
+  }
+  #ancestry-overlay .anc-opt:hover { background: #4a3418; }
+  #ancestry-overlay .anc-opt.picked { background: #5a4218; box-shadow: inset 0 0 0 2px #ffd060; }
+  #ancestry-overlay .anc-opt.disabled { opacity: 0.45; cursor: not-allowed; }
+  #ancestry-overlay .anc-opt .anc-check {
+    width: 12px; height: 12px; background: #2a1a08; box-shadow: inset 0 0 0 2px #6a4528;
+    flex-shrink: 0;
+  }
+  #ancestry-overlay .anc-opt.picked .anc-check { background: #ffd060; box-shadow: inset 0 0 0 2px #6a4528; }
+  #ancestry-overlay .anc-opt .anc-name { flex: 1; font-weight: bold; }
+  #ancestry-overlay .anc-opt .anc-chap { color: #a89070; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+  #ancestry-overlay .anc-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  #ancestry-overlay button {
+    background: #5a3a18; color: #f5d889; border: 0;
+    padding: 8px 16px; font-family: 'Pixelify Sans', monospace; font-size: 12px;
+    cursor: pointer; letter-spacing: 1px; text-transform: uppercase;
+    box-shadow: inset 0 0 0 2px #6a4528, 2px 2px 0 0 #1a0c00;
+  }
+  #ancestry-overlay button:hover { background: #6a4a28; }
+  #ancestry-overlay button:disabled { opacity: 0.45; cursor: not-allowed; }
+  #ancestry-overlay button.cancel { background: transparent; color: #c0b090; box-shadow: inset 0 0 0 2px #5a4a38, 2px 2px 0 0 #1a0c00; }
+
   #prestige-overlay {
     position: fixed; inset: 0; display: none;
     align-items: center; justify-content: center;
@@ -2813,6 +2872,21 @@
     </div>
   </div>
 
+  <div id="ancestry-overlay" role="dialog" aria-label="Ancestry picker">
+    <div class="anc-card">
+      <h3>&#9733; Ancestry &mdash; Preserve Nodes</h3>
+      <div class="anc-hint">
+        Pick up to <span class="anc-budget" id="anc-budget">0</span> currently-owned research nodes to keep after prestige.
+        All others will be wiped. <b>No refunds</b> &mdash; preserved nodes do NOT return their RP cost.
+      </div>
+      <div class="anc-list" id="anc-list"></div>
+      <div class="anc-actions">
+        <button class="cancel" onclick="cancelAncestry()">Cancel</button>
+        <button id="anc-confirm-btn" onclick="confirmAncestry()">Continue</button>
+      </div>
+    </div>
+  </div>
+
   <div id="prestige-overlay">
     <div class="prestige-card">
       <div class="prestige-banner">
@@ -3975,6 +4049,7 @@ window.resetRun = function (opts) {
   enemyProjectiles.length = 0;
   particles.length = 0;
   coins.length = 0;
+  hound = null;   // Cleared on run reset; respawned by startWave() if unlocked.
   gold = effects.startGold;
   // Prestige: Bank Vault — consume any banked gold carried over from a prior
   // run's death. Single-shot: the stash clears on spend, no compounding.
@@ -4392,7 +4467,25 @@ const PRESTIGE_BONUSES = [
   // two don't stack — but having EITHER source is enough to trigger the revive.
   // Dramatic comeback moment that rewards pushing past your wall's limits.
   { id: 'phoenixDown',     name: 'Phoenix Down',      cost: 18, desc: 'First wall-HP breach each run revives the wall to 50% HP (once per run).',
-    effect: { phoenixDown: true } }
+    effect: { phoenixDown: true } },
+  // ----- BATCH 3 (Commit 3) -----
+  // Dual Imbue: heroes can stack a SECOND element on top of their primary.
+  // Both elements trigger on hit (DoT stacks, slows take the stronger value
+  // via existing applyElement logic). Transformative for lategame builds —
+  // Fire+Poison, Ice+Bleed, Holy+Stun become real options.
+  { id: 'dualImbue',       name: 'Dual Imbue',        cost: 25, desc: 'Heroes can imbue a second element on top of their primary.',
+    effect: { dualImbue: true } },
+  // The Hound: unlocks a roaming war hound that bites nearby enemies for a
+  // fraction of wall-hero average damage + applies a 30% slow for 1.2s.
+  // Respawns each wave if killed. New entity class; see updateHound().
+  { id: 'hound',           name: 'The Hound',         cost: 25, desc: 'Unlocks a roaming war hound — bites enemies for extra damage and slows them. Respawns each wave.',
+    effect: { hound: true } },
+  // Ancestry: on prestige, keep N currently-owned research nodes (player picks).
+  // Stacks 1/2/3 let you preserve 1/2/3 nodes. Big sting-reducer for players
+  // who hate the research wipe — lets them carry forward their favorite build
+  // piece (a keystone, a slot unlock, a hero unlock, whatever).
+  { id: 'ancestry',        name: 'Ancestry',          cost: 20, desc: 'Keep 1 currently-owned research node across each prestige (stacks up to 3).', maxStacks: 3,
+    effect: { ancestrySlots: 1 } }
 ];
 // Per-run flags reset each run (not persisted)
 let runState = {
@@ -4638,6 +4731,10 @@ function applyResearch() {
   effects.promotionEnabled   = false;
   effects.skillCdMul         = 1;   // multiplicative — 1.0 = no change, 0.7 = -30%
   effects.phoenixDown        = false;
+  // Batch 3 prestige fields: dual imbue, hound entity, ancestry slot budget.
+  effects.dualImbueEnabled   = false;
+  effects.houndUnlocked      = false;
+  effects.ancestrySlots      = 0;   // integer — how many research nodes survive prestige
   for (const b of PRESTIGE_BONUSES) {
     const stacks = prestige.purchased[b.id] || 0;
     if (stacks === 0) continue;
@@ -4661,6 +4758,10 @@ function applyResearch() {
     if (pe.promotion)      effects.promotionEnabled = true;
     if (pe.skillCdReduce)  effects.skillCdMul       = Math.max(0.1, effects.skillCdMul - pe.skillCdReduce * stacks);
     if (pe.phoenixDown)    effects.phoenixDown      = true;
+    // Batch 3
+    if (pe.dualImbue)      effects.dualImbueEnabled = true;
+    if (pe.hound)          effects.houndUnlocked    = true;
+    if (pe.ancestrySlots)  effects.ancestrySlots   += pe.ancestrySlots * stacks;
   }
   // Apply multiplicative killGold AFTER research additions
   effects.killGold = Math.max(1, Math.floor(effects.killGold * effects.killGoldMul));
@@ -6790,6 +6891,9 @@ function startWave(n) {
   } else {
     eventBannerT = 0;
   }
+  // The Hound — respawn fresh at each wave start if prestige bonus is owned.
+  // Null means "downed last wave" OR "never spawned"; either way we re-spawn.
+  if (effects.houndUnlocked && typeof houndSpawn === 'function') houndSpawn();
   setBestWave(n);
 }
 
@@ -7409,15 +7513,25 @@ window.imbue = function (idx, elementId) {
   const s = SLOTS[idx];
   if (!s || !s.filled) return;
   const h = s.hero;
-  if (h.element) return;                                         // already imbued — locked for this run
-  if (!effects.imbueAllowed.has(h.type)) return;                 // hero can't imbue at all
-  if (!effects.unlockedElements.has(h.type + ':' + elementId)) return; // this element not unlocked for this hero
+  // Determine which imbue slot we're writing to:
+  //   empty -> h.element (primary, always available)
+  //   primary filled + Dual Imbue prestige owned + slot2 empty -> h.element2
+  //   both filled -> locked for run
+  const hasPrimary   = !!h.element;
+  const hasSecondary = !!h.element2;
+  if (hasPrimary && hasSecondary) return;
+  if (hasPrimary && !effects.dualImbueEnabled) return;
+  // Can't double up the same element on both slots — no stacking free DoT.
+  if (hasPrimary && h.element === elementId) return;
+  if (!effects.imbueAllowed.has(h.type)) return;
+  if (!effects.unlockedElements.has(h.type + ':' + elementId)) return;
   const el = ELEMENTS[elementId];
   if (!el) return;
   const cost = imbueCost(elementId);
   if (gold < cost) return;
   gold -= cost;
-  h.element = elementId;
+  if (hasPrimary) h.element2 = elementId;
+  else            h.element  = elementId;
   goldDirty = true;
   updateUI();
 };
@@ -8182,14 +8296,30 @@ function renderImbueSection(s, h) {
   // Alchemy research tree). Review feedback flagged this as confusing.
   const heroType = HERO_TYPES[h.type];
   if (heroType && heroType.isSupport) return '';
-  if (h.element) {
-    const el = ELEMENTS[h.element];
+  // Build a small helper to render a locked-tag row for an already-imbued element.
+  const lockedRow = (elId) => {
+    const el = ELEMENTS[elId];
+    if (!el) return '';
     return `
-      <div class="imbue-head">Imbued</div>
       <div class="imbue-locked" style="background:${el.tag};">
         <span>${el.name}</span>
-        <span class="imbue-locked-tag">LOCKED · this run</span>
+        <span class="imbue-locked-tag">LOCKED \u00b7 this run</span>
       </div>
+    `;
+  };
+  // Both imbue slots filled — locked for run, show both.
+  if (h.element && h.element2) {
+    return `
+      <div class="imbue-head">Imbued \u00b7 dual</div>
+      ${lockedRow(h.element)}
+      ${lockedRow(h.element2)}
+    `;
+  }
+  // Primary filled, Dual Imbue NOT owned — identical to the old single-slot lock.
+  if (h.element && !effects.dualImbueEnabled) {
+    return `
+      <div class="imbue-head">Imbued</div>
+      ${lockedRow(h.element)}
     `;
   }
   const heroName = (HERO_TYPES[h.type] || HERO_TYPES.archer).name;
@@ -8200,7 +8330,7 @@ function renderImbueSection(s, h) {
     `;
   }
   const pool = HERO_ELEMENT_POOLS[h.type] || [];
-  const unlocked = pool
+  let unlocked = pool
     .map(id => ELEMENTS[id])
     .filter(el => el && effects.unlockedElements.has(h.type + ':' + el.id));
   if (unlocked.length === 0) {
@@ -8208,6 +8338,12 @@ function renderImbueSection(s, h) {
       <div class="imbue-head">Imbue Weapon</div>
       <div class="locked-msg">No imbues researched for <b>${heroName}</b> yet.</div>
     `;
+  }
+  // Primary filled + Dual Imbue owned + no secondary yet — secondary picker.
+  // Filter out the already-used primary from the secondary option list.
+  const pickingSecondary = !!h.element && effects.dualImbueEnabled;
+  if (pickingSecondary) {
+    unlocked = unlocked.filter(el => el.id !== h.element);
   }
   const opts = unlocked.map(el => {
     const cost = imbueCost(el.id);
@@ -8225,8 +8361,12 @@ function renderImbueSection(s, h) {
       </div>
     `;
   }).join('');
+  // Header reflects which slot we're picking for — makes the dual-imbue flow obvious.
+  const header = pickingSecondary
+    ? `<div class="imbue-head">Second Imbue \u00b7 pick one</div>${lockedRow(h.element)}`
+    : `<div class="imbue-head">Imbue Weapon \u00b7 pick one</div>`;
   return `
-    <div class="imbue-head">Imbue Weapon · pick one</div>
+    ${header}
     ${opts}
   `;
 }
@@ -8674,7 +8814,8 @@ function spawnProjectileFromHero(from, target, dmg, angleOffset) {
     splashDmg: h.splashDmg || 0,
     pierce: h.type === 'archer' ? effects.pierce : 0,
     chains: h.type === 'mage' ? (2 + (effects.mageChainsAdd || 0)) : 0,
-    element: h.element || null,
+    element:  h.element  || null,
+    element2: h.element2 || null,   // Dual Imbue prestige — applied alongside primary
     elementDmg: dmg,
     hitTargets: new Set(),
     // Cannon shells explode on a timer — even if the target dodged / was killed
@@ -8725,7 +8866,8 @@ function updateProjectiles(dt) {
           if (sdx * sdx + sdy * sdy <= r2) {
             other.lastDmgFromSlotIdx = p.sourceSlotIdx;
             applyDamage(other, Math.max(p.damage, p.splashDmg) * detonateCritMul);
-            if (p.element) applyElement(other, p.element, p.elementDmg * 0.6);
+            if (p.element)  applyElement(other, p.element,  p.elementDmg * 0.6);
+            if (p.element2) applyElement(other, p.element2, p.elementDmg * 0.6);
           }
         }
         if (p.isCrit && typeof spawnFloatingText === 'function') {
@@ -8769,7 +8911,8 @@ function updateProjectiles(dt) {
           }
           // Holy element — bonus damage vs bosses applied BEFORE armor reduction
           let dmgScale = 1;
-          if (p.element === 'holy' && e.isBoss) dmgScale = 2;
+          // Holy-vs-boss damage bonus — honours whichever imbue slot carries Holy.
+          if (e.isBoss && (p.element === 'holy' || p.element2 === 'holy')) dmgScale = 2;
           // Crit multiplier — rolled at projectile launch so the whole hit
           // (and any splash / chain that follows) shares the same outcome.
           const critMul = p.isCrit ? HERO_CRIT_MUL : 1;
@@ -8803,12 +8946,13 @@ function updateProjectiles(dt) {
                                 '#fff8c0');
             }
           }
-          if (p.element) applyElement(e, p.element, p.elementDmg);
+          if (p.element)  applyElement(e, p.element,  p.elementDmg);
+          if (p.element2) applyElement(e, p.element2, p.elementDmg);
           // Cleric — each holy bolt heals the wall (1 HP base + research bonus)
           if (p.type === 'cleric' && wallHP < effects.wallMaxHp) {
             let heal = 1 + (effects.clericHealAdd || 0);
-            // Mending element — extra wall heal per hit
-            if (p.element === 'mending') heal += 2;
+            // Mending element — extra wall heal per hit (either imbue slot works).
+            if (p.element === 'mending' || p.element2 === 'mending') heal += 2;
             wallHP = Math.min(effects.wallMaxHp, wallHP + heal);
             updateWallHp();
           }
@@ -8841,7 +8985,8 @@ function updateProjectiles(dt) {
               if (sdx * sdx + sdy * sdy <= r2) {
                 other.lastDmgFromSlotIdx = p.sourceSlotIdx;
                 applyDamage(other, p.splashDmg * critMul);
-                if (p.element) applyElement(other, p.element, p.elementDmg * 0.6);
+                if (p.element)  applyElement(other, p.element,  p.elementDmg * 0.6);
+            if (p.element2) applyElement(other, p.element2, p.elementDmg * 0.6);
               }
             }
             spawnExplosion(e.x, e.y - 3, p.splash);
@@ -8868,7 +9013,8 @@ function updateProjectiles(dt) {
               spawnBeam(lastX, lastY, next.x, next.y - 3, p.element);
               next.lastDmgFromSlotIdx = p.sourceSlotIdx;
               applyDamage(next, chainDmg);
-              if (p.element) applyElement(next, p.element, chainDmg);
+              if (p.element)  applyElement(next, p.element,  chainDmg);
+              if (p.element2) applyElement(next, p.element2, chainDmg);
               p.hitTargets.add(next);
               lastX = next.x; lastY = next.y - 3;
               chainDmg *= 0.75;
@@ -9506,6 +9652,141 @@ canvas.addEventListener('gesturestart', e => e.preventDefault());
 // ---------- enemies ----------
 const enemies = [];
 const enemyProjectiles = [];
+
+// =====================================================================
+//  THE HOUND — prestige-unlocked roaming ally (Batch 3 of tree expansion)
+// =====================================================================
+// A single persistent unit that spawns when effects.houndUnlocked is true.
+// Seeks the nearest enemy, bites for a fraction of the wall's average hero
+// damage, and applies a 30% slow for 1.2s. Has its own HP — overlapping
+// enemies chip 10 HP/s off it, and at 0 HP it stays "down" until the next
+// wave begins, when it respawns at full HP. Uniquely ISN'T a hero — lives
+// outside SLOTS, has its own render/update pass, and moves on the field
+// instead of standing on the wall.
+let hound = null;   // null when disabled OR downed this wave
+const HOUND_MAX_HP       = 60;
+const HOUND_BITE_CD      = 0.6;     // seconds between bites
+const HOUND_BITE_RANGE   = 10;      // px — must be this close to land a bite
+const HOUND_MOVE_SPEED   = 42;      // px/s
+const HOUND_SLOW_MUL     = 0.7;     // 0.7 = -30% speed
+const HOUND_SLOW_T       = 1.2;     // seconds
+const HOUND_CHIP_PER_SEC = 10;      // HP/s lost while overlapping an enemy
+
+function houndSpawn() {
+  hound = {
+    x: WALL_W + 30,
+    y: H / 2,
+    hp: HOUND_MAX_HP,
+    maxHp: HOUND_MAX_HP,
+    cd: 0,
+    biteFlash: 0,   // 0..1 — briefly draws teeth / red-mouth during bite
+    facing: 1       // 1 = facing right (toward enemies), -1 = left
+  };
+}
+
+// Damage scales with the wall's current hero roster. Bite = 50% of the
+// average filled-hero effective damage (so a promoted / researched army
+// hits harder). Floor of 3 so early-game hounds always contribute.
+function houndBiteDamage() {
+  let total = 0, n = 0;
+  for (const s of SLOTS) {
+    if (!s.filled || !s.hero) continue;
+    total += effectiveHeroDamage(s.hero);
+    n++;
+  }
+  const avg = n > 0 ? (total / n) : 4;
+  return Math.max(3, Math.floor(avg * 0.5));
+}
+
+function updateHound(dt) {
+  if (!effects.houndUnlocked) { hound = null; return; }
+  if (!hound) return;   // downed — wait for wave reset
+  hound.cd        = Math.max(0, hound.cd - dt);
+  hound.biteFlash = Math.max(0, hound.biteFlash - dt * 3);
+  // Find nearest live enemy
+  let target = null, bestD2 = Infinity;
+  for (const e of enemies) {
+    if (e.hp <= 0) continue;
+    const dx = e.x - hound.x, dy = e.y - hound.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < bestD2) { bestD2 = d2; target = e; }
+  }
+  if (target) {
+    const dx = target.x - hound.x;
+    const dy = target.y - hound.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    // Cap how far the hound can roam so it doesn't chase witches into
+    // the far edge of the field and get stuck behind enemy archers.
+    const maxX = Math.min(W - 18, WALL_W + 80);
+    const targetX = hound.x + (dx / dist) * HOUND_MOVE_SPEED * dt;
+    const targetY = hound.y + (dy / dist) * HOUND_MOVE_SPEED * dt;
+    hound.x = Math.max(WALL_W + 8, Math.min(maxX, targetX));
+    hound.y = Math.max(10, Math.min(H - 10, targetY));
+    hound.facing = dx >= 0 ? 1 : -1;
+    // Bite if close enough
+    if (dist <= HOUND_BITE_RANGE && hound.cd <= 0) {
+      target.lastDmgFromSlotIdx = -1;   // no hero credit
+      applyDamage(target, houndBiteDamage());
+      if (!(target.slowT > 0) || (target.slowMul || 1) > HOUND_SLOW_MUL) {
+        target.slowT   = HOUND_SLOW_T;
+        target.slowMul = HOUND_SLOW_MUL;
+      }
+      hound.cd        = HOUND_BITE_CD;
+      hound.biteFlash = 1;
+      if (typeof Audio !== 'undefined' && Audio.sfx && Audio.sfx.buy) Audio.sfx.buy();
+    }
+  }
+  // Take overlap chip damage from live enemies (simple, no projectile routing)
+  let overlapping = false;
+  for (const e of enemies) {
+    if (e.hp <= 0) continue;
+    const dx = e.x - hound.x, dy = e.y - hound.y;
+    if (dx * dx + dy * dy < 64) { overlapping = true; break; }
+  }
+  if (overlapping) hound.hp -= HOUND_CHIP_PER_SEC * dt;
+  if (hound.hp <= 0) {
+    hound = null;   // down until wave reset
+  }
+}
+
+// Simple pixel-art hound — 4 brown rects + dark outline + tiny red mouth during bite.
+// Scales with the canvas via the draw transform, same as other field sprites.
+function drawHound() {
+  if (!hound) return;
+  const x = Math.round(hound.x);
+  const y = Math.round(hound.y);
+  const f = hound.facing;  // +1 face right, -1 face left
+  // Outline (dark)
+  ctx.fillStyle = '#2a1808';
+  ctx.fillRect(x - 5, y - 2, 10, 5);      // body
+  ctx.fillRect(x + 3 * f - 1, y - 3, 3, 3); // head
+  ctx.fillRect(x - 4, y + 2, 2, 2);        // front leg
+  ctx.fillRect(x + 2, y + 2, 2, 2);        // back leg
+  ctx.fillRect(x - 5 * f, y - 1, 2, 1);    // tail base
+  // Body fill (tan)
+  ctx.fillStyle = '#a8783a';
+  ctx.fillRect(x - 4, y - 1, 8, 3);
+  ctx.fillRect(x + 3 * f, y - 2, 2, 2);    // head fill
+  // Highlight (bright tan along top)
+  ctx.fillStyle = '#d4a268';
+  ctx.fillRect(x - 3, y - 1, 6, 1);
+  // Eye dot
+  ctx.fillStyle = '#1a0c00';
+  ctx.fillRect(x + 3 * f + (f > 0 ? 1 : 0), y - 2, 1, 1);
+  // Bite flash — tiny red mouth pixel
+  if (hound.biteFlash > 0.1) {
+    ctx.fillStyle = '#c83020';
+    ctx.fillRect(x + 4 * f, y - 1, 1, 1);
+  }
+  // HP bar when damaged (only visible when not at full)
+  if (hound.hp < hound.maxHp) {
+    const pct = Math.max(0, hound.hp) / hound.maxHp;
+    ctx.fillStyle = '#1a0c00';
+    ctx.fillRect(x - 5, y - 6, 10, 2);
+    ctx.fillStyle = pct > 0.5 ? '#6a9a3a' : pct > 0.25 ? '#c8a828' : '#c83020';
+    ctx.fillRect(x - 5, y - 6, Math.round(10 * pct), 2);
+  }
+}
 
 // Per-kind stat modifiers + behavior flags
 const ENEMY_KINDS = {
@@ -10595,6 +10876,7 @@ function render() {
   drawHeroes();
   drawHeroRangeIndicator();
   drawEnemies();
+  drawHound();
   drawProjectiles();
   drawEnemyProjectiles();
   drawBeams();
@@ -10758,6 +11040,7 @@ function loop(t) {
     updateHeroes(dt);
     updateProjectiles(dt);
     updateEnemies(dt);
+    updateHound(dt);
     // Hold-to-damage — while the player keeps the pointer pressed, deal a
     // tap-damage tick every effects.holdTapInterval seconds to whichever
     // enemy is currently under the cursor. Re-targets if the cursor moves
@@ -11276,12 +11559,104 @@ function rollPromotion() {
   return pick;
 }
 
+// Ancestry picker state — transient, lives only during the prestige flow.
+// _ancestryPicks holds the set of node ids the player has currently selected.
+// _ancestryBudget is the maximum they're allowed to pick (= effects.ancestrySlots).
+// _ancestryOnDone is the continuation — called with the frozen picks array when
+// the player confirms, or with null when they cancel.
+let _ancestryPicks   = new Set();
+let _ancestryBudget  = 0;
+let _ancestryOnDone  = null;
+
+function openAncestryPicker(budget, onDone) {
+  _ancestryPicks  = new Set();
+  _ancestryBudget = Math.max(1, budget);
+  _ancestryOnDone = onDone;
+  document.getElementById('anc-budget').textContent = _ancestryBudget;
+  renderAncestryList();
+  document.getElementById('ancestry-overlay').classList.add('show');
+}
+
+function renderAncestryList() {
+  const list = document.getElementById('anc-list');
+  if (!list) return;
+  // Owned nodes minus the free starter 'root' (it always re-grants anyway)
+  const owned = [...research.purchased].filter(id => id !== 'root');
+  if (owned.length === 0) {
+    list.innerHTML = '<div class="anc-hint">No research nodes owned yet.</div>';
+    document.getElementById('anc-confirm-btn').textContent = 'Continue';
+    return;
+  }
+  // Map to node objects + chapter labels; skip unknown ids (corrupt saves)
+  const rows = owned.map(id => {
+    const node = RESEARCH_NODES.find(n => n.id === id);
+    if (!node) return null;
+    const chap = (typeof nodeChapter === 'function') ? nodeChapter(node) : null;
+    const chapName = chap ? (CHAPTERS.find(c => c.id === chap) || {}).name || chap : '';
+    const picked = _ancestryPicks.has(id);
+    const disabled = !picked && _ancestryPicks.size >= _ancestryBudget;
+    const cls = 'anc-opt' + (picked ? ' picked' : '') + (disabled ? ' disabled' : '');
+    const click = disabled
+      ? ''
+      : `onclick="toggleAncestryPick('${id}')"`;
+    return `<div class="${cls}" ${click}>
+      <div class="anc-check"></div>
+      <div class="anc-name">${node.name}</div>
+      <div class="anc-chap">${chapName}</div>
+    </div>`;
+  }).filter(Boolean);
+  list.innerHTML = rows.join('');
+  const btn = document.getElementById('anc-confirm-btn');
+  btn.textContent = 'Continue (' + _ancestryPicks.size + '/' + _ancestryBudget + ')';
+}
+
+window.toggleAncestryPick = function (id) {
+  if (_ancestryPicks.has(id)) {
+    _ancestryPicks.delete(id);
+  } else if (_ancestryPicks.size < _ancestryBudget) {
+    _ancestryPicks.add(id);
+  }
+  renderAncestryList();
+};
+window.confirmAncestry = function () {
+  const picks = [...(_ancestryPicks || [])];
+  document.getElementById('ancestry-overlay').classList.remove('show');
+  const cont = _ancestryOnDone;
+  _ancestryPicks = new Set();
+  _ancestryOnDone = null;
+  if (cont) cont(picks);
+};
+window.cancelAncestry = function () {
+  document.getElementById('ancestry-overlay').classList.remove('show');
+  const cont = _ancestryOnDone;
+  _ancestryPicks = new Set();
+  _ancestryOnDone = null;
+  if (cont) cont(null);
+};
+
 window.doPrestige = function () {
   const gain = prestigeShardsFor(research.totalRp || 0, prestige.deepestWave || 0);
   if ((research.totalRp || 0) < PRESTIGE_UNLOCK_RP) return;
+  // Ancestry pre-step: if the bonus is owned AND the player has nodes to
+  // preserve, open the picker first. Otherwise skip straight to the confirm.
+  const budget = effects.ancestrySlots || 0;
+  const hasPickable = budget > 0 && [...research.purchased].some(id => id !== 'root');
+  if (hasPickable) {
+    openAncestryPicker(budget, (picks) => {
+      if (picks === null) return;   // cancelled — abort prestige entirely
+      _runPrestigeConfirm(gain, picks);
+    });
+  } else {
+    _runPrestigeConfirm(gain, []);
+  }
+};
+function _runPrestigeConfirm(gain, keptNodes) {
+  const keptBlurb = keptNodes.length > 0
+    ? ' <b>Ancestry will preserve ' + keptNodes.length + ' node' + (keptNodes.length === 1 ? '' : 's') + '.</b>'
+    : '';
   window.showConfirm({
     title:    'Prestige?',
-    message:  'This wipes ALL research nodes, banked RP, and Crowns. You will gain ' + gain + ' Crown Shards to spend on permanent bonuses. Your stats and prestige bonuses are kept. Continue?',
+    message:  'This wipes ALL research nodes, banked RP, and Crowns. You will gain ' + gain + ' Crown Shards to spend on permanent bonuses. Your stats and prestige bonuses are kept.' + keptBlurb + ' Continue?',
     yesLabel: 'Prestige (+' + gain + ' \u25C6)',
     danger:   true,
     onYes: () => {
@@ -11300,8 +11675,15 @@ window.doPrestige = function () {
       // Wipe research (preserve the discoverability flags — they're per-player
       // not per-prestige). sawPrestigeUnlock/openedPrestigeOnce/reachedEndless
       // all stay TRUE because the player has already seen those one-shot cues.
+      // Ancestry: fold the kept nodes into the fresh purchased Set so they
+      // survive the wipe. Repeat-counts for kept repeatable nodes aren't
+      // preserved (only the base purchase is) — deliberately simple.
+      const preserved = new Set(['root']);
+      for (const id of (keptNodes || [])) {
+        if (RESEARCH_NODES.some(n => n.id === id)) preserved.add(id);
+      }
       research = { rp: 0, totalRp: 0, crowns: 0, totalCrowns: 0,
-                   purchased: new Set(['root']), disabled: new Set(), repeatCounts: {},
+                   purchased: preserved, disabled: new Set(), repeatCounts: {},
                    sawPrestigeUnlock:  research.sawPrestigeUnlock,
                    openedPrestigeOnce: research.openedPrestigeOnce,
                    reachedEndless:     research.reachedEndless };
@@ -11326,7 +11708,7 @@ window.doPrestige = function () {
       }
     }
   });
-};
+}
 
 // =====================================================================
 //  SAVE EXPORT / IMPORT — base64-encoded JSON of all castle* localStorage keys
