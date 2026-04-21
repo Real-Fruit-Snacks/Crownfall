@@ -4389,14 +4389,20 @@ const UPGRADE_PRESETS = {
   'balanced':   { label: 'Balanced (round-robin)', order: ['dmg','rng','spd'], roundRobin: true }
 };
 function defaultCommander(idx) {
+  // Every setting starts OFF — commander does nothing until the player
+  // explicitly enables a behavior. Review feedback: "commanders should be
+  // very optional. like you have a commander that you toggle each thing
+  // with." Old default of upgradePreset='dmg-first' meant the commander
+  // immediately drained the treasury into one hero whether you wanted that
+  // or not.
   return {
     idx,
     owned:        false,
-    autoHire:     null,         // hero type id
-    autoImbue:    null,         // element id
-    autoSkin:     null,         // skin id
-    upgradePreset:'dmg-first',
-    minGoldReserve: 0
+    autoHire:     null,    // null = no auto-hire (manual)
+    autoImbue:    null,    // null = no auto-imbue
+    autoSkin:     null,    // null = default skin
+    upgradePreset:null,    // null = no auto-upgrade
+    minGoldReserve: 50     // 50g safety floor when ANY auto-spend is on
   };
 }
 for (let i = 0; i < SLOT_COUNT; i++) COMMANDERS.push(defaultCommander(i));
@@ -4494,9 +4500,12 @@ function renderCommanderOverlay() {
       .map(t => `<button class="cmd-chip${_cmdDraft.autoHire === t.id ? ' active' : ''}" style="${_cmdDraft.autoHire === t.id ? '' : 'background:'+t.accentTag+';color:#fff;'}" onclick="setCmdField('autoHire','${t.id}')">${t.name}</button>`))
     .join('');
 
-  const upgOpts = Object.entries(UPGRADE_PRESETS).map(([id, p]) =>
-    `<button class="cmd-chip${_cmdDraft.upgradePreset === id ? ' active' : ''}" onclick="setCmdField('upgradePreset','${id}')">${p.label}</button>`
-  ).join('');
+  // First chip is "Off" — picks no auto-upgrade. Each preset stays toggleable
+  // independently so players can mix-and-match (e.g. auto-hire ON, auto-upgrade OFF).
+  const upgOpts = `<button class="cmd-chip${!_cmdDraft.upgradePreset ? ' active' : ''}" onclick="setCmdField('upgradePreset', null)">Off</button>` +
+    Object.entries(UPGRADE_PRESETS).map(([id, p]) =>
+      `<button class="cmd-chip${_cmdDraft.upgradePreset === id ? ' active' : ''}" onclick="setCmdField('upgradePreset','${id}')">${p.label}</button>`
+    ).join('');
 
   const heroForElems = _cmdDraft.autoHire;
   let elemSection = '<div class="cmd-info">Pick a hero above to see imbue options.</div>';
@@ -4536,10 +4545,12 @@ function renderCommanderOverlay() {
   body.innerHTML = `
     <div class="cmd-section">
       <div class="label">Auto-Hire</div>
+      <div class="cmd-info">Pick one to auto-hire when slot is empty, or Manual to hire yourself.</div>
       <div class="cmd-row">${heroOpts}</div>
     </div>
     <div class="cmd-section">
-      <div class="label">Upgrade Priority</div>
+      <div class="label">Auto-Upgrade</div>
+      <div class="cmd-info">Off = never spend gold on upgrades. Pick a preset to auto-spend after each kill.</div>
       <div class="cmd-row">${upgOpts}</div>
     </div>
     <div class="cmd-section">
@@ -4595,9 +4606,10 @@ function runCommanderAutomation() {
       const ic = imbueCost(c.autoImbue);
       if (gold - ic >= reserve) imbue(s.index, c.autoImbue);
     }
-    // 3. Auto-upgrade — spend remaining gold above reserve following the preset
-    //    Priority modes restart from the top of the order after each purchase.
-    //    Round-robin spreads purchases evenly: one of each affordable stat per pass.
+    // 3. Auto-upgrade — only runs if the player explicitly picked a preset.
+    //    Null preset = no auto-upgrade (the player just wants auto-hire or
+    //    auto-imbue without burning all their gold on stat upgrades).
+    if (!c.upgradePreset) continue;
     const preset = UPGRADE_PRESETS[c.upgradePreset] || UPGRADE_PRESETS['dmg-first'];
     const order  = preset.order;
     let safety = 200;
@@ -7605,6 +7617,30 @@ function drawHeroes() {
   for (const s of SLOTS) if (s.filled) drawHero(s);
 }
 
+// Range indicator — when a hero slot is selected (slot panel open), show a
+// pulsing translucent circle at the hero's effective range so the player
+// knows where they can hit. Drawn between heroes and enemies so live action
+// stays visible on top of the overlay.
+function drawHeroRangeIndicator() {
+  if (!openSlot || !openSlot.filled || !openSlot.hero) return;
+  const h = openSlot.hero;
+  if (!h.range || h.range <= 0) return;     // bards / supports — skip
+  const cx = openSlot.cx + 3;                // arrows fire from cx+3
+  const cy = openSlot.cy;
+  const r  = h.range;
+  // Soft 0.6-1.0 pulse so the indicator is visible but not jarring
+  const pulse = 0.7 + 0.3 * Math.sin(performance.now() / 320);
+  ctx.save();
+  ctx.fillStyle   = `rgba(245, 216, 137, ${0.07 * pulse})`;
+  ctx.strokeStyle = `rgba(245, 216, 137, ${0.55 * pulse})`;
+  ctx.lineWidth   = 1;
+  ctx.beginPath();  ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.setLineDash([3, 2]);
+  ctx.beginPath();  ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
 // Bards apply a fire-rate boost to nearby allied heroes (and an optional damage aura)
 function bardFireRateMul(slot) {
   let mul = 1;
@@ -7755,7 +7791,13 @@ function spawnProjectileFromHero(from, target, dmg, angleOffset) {
     x: sx, y: sy,
     vx, vy,
     damage: dmg,
-    life: 1.8,
+    // Scale lifespan to actual travel distance + 50% margin. The old fixed
+    // 1.8s killed long-range mage / cleric / crossbow bolts mid-flight when
+    // upgrades pushed range past projSpeed * 1.8. Review: "projectiles are
+    // being deleted too fast. Even if my mage has high enough range it will
+    // shoot a projectile towards monster and it will be deleted before
+    // hitting the target." Min 2s, max 5s — generous floor + sane ceiling.
+    life: Math.max(2.0, Math.min(5.0, (h.range / Math.max(1, h.projSpeed)) * 1.5 + 0.4)),
     type: h.type,
     splash:    h.splash    || 0,
     splashDmg: h.splashDmg || 0,
@@ -9434,6 +9476,7 @@ function render() {
   drawWallDamage(wallHP / Math.max(1, effects.wallMaxHp || 1));
   drawSlots();
   drawHeroes();
+  drawHeroRangeIndicator();
   drawEnemies();
   drawProjectiles();
   drawEnemyProjectiles();
