@@ -4270,7 +4270,11 @@ let prestige = {
   bankedGold:         0,
   // Shard formula depth bonus — deepest wave cleared across all lifetime runs.
   // Updated on wave-clear; persists across prestige (it's a lifetime record).
-  deepestWave:        0
+  deepestWave:        0,
+  // Promotion — each prestige with the bonus owned picks one random hero type
+  // and grants a permanent +10% damage stack. { archer: 3, mage: 1, ... }.
+  // Stacks uncapped — the longer you play the more compounding your army.
+  promotions:         {}
 };
 const PRESTIGE_UNLOCK_RP = 500;   // totalRp threshold to unlock the feature
 // Shard award formula: base from lifetime RP + depth bonus from best wave
@@ -4296,6 +4300,14 @@ function loadPrestige() {
     prestige.prestigeCount     = Math.max(0, p.prestigeCount     || 0);
     prestige.bankedGold        = Math.max(0, Math.floor(p.bankedGold  || 0));
     prestige.deepestWave       = Math.max(0, Math.floor(p.deepestWave || 0));
+    // Promotion stacks per hero type — coerce to safe ints, reject malformed.
+    const proms = (p.promotions && typeof p.promotions === 'object' && !Array.isArray(p.promotions))
+      ? p.promotions : {};
+    prestige.promotions = {};
+    for (const k of Object.keys(proms)) {
+      const n = Math.max(0, Math.floor(Number(proms[k]) || 0));
+      if (n > 0) prestige.promotions[k] = n;
+    }
     // Defensive: must be a plain object (not an array, not corrupt). Coerce stack
     // counts to safe integers and clamp to each bonus's maxStacks so a bad import
     // can't grant infinite damage etc.
@@ -4362,7 +4374,25 @@ const PRESTIGE_BONUSES = [
   // gold. Turns "I saved up 40k and died" from pure loss into seed capital.
   // Reset on new run (spent) — not compound-interest infinite storage.
   { id: 'bankVault',       name: 'Bank Vault',        cost: 15, desc: '25% of your unspent gold at run end carries to the next run.',
-    effect: { bankVault: true } }
+    effect: { bankVault: true } },
+  // ----- BATCH 2 (Commit 2) -----
+  // Promotion: on each prestige, one random hero type gains permanent +10%
+  // damage. Stacks uncapped — it's a lottery pull per prestige that keeps
+  // paying forever. Which type is random (to keep it exciting), but the
+  // bonus is visible on every prestige screen so the player tracks it.
+  { id: 'promotion',       name: 'Promotion',         cost: 6,  desc: 'Each prestige, one random hero type gains +10% damage permanently.',
+    effect: { promotion: true } },
+  // Skill Mastery: -10% active skill cooldown per stack. Three stacks = -30%,
+  // so your Smite fires off a 6s cooldown in 4.2s. Front-loads aggression for
+  // active players without changing base skill economy.
+  { id: 'skillMastery',    name: 'Skill Mastery',     cost: 8,  desc: '-10% active skill cooldown (stacks up to 3).', maxStacks: 3,
+    effect: { skillCdReduce: 0.10 } },
+  // Phoenix Down: first wall-HP-zero in a run revives at 50% HP (once per run).
+  // Shares the same runtime flag as the Phoenix Will research keystone so the
+  // two don't stack — but having EITHER source is enough to trigger the revive.
+  // Dramatic comeback moment that rewards pushing past your wall's limits.
+  { id: 'phoenixDown',     name: 'Phoenix Down',      cost: 18, desc: 'First wall-HP breach each run revives the wall to 50% HP (once per run).',
+    effect: { phoenixDown: true } }
 ];
 // Per-run flags reset each run (not persisted)
 let runState = {
@@ -4604,6 +4634,10 @@ function applyResearch() {
   effects.endlessMarchShards = 0;   // 0 or 1 — read by prestigeShardsFor caller path
   effects.huntersMark        = false;
   effects.bankVaultEnabled   = false;
+  // Batch 2 prestige fields: promotion roll, skill CD reducer, phoenix revive.
+  effects.promotionEnabled   = false;
+  effects.skillCdMul         = 1;   // multiplicative — 1.0 = no change, 0.7 = -30%
+  effects.phoenixDown        = false;
   for (const b of PRESTIGE_BONUSES) {
     const stacks = prestige.purchased[b.id] || 0;
     if (stacks === 0) continue;
@@ -4623,6 +4657,10 @@ function applyResearch() {
     if (pe.endlessMarchShards) effects.endlessMarchShards += pe.endlessMarchShards * stacks;
     if (pe.huntersMark)        effects.huntersMark        = true;
     if (pe.bankVault)          effects.bankVaultEnabled   = true;
+    // Batch 2
+    if (pe.promotion)      effects.promotionEnabled = true;
+    if (pe.skillCdReduce)  effects.skillCdMul       = Math.max(0.1, effects.skillCdMul - pe.skillCdReduce * stacks);
+    if (pe.phoenixDown)    effects.phoenixDown      = true;
   }
   // Apply multiplicative killGold AFTER research additions
   effects.killGold = Math.max(1, Math.floor(effects.killGold * effects.killGoldMul));
@@ -7487,13 +7525,19 @@ function openSkillBuyMenu(idx) {
   } else {
     body = unlocked.map(sk => {
       const ok = gold >= sk.cost;
+      // Show the effective CD so Skill Mastery prestige reduction is visible
+      // in the shop. Falls back to base cd when no prestige reduction is active.
+      const effCd = sk.cd * (effects.skillCdMul || 1);
+      const cdLabel = (effCd < sk.cd)
+        ? `<span class="cost" style="color:#a8ffb0;">cd ${effCd.toFixed(1)}s</span>`
+        : `cd ${sk.cd}s`;
       return `<div class="sk-opt">
         <div class="sk-head">
           <span class="sk-name" style="background:${sk.tag};">${sk.name}</span>
           <span class="sk-cost">${sk.cost}g</span>
         </div>
         <div class="sk-desc">${sk.desc}</div>
-        <div class="sk-meta">cd ${sk.cd}s \u00b7 ${sk.target === 'enemy' ? 'click an enemy' : sk.target === 'point' ? 'click any spot' : 'instant'}</div>
+        <div class="sk-meta">${cdLabel} \u00b7 ${sk.target === 'enemy' ? 'click an enemy' : sk.target === 'point' ? 'click any spot' : 'instant'}</div>
         <button onclick="buySkill(${idx},'${sk.id}')" ${ok ? '' : 'disabled'}>
           ${ok ? `Equip ${sk.name}` : `Need ${sk.cost - Math.floor(gold)}g`}
         </button>
@@ -7926,7 +7970,10 @@ function castSkill(idx, sk, x, y, enemy) {
     flashScreen('rgba(255,224,80,0.24)', 0.20);
     shakeT = 0.30;
   }
-  slot.cooldown = sk.cd;
+  // Prestige: Skill Mastery shrinks active skill cooldowns multiplicatively.
+  // skillCdMul defaults to 1.0; each stack subtracts 0.10 down to a 0.10 floor
+  // (so 3 stacks = -30%, 9 stacks would be -90% but maxStacks is 3).
+  slot.cooldown = sk.cd * (effects.skillCdMul || 1);
   armedSkill = null;
   document.body.classList.remove('skill-armed');
   renderSkillBar();
@@ -8542,6 +8589,13 @@ function effectiveHeroDamage(h) {
   if (effects.empiresReachStacks > 0) {
     const pastTwenty = Math.max(0, (wave || 0) - 20);
     if (pastTwenty > 0) dmg *= (1 + 0.005 * effects.empiresReachStacks * pastTwenty);
+  }
+  // Prestige: Promotion — each prior prestige where the bonus was owned has
+  // granted one random hero type a permanent +10% stack. Apply by hero type.
+  // Doesn't require the bonus to still be owned — the permanent buff persists
+  // (it's the prestige REWARD, not a bonus-gated effect).
+  if (h && h.type && prestige && prestige.promotions && prestige.promotions[h.type]) {
+    dmg *= (1 + 0.10 * prestige.promotions[h.type]);
   }
   return dmg;
 }
@@ -9553,7 +9607,11 @@ function damageWall(raw) {
   wallHP -= dmg;
   Audio.sfx.wallHit();
   if (wallHP <= 0) {
-    if (effects.phoenixWill && !runState.phoenixUsed) {
+    // Revive triggers from EITHER the Phoenix Will research keystone OR the
+    // Phoenix Down prestige bonus. They don't stack (shared runState.phoenixUsed
+    // flag) — one revive per run regardless of how many sources you've unlocked.
+    const canRevive = (effects.phoenixWill || effects.phoenixDown) && !runState.phoenixUsed;
+    if (canRevive) {
       runState.phoenixUsed = true;
       wallHP = Math.max(1, Math.floor(effects.wallMaxHp * 0.5));
       // wipe the field so the player can recover
@@ -10983,7 +11041,7 @@ window.settingsWipe = function () {
                     purchased: new Set(['root']), disabled: new Set(), repeatCounts: {},
                     sawPrestigeUnlock: false, openedPrestigeOnce: false, reachedEndless: false };
       prestige  = { shards: 0, totalShardsEarned: 0, prestigeCount: 0, purchased: {},
-                    bankedGold: 0, deepestWave: 0 };
+                    bankedGold: 0, deepestWave: 0, promotions: {} };
       if (typeof stats !== 'undefined') {
         for (const k in stats) { if (typeof stats[k] === 'number') stats[k] = 0; }
       }
@@ -11141,10 +11199,23 @@ function renderPrestige() {
   const depthLine  = depthBonus > 0
     ? ' Deepest wave <span class="hl">' + (prestige.deepestWave || 0) + '</span> is giving you <span class="hl">+' + depthBonus + '</span> bonus shards.'
     : ' Push past wave 10 for a depth bonus on shards (one extra shard per 10 waves deeper you reach).';
+  // Promotions summary — shows which hero types have permanent stacks.
+  let promoLine = '';
+  if (prestige.promotions && Object.keys(prestige.promotions).length > 0) {
+    const parts = Object.keys(prestige.promotions)
+      .filter(k => prestige.promotions[k] > 0)
+      .map(k => {
+        const name = (HERO_TYPES[k] && HERO_TYPES[k].name) || k;
+        return '<span class="hl">' + name + ' +' + (prestige.promotions[k] * 10) + '%</span>';
+      });
+    if (parts.length > 0) {
+      promoLine = '<br><span style="font-size:11px;opacity:0.9;">\u2605 Promotions: ' + parts.join(' \u00b7 ') + '</span>';
+    }
+  }
   if (prestige.prestigeCount === 0) {
-    blurb.innerHTML = '<span class="hl">First prestige!</span> Prestiging resets all research, RP, Crowns, and purchased nodes. In exchange you earn <span class="hl">Crown Shards</span> to spend on permanent bonuses that apply to every future run. Stats and achievements are kept.' + depthLine;
+    blurb.innerHTML = '<span class="hl">First prestige!</span> Prestiging resets all research, RP, Crowns, and purchased nodes. In exchange you earn <span class="hl">Crown Shards</span> to spend on permanent bonuses that apply to every future run. Stats and achievements are kept.' + depthLine + promoLine;
   } else {
-    blurb.innerHTML = 'You have prestiged <span class="hl">' + prestige.prestigeCount + '</span> time' + (prestige.prestigeCount === 1 ? '' : 's') + '. <span class="warn">Prestiging again wipes your current research and Crowns.</span> Stats and previously-purchased prestige bonuses are kept.' + depthLine;
+    blurb.innerHTML = 'You have prestiged <span class="hl">' + prestige.prestigeCount + '</span> time' + (prestige.prestigeCount === 1 ? '' : 's') + '. <span class="warn">Prestiging again wipes your current research and Crowns.</span> Stats and previously-purchased prestige bonuses are kept.' + depthLine + promoLine;
   }
   // Tree
   const tree = document.getElementById('prestige-tree');
@@ -11191,6 +11262,20 @@ window.buyPrestigeBonus = function (id) {
   renderPrestige();
 };
 
+// Picks a random hero type and grants a permanent +10% damage stack.
+// Called from doPrestige when the Promotion bonus is owned. Returns the
+// hero type id ('archer', 'mage', ...) or null if no HERO_TYPES registered.
+function rollPromotion() {
+  if (typeof HERO_TYPES !== 'object') return null;
+  const ids = Object.keys(HERO_TYPES);
+  if (ids.length === 0) return null;
+  const pick = ids[Math.floor(Math.random() * ids.length)];
+  prestige.promotions = prestige.promotions || {};
+  prestige.promotions[pick] = (prestige.promotions[pick] || 0) + 1;
+  savePrestige();
+  return pick;
+}
+
 window.doPrestige = function () {
   const gain = prestigeShardsFor(research.totalRp || 0, prestige.deepestWave || 0);
   if ((research.totalRp || 0) < PRESTIGE_UNLOCK_RP) return;
@@ -11204,11 +11289,23 @@ window.doPrestige = function () {
       prestige.shards            += gain;
       prestige.totalShardsEarned += gain;
       prestige.prestigeCount     += 1;
+      // Promotion: roll a random hero type for a permanent +10% stack.
+      // Happens BEFORE the research wipe so the toast reads HERO_TYPES
+      // without any races. Saves are inside rollPromotion().
+      let promotedId = null;
+      if (effects.promotionEnabled && typeof rollPromotion === 'function') {
+        promotedId = rollPromotion();
+      }
       savePrestige();
-      // Wipe research
+      // Wipe research (preserve the discoverability flags — they're per-player
+      // not per-prestige). sawPrestigeUnlock/openedPrestigeOnce/reachedEndless
+      // all stay TRUE because the player has already seen those one-shot cues.
       research = { rp: 0, totalRp: 0, crowns: 0, totalCrowns: 0,
-                   purchased: new Set(['root']), disabled: new Set(), repeatCounts: {} };
-      try { localStorage.removeItem('castleResearch'); } catch {}
+                   purchased: new Set(['root']), disabled: new Set(), repeatCounts: {},
+                   sawPrestigeUnlock:  research.sawPrestigeUnlock,
+                   openedPrestigeOnce: research.openedPrestigeOnce,
+                   reachedEndless:     research.reachedEndless };
+      try { saveResearch(); } catch {}
       // Re-apply effects (now with fresh research + existing prestige bonuses)
       applyResearch();
       // Re-render research if it's open
@@ -11218,6 +11315,15 @@ window.doPrestige = function () {
       // Reset current run and re-render prestige
       window.resetRun();
       renderPrestige();
+      // Promotion toast (fires AFTER reset so it lands on top of the title/run)
+      if (promotedId && HERO_TYPES[promotedId] && typeof showAchievementToast === 'function') {
+        const heroName = HERO_TYPES[promotedId].name || promotedId;
+        const newStacks = (prestige.promotions && prestige.promotions[promotedId]) || 1;
+        showAchievementToast({
+          name: '\u2605 PROMOTION: ' + heroName.toUpperCase(),
+          desc: 'All ' + heroName + 's gain +10% damage forever (total +' + (newStacks * 10) + '%).'
+        });
+      }
     }
   });
 };
