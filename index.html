@@ -4125,7 +4125,7 @@ const RESEARCH_NODES = [
   { id:'clkey',   x:72, y:34, name:'Avatar of Light',   desc:'+50% Cleric damage and +1 wall heal per hit',             cost:16, req:['cl2','cl3'],       keystone:true, effect:{ clericDmgMul:0.50, clericHealAdd:1 } },
 
   // BARDS — chapter
-  { id:'hBard',   x:24, y:42, name:'Guild: Bards',      desc:'Unlocks the Bard — does not fire; inspires nearby heroes (+25% fire rate).', cost:18, req:['hCleric'], effect:{ heroType:'bard' } },
+  { id:'hBard',   x:24, y:42, name:'Guild: Bards',      desc:'Unlocks the Bard — does not fire; inspires nearby heroes (+25% fire rate) and regenerates The Hound wherever it roams.', cost:18, req:['hCleric'], effect:{ heroType:'bard' } },
   { id:'bd1',     x:20, y:36, name:'Resonance',         desc:'+30 Bard aura range',                                    cost:5, req:['hBard'],            effect:{ bardRngAdd:30 } },
   { id:'bd2',     x:16, y:32, name:'Crescendo',         desc:'+10% additional fire-rate buff from Bards',              cost:7, req:['hBard'],            effect:{ bardAuraAdd:0.10 } },
   { id:'bd3',     x:18, y:40, name:'Battle Hymn',       desc:'Bard aura also grants +10% damage to nearby heroes',     cost:8, req:['bd1'],              effect:{ bardDmgAuraAdd:0.10 } },
@@ -9676,7 +9676,10 @@ const enemyProjectiles = [];
 // on the wall. The variable names say "hound" (the prestige bonus name) but
 // the sprite drawn by drawHound() is a proper wolf — see there for palette.
 let hound = null;   // null when disabled OR downed this wave
-const HOUND_MAX_HP       = 60;
+// HP doubled from 60 -> 120 per player feedback: "I think its health needs to
+// be like double what it currently is." Previously the wolf died in 6 seconds
+// of sustained overlap; now it lasts ~12s, making positioning actually matter.
+const HOUND_MAX_HP       = 120;
 const HOUND_BITE_CD      = 0.6;     // seconds between bites
 const HOUND_BITE_RANGE   = 10;      // px — must be this close to land a bite
 const HOUND_MOVE_SPEED   = 42;      // px/s
@@ -9692,7 +9695,8 @@ function houndSpawn() {
     maxHp: HOUND_MAX_HP,
     cd: 0,
     biteFlash: 0,   // 0..1 — briefly draws teeth / red-mouth during bite
-    facing: 1       // 1 = facing right (toward enemies), -1 = left
+    facing: 1,      // 1 = facing right (toward enemies), -1 = left
+    walkPhase: 0    // ticks up while moving; drives 2-frame leg animation
   };
 }
 
@@ -9730,11 +9734,19 @@ function updateHound(dt) {
     // Cap how far the hound can roam so it doesn't chase witches into
     // the far edge of the field and get stuck behind enemy archers.
     const maxX = Math.min(W - 18, WALL_W + 80);
+    const oldX = hound.x, oldY = hound.y;
     const targetX = hound.x + (dx / dist) * HOUND_MOVE_SPEED * dt;
     const targetY = hound.y + (dy / dist) * HOUND_MOVE_SPEED * dt;
     hound.x = Math.max(WALL_W + 8, Math.min(maxX, targetX));
     hound.y = Math.max(10, Math.min(H - 10, targetY));
     hound.facing = dx >= 0 ? 1 : -1;
+    // Tick the walk-animation phase when the wolf actually changed position.
+    // Staying stuck against its roam cap (no motion) pauses the animation so
+    // the wolf idles in place instead of pedaling legs against an invisible wall.
+    const movedPx = Math.hypot(hound.x - oldX, hound.y - oldY);
+    if (movedPx > 0.05) {
+      hound.walkPhase = (hound.walkPhase || 0) + dt * 8;   // cycle rate
+    }
     // Bite if close enough
     if (dist <= HOUND_BITE_RANGE && hound.cd <= 0) {
       target.lastDmgFromSlotIdx = -1;   // no hero credit
@@ -9756,6 +9768,33 @@ function updateHound(dt) {
     if (dx * dx + dy * dy < 64) { overlapping = true; break; }
   }
   if (overlapping) hound.hp -= HOUND_CHIP_PER_SEC * dt;
+  // Bard heal — any Bard on the wall regenerates the wolf regardless of the
+  // bard's normal aura range. The wolf roams the field (never on the wall)
+  // so a range check would always fail; the fix is to treat the wolf as a
+  // permanent "aura target" that any living bard tops up. Scales per bard
+  // (double-bard = 2x regen), capped at max HP.
+  if (hound.hp < hound.maxHp) {
+    let bardCount = 0;
+    for (const s of SLOTS) {
+      if (!s.filled || !s.hero) continue;
+      if (s.hero.type === 'bard') bardCount++;
+    }
+    if (bardCount > 0) {
+      hound.hp = Math.min(hound.maxHp, hound.hp + 2 * bardCount * dt);
+      // Tiny green pulse so the player can see the heal happening — one
+      // particle every ~third frame at most (particle throttling).
+      if (typeof particles !== 'undefined' && Math.random() < dt * 4) {
+        particles.push({
+          x: hound.x + (Math.random() - 0.5) * 8,
+          y: hound.y - 3 + (Math.random() - 0.5) * 4,
+          vx: 0, vy: -18 - Math.random() * 10,
+          life: 0.5,
+          color: '#a8ffb0',
+          noGravity: true
+        });
+      }
+    }
+  }
   if (hound.hp <= 0) {
     hound = null;   // down until wave reset
   }
@@ -9811,16 +9850,27 @@ function drawHound() {
   px(-4, -1, 1, 1);      // tail under-curve root
   // Belly + chest
   px(-2,  1, 8, 1);      // belly line
-  // Legs — 2 visible pairs, slender
-  px(-1,  2, 1, 2);      // rear leg
-  px( 1,  2, 1, 2);      // rear leg pair
-  px( 4,  2, 1, 2);      // front leg
-  px( 6,  2, 1, 2);      // front leg pair
-  // Paws
-  px(-1,  4, 1, 1);
-  px( 1,  4, 1, 1);
-  px( 4,  4, 1, 1);
-  px( 6,  4, 1, 1);
+  // Legs — 2 visible pairs. When the wolf is walking, legs alternate in
+  // diagonal pairs (a simple 2-frame trot cycle): pair A = rear-outer +
+  // front-inner, pair B = rear-inner + front-outer. The "lifted" leg is 1px
+  // tall with its paw raised; the "planted" leg is full 2px with paw on the
+  // ground. walkPhase only advances while the wolf is actually moving, so
+  // idle frames render all four legs planted.
+  const walking = (hound.walkPhase || 0) > 0.05;
+  const phase   = walking ? (Math.floor((hound.walkPhase || 0)) % 2) : -1;
+  const drawLeg = (ox, lifted) => {
+    if (lifted) {
+      px(ox, 2, 1, 1);   // short leg (knee up)
+      px(ox, 3, 1, 1);   // raised paw
+    } else {
+      px(ox, 2, 1, 2);   // full leg
+      px(ox, 4, 1, 1);   // grounded paw
+    }
+  };
+  drawLeg(-1, phase === 1);  // rear-outer  (pair A)
+  drawLeg( 1, phase === 0);  // rear-inner  (pair B)
+  drawLeg( 4, phase === 0);  // front-outer (pair B — diagonal from rear-outer)
+  drawLeg( 6, phase === 1);  // front-inner (pair A — diagonal from rear-inner)
 
   // === 2. COAT fill (grey body mass) ===
   ctx.fillStyle = COAT;
