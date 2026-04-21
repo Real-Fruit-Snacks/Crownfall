@@ -2600,6 +2600,7 @@
         <button class="primary" onclick="togglePause()">Resume</button>
         <button onclick="pauseOpenResearch()">Research</button>
         <button onclick="pauseOpenStats()">Stats</button>
+        <button onclick="pauseOpenBestiary()">Bestiary</button>
         <button onclick="pauseOpenSettings()">Settings</button>
         <button onclick="pauseOpenTitle()">Main Menu</button>
         <button id="pause-prestige-btn" style="display:none" onclick="pauseOpenPrestige()">Prestige</button>
@@ -2656,11 +2657,6 @@
         <div class="name">Restart Tutorial</div>
         <div class="desc">Replay the onboarding tour from step one.</div>
         <button onclick="settingsRestartTutorial()">Restart Tutorial</button>
-      </div>
-      <div class="item">
-        <div class="name">Bestiary</div>
-        <div class="desc">Look up every enemy type and what makes them tick.</div>
-        <button onclick="openBestiary()">Open Bestiary</button>
       </div>
       <div class="item">
         <div class="name">End Run · Claim RP</div>
@@ -4885,7 +4881,7 @@ function renderCommanderOverlay() {
   body.innerHTML = `
     <div class="cmd-section">
       <div class="label">Auto-Hire</div>
-      <div class="cmd-info">Pick one to auto-hire when slot is empty, or Manual to hire yourself.</div>
+      <div class="cmd-info">Pick one to auto-hire when slot is empty &mdash; <strong>free of gold</strong>, but skipped if another slot already has the same hero type. Manual hire (clicking the slot) still costs gold and allows duplicates.</div>
       <div class="cmd-row">${heroOpts}</div>
     </div>
     <div class="cmd-section">
@@ -4929,17 +4925,28 @@ function runCommanderAutomation() {
     if (!c.owned) continue;
     if (s.index >= effects.slotsUnlocked) continue;
     const reserve = c.minGoldReserve || 0;
-    // 1. Auto-hire — IGNORES the reserve. The reserve is meant to stop the
-    //    auto-upgrade loop from draining the treasury into one hero's stats,
-    //    NOT to block the one-time hire purchase. Bug from the prior pass:
-    //    default reserve 50g + starting gold 25g meant the commander would
-    //    never hire an Archer (10g) on a fresh run because 25-10=15 < 50.
+    // 1. Auto-hire — FREE (no gold cost) but enforces uniqueness: a commander
+    //    will not spawn a hero type that's already on the wall. Per design:
+    //    "hero commander spawns dont cost any money but they cant be used to
+    //    spawn 2 or more of the same units." Manual hires (player click)
+    //    still pay gold and still allow duplicates — this rule is just for
+    //    the automation path. Bypasses buyHero entirely so we don't need to
+    //    fold a free-flag through the gold-paying path.
     if (!s.filled && c.autoHire && effects.unlockedHeroTypes.has(c.autoHire)) {
-      const cost = heroCost(c.autoHire);
-      if (gold >= cost) {
+      let dup = false;
+      for (const other of SLOTS) {
+        if (other === s) continue;
+        if (other.filled && other.hero && other.hero.type === c.autoHire) {
+          dup = true; break;
+        }
+      }
+      if (!dup) {
         const skin = (c.autoSkin && HERO_SKINS[c.autoSkin] && HERO_SKINS[c.autoSkin].hero === c.autoHire &&
                      effects.unlockedSkins && effects.unlockedSkins.has(c.autoSkin)) ? c.autoSkin : null;
-        buyHero(s.index, c.autoHire, skin);
+        s.filled = true;
+        s.hero   = makeHero(c.autoHire, skin);
+        Audio.sfx.buy && Audio.sfx.buy();
+        updateUI();
       }
     }
     if (!s.filled) continue;
@@ -11183,6 +11190,7 @@ window.togglePause = function () {
 };
 window.pauseOpenResearch = function () { exitPause(); window.openResearch(); };
 window.pauseOpenSettings = function () { exitPause(); window.openSettings(); };
+window.pauseOpenBestiary = function () { exitPause(); window.openBestiary(); };
 window.pauseOpenPrestige = function () { exitPause(); window.openPrestige(); };
 window.pauseEndRun       = function () { exitPause(); endRunForResearch(); };
 window.pauseOpenTitle    = function () {
