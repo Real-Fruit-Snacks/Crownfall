@@ -68,6 +68,16 @@
   #panel h3 { margin: 0 0 10px; color: #f5d889; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 2px solid #6a4528; padding-bottom: 6px; text-align: center; font-family: 'Pixelify Sans', monospace; }
   #panel .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 7px 0; }
   #panel .stat { color: #c0b090; font-size: 13px; }
+  /* DPS / kills meta-row sits above the imbue section — readonly stats */
+  #panel .row.hero-meta {
+    background: #1f1207;
+    padding: 5px 8px;
+    margin: 8px -2px;
+    box-shadow: inset 0 0 0 1px #4a352a;
+    justify-content: space-around;
+  }
+  #panel .row.hero-meta .stat { color: #a89070; font-size: 11px; letter-spacing: 0.5px; }
+  #panel .row.hero-meta .stat b { color: #ffd060; }
   #panel .stat b { color: #f5d889; font-family: 'VT323', monospace; font-size: 18px; font-weight: 400; letter-spacing: 1px; vertical-align: -1px; }
   #panel .cost { color: #f5d889; font-family: 'VT323', monospace; font-size: 18px; font-weight: 400; letter-spacing: 1px; }
   #panel button {
@@ -1174,6 +1184,45 @@
   /* Hide on devices that don't support the fullscreen API gracefully via JS */
   #fs-btn.unsupported { display: none; }
 
+  /* SPEED BUTTON — sits to the RIGHT of #fs-btn (fs is at left:14, w:44 → speed at left:66) */
+  #speed-btn {
+    position: fixed;
+    top: 10px;
+    left: 66px;
+    width: 44px; height: 44px;
+    background: #2a1a08;
+    color: #f5d889;
+    border: 0; cursor: pointer;
+    padding: 0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow:
+      inset 0 0 0 2px #6a4528,
+      inset 0 0 0 4px #1a0c00,
+      4px 4px 0 0 rgba(0,0,0,0.78);
+    transition: transform 0.08s, box-shadow 0.08s, color 0.08s;
+  }
+  #speed-btn:hover {
+    transform: translate(-1px,-1px);
+    color: #ffd060;
+    box-shadow:
+      inset 0 0 0 2px #8a6428,
+      inset 0 0 0 4px #1a0c00,
+      5px 5px 0 0 rgba(0,0,0,0.78);
+  }
+  #speed-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow:
+      inset 0 0 0 2px #6a4528,
+      inset 0 0 0 4px #1a0c00,
+      2px 2px 0 0 rgba(0,0,0,0.78);
+  }
+  #speed-btn.fast { color: #ffba40; }    /* 2x */
+  #speed-btn.faster { color: #ff8030; }  /* 3x */
+
   /* HELP BUTTON — sits to the LEFT of #pause-btn in top-right (pause is at right:14, w:44 → help at right:66) */
   #help-btn {
     position: fixed;
@@ -1362,6 +1411,47 @@
   #settings-overlay .item button:active { transform: translate(0, 0); box-shadow: inset 0 0 0 2px #a87a3e, 2px 2px 0 0 #1a0c00; }
   #settings-overlay .item button.danger { color: #ff8070; background: #2a1008; box-shadow: inset 0 0 0 2px #a8413a, 3px 3px 0 0 #1a0c00; }
   #settings-overlay .item button.danger:hover { color: #ffa090; box-shadow: inset 0 0 0 2px #d47070, 4px 4px 0 0 #1a0c00; }
+  /* Pixel-styled volume sliders — keeps the chunky aesthetic */
+  #settings-overlay .item .vol-row { display: flex; align-items: center; gap: 12px; }
+  #settings-overlay .item input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 16px;
+    background: #1a0c00;
+    box-shadow: inset 0 0 0 2px #6a4528;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+  }
+  #settings-overlay .item input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px; height: 24px;
+    background: #f5d889;
+    box-shadow: inset 0 0 0 2px #6a4528, 2px 2px 0 0 #1a0c00;
+    cursor: pointer;
+    border: 0;
+    border-radius: 0;
+  }
+  #settings-overlay .item input[type="range"]::-moz-range-thumb {
+    width: 16px; height: 24px;
+    background: #f5d889;
+    box-shadow: inset 0 0 0 2px #6a4528, 2px 2px 0 0 #1a0c00;
+    cursor: pointer;
+    border: 0;
+    border-radius: 0;
+  }
+  #settings-overlay .item .vol-pct {
+    color: #f5d889;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    min-width: 38px; text-align: right;
+    letter-spacing: 0.5px;
+  }
+  /* Toggle-style button (used for Reduced Motion etc.) */
+  #settings-overlay .item button.toggle.on  { color: #a8ffb0; box-shadow: inset 0 0 0 2px #4aa84a, 3px 3px 0 0 #1a0c00; }
+  #settings-overlay .item button.toggle.off { color: #c0a070; box-shadow: inset 0 0 0 2px #6a4528, 3px 3px 0 0 #1a0c00; }
   /* Save export/import controls — textareas & inline status, hidden until activated */
   #settings-overlay .save-blob {
     display: none;
@@ -1692,10 +1782,31 @@
     transform: translate(-1px, -1px);
     box-shadow: 4px 4px 0 0 #1a0c00;
   }
+  /* AFFORDABLE — pulses gold so the eye picks it out of the long node list.
+     Doesn't change layout; just animates the border + a glow ring. Owned/locked
+     states override this since they're more specific in the cascade. */
+  .node-entry.buyable {
+    border-color: #c89030;
+    box-shadow:
+      3px 3px 0 0 #1a0c00,
+      0 0 0 2px rgba(245,216,137,0.0);
+    animation: nodeBuyPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes nodeBuyPulse {
+    0%, 100% {
+      border-color: #c89030;
+      box-shadow: 3px 3px 0 0 #1a0c00, 0 0 0 0px rgba(245,216,137,0.0);
+    }
+    50% {
+      border-color: #f5d889;
+      box-shadow: 3px 3px 0 0 #1a0c00, 0 0 0 4px rgba(245,216,137,0.40);
+    }
+  }
   .node-entry.owned {
     background: #b0c890;
     border-color: #4a7818;
     box-shadow: 3px 3px 0 0 #2a4810;
+    animation: none;     /* never pulse owned/locked */
   }
   .node-entry.owned:hover {
     background: #b8d098;
@@ -1708,6 +1819,7 @@
     cursor: default;
     box-shadow: 2px 2px 0 0 #2a1a0a;
     opacity: 0.85;
+    animation: none;
   }
   .node-entry.locked:hover {
     background: #b0a888;
@@ -1921,6 +2033,46 @@
     cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' shape-rendering='crispEdges'><g fill='%231a0c00'><rect x='1' y='1' width='9' height='2'/><rect x='1' y='1' width='2' height='9'/><rect x='22' y='1' width='9' height='2'/><rect x='29' y='1' width='2' height='9'/><rect x='1' y='29' width='9' height='2'/><rect x='1' y='22' width='2' height='9'/><rect x='22' y='29' width='9' height='2'/><rect x='29' y='22' width='2' height='9'/><rect x='12' y='12' width='8' height='8'/></g><g fill='%23ffe060'><rect x='2' y='2' width='7' height='1'/><rect x='2' y='2' width='1' height='7'/><rect x='23' y='2' width='7' height='1'/><rect x='29' y='2' width='1' height='7'/><rect x='2' y='29' width='7' height='1'/><rect x='2' y='23' width='1' height='7'/><rect x='23' y='29' width='7' height='1'/><rect x='29' y='23' width='1' height='7'/><rect x='13' y='13' width='6' height='6'/></g><rect x='15' y='15' width='2' height='2' fill='%23c83020'/></svg>") 16 16, crosshair !important;
   }
 
+  /* Enemy info tooltip — appears next to the cursor on hover / tap-and-hold.
+     Pointer-events: none so it never eats clicks meant for the enemy. */
+  #enemy-tooltip {
+    position: fixed; display: none;
+    background: #2a1a08;
+    color: #e8d9b8;
+    font-family: 'Pixelify Sans', monospace;
+    font-size: 11px;
+    padding: 6px 8px;
+    min-width: 130px; max-width: 180px;
+    z-index: 22;
+    pointer-events: none;
+    box-shadow:
+      inset 0 0 0 2px #6a4528,
+      inset 0 0 0 4px #1a0c00,
+      3px 3px 0 0 rgba(0,0,0,0.78);
+  }
+  #enemy-tooltip.show { display: block; }
+  #enemy-tooltip .et-name {
+    color: #f5d889;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  #enemy-tooltip .et-name.boss { color: #ffba40; }
+  #enemy-tooltip .et-hp {
+    color: #c0b090;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  #enemy-tooltip .et-hp b { color: #f5d889; }
+  #enemy-tooltip .et-trait {
+    color: #a8957a;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
   /* skill buy / details popup — same chrome as #panel.
      Sized narrow + short so it overlays as little of the battlefield as
      possible (review feedback: "skill menu covers part of the screen,
@@ -2056,9 +2208,10 @@
     #prestige-overlay .p-node .p-stacks { font-size: 6px; }
     #prestige-overlay button { padding: 7px 12px; font-size: 9px; }
     /* Top corner buttons — keep small + flush */
-    #help-btn, #pause-btn, #fs-btn { width: 32px; height: 32px; top: 4px; }
-    #fs-btn   { left: 4px;  font-size: 14px; }
-    #help-btn { right: 42px; font-size: 14px; }
+    #help-btn, #pause-btn, #fs-btn, #speed-btn { width: 32px; height: 32px; top: 4px; }
+    #fs-btn    { left: 4px;  font-size: 14px; }
+    #speed-btn { left: 42px; font-size: 11px; letter-spacing: 0; }
+    #help-btn  { right: 42px; font-size: 14px; }
     #pause-btn { right: 4px; }
     /* Topbar tightens — small font, compact padding, fits in ~40px tall */
     #topbar { top: 4px; padding: 1px; }
@@ -2204,6 +2357,11 @@
     </div>
   </div>
   <div id="panel"></div>
+  <div id="enemy-tooltip">
+    <div class="et-name" id="et-name"></div>
+    <div class="et-hp"><b id="et-hp">0</b>/<span id="et-hpmax">0</span> HP</div>
+    <div class="et-trait" id="et-trait"></div>
+  </div>
   <div id="skillbar"></div>
   <div id="skill-panel"></div>
   <div id="gameover">
@@ -2364,8 +2522,36 @@
       <h2>Settings</h2>
       <div class="item">
         <div class="name">Sound</div>
-        <div class="desc">Toggle all sound effects and the ambient music.</div>
+        <div class="desc">Master toggle &mdash; mutes everything when off.</div>
         <button id="settings-mute-btn" onclick="settingsToggleMute()">Sound: ON</button>
+      </div>
+      <div class="item">
+        <div class="name">Music Volume</div>
+        <div class="desc">Background ambient music level.</div>
+        <div class="vol-row">
+          <input id="settings-music-vol" type="range" min="0" max="100" step="5"
+                 oninput="settingsSetMusicVol(this.value)">
+          <span class="vol-pct" id="settings-music-vol-pct">20%</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="name">SFX Volume</div>
+        <div class="desc">Combat sounds, taps, achievement fanfare.</div>
+        <div class="vol-row">
+          <input id="settings-sfx-vol" type="range" min="0" max="100" step="5"
+                 oninput="settingsSetSfxVol(this.value)">
+          <span class="vol-pct" id="settings-sfx-vol-pct">55%</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="name">Reduced Motion</div>
+        <div class="desc">Disables screen shake and damage flashes for motion-sensitive players.</div>
+        <button id="settings-reduce-motion-btn" class="toggle off" onclick="settingsToggleReduceMotion()">Reduced Motion: OFF</button>
+      </div>
+      <div class="item">
+        <div class="name">Restart Tutorial</div>
+        <div class="desc">Replay the onboarding tour from step one.</div>
+        <button onclick="settingsRestartTutorial()">Restart Tutorial</button>
       </div>
       <div class="item">
         <div class="name">End Run · Claim RP</div>
@@ -2475,6 +2661,8 @@
   </div>
 
   <button id="fs-btn" onclick="toggleFullscreen()" title="Fullscreen (uses your phone's whole screen)" aria-label="Fullscreen"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" width="20" height="20"><g fill="#f5d889"><rect x="0" y="0" width="6" height="2"/><rect x="0" y="0" width="2" height="6"/><rect x="10" y="0" width="6" height="2"/><rect x="14" y="0" width="2" height="6"/><rect x="0" y="14" width="6" height="2"/><rect x="0" y="10" width="2" height="6"/><rect x="10" y="14" width="6" height="2"/><rect x="14" y="10" width="2" height="6"/></g></svg></button>
+
+  <button id="speed-btn" onclick="cycleGameSpeed()" title="Game speed (click to cycle 1x / 2x / 3x)" aria-label="Game speed">1&times;</button>
 
   <button id="help-btn" onclick="openWelcome(true)" title="Help / Controls" aria-label="Help">?</button>
 
@@ -2613,11 +2801,17 @@ const Audio = (function () {
   let muted = false;
   let musicTimer = null;
   let musicStep = 0;
+  // Persisted per-channel volumes (0..1). Defaults match the old hardcoded gains.
+  let sfxVol   = 0.55;
+  let musicVol = 0.20;
 
-  // Persisted mute state
   try {
     const saved = localStorage.getItem('castleMuted');
     if (saved === '1') muted = true;
+    const sv = parseFloat(localStorage.getItem('castleSfxVol'));
+    if (!isNaN(sv) && sv >= 0 && sv <= 1) sfxVol = sv;
+    const mv = parseFloat(localStorage.getItem('castleMusicVol'));
+    if (!isNaN(mv) && mv >= 0 && mv <= 1) musicVol = mv;
   } catch {}
 
   function ensureCtx() {
@@ -2629,10 +2823,10 @@ const Audio = (function () {
     masterGain.gain.value = muted ? 0 : 0.85;
     masterGain.connect(ac.destination);
     sfxGain = ac.createGain();
-    sfxGain.gain.value = 0.55;
+    sfxGain.gain.value = sfxVol;
     sfxGain.connect(masterGain);
     musicGain = ac.createGain();
-    musicGain.gain.value = 0.20;
+    musicGain.gain.value = musicVol;
     musicGain.connect(masterGain);
     started = true;
     startMusic();
@@ -2727,6 +2921,18 @@ const Audio = (function () {
       muted = !!v;
       try { localStorage.setItem('castleMuted', muted ? '1' : '0'); } catch {}
       if (masterGain) masterGain.gain.value = muted ? 0 : 0.85;
+    },
+    sfxVolume()   { return sfxVol; },
+    musicVolume() { return musicVol; },
+    setSfxVolume(v) {
+      sfxVol = Math.max(0, Math.min(1, +v || 0));
+      try { localStorage.setItem('castleSfxVol', String(sfxVol)); } catch {}
+      if (sfxGain) sfxGain.gain.value = sfxVol;
+    },
+    setMusicVolume(v) {
+      musicVol = Math.max(0, Math.min(1, +v || 0));
+      try { localStorage.setItem('castleMusicVol', String(musicVol)); } catch {}
+      if (musicGain) musicGain.gain.value = musicVol;
     },
     sfx: {
       arrow:    () => tone({ freq: 1100, freqEnd: 520, dur: 0.06, type: 'square',   vol: 0.06 }),
@@ -3305,6 +3511,8 @@ let totalKills = 0;
 let totalGoldEarned = 0;
 let openSlot = null;
 let autoTapTimer = 0;     // Sentry Marksmen research — ticks down every frame
+let gameSpeed = 1;        // 1x / 2x / 3x — multiplies dt in the main loop
+let reducedMotion = false;// Settings toggle — suppresses screen shake / damage flash
 
 // ---------- wall ----------
 let wallHP = 100;
@@ -5791,6 +5999,7 @@ function renderNodeEntry(n) {
   const classes = ['node-entry'];
   if (state === 'owned' || state === 'maxed') classes.push('owned');
   if (state === 'locked') classes.push('locked');
+  if (state === 'buy')    classes.push('buyable');   // CSS pulses gold to draw the eye
   if (n.keystone)         classes.push('keystone');
   if (isOwned && isDisabled) classes.push('disabled');
 
@@ -6058,7 +6267,13 @@ function updateWaveHud() {
   else if (wavePhase === 'active')  waveStateEl.textContent = (isBoss ? 'BOSS FIGHT'    : 'fighting')    + evTag;
   else if (wavePhase === 'resting') {
     const rew = Math.floor((3 + wave * 2) * effects.waveRewardMul);
-    waveStateEl.textContent = `next in ${Math.max(1, Math.ceil(waveRestTimer))}s \u00b7 +${rew}g`;
+    // Wave preview during rest period — flag a boss in the very next wave so
+    // the player can pre-cast Rally / equip Heal Wall / save gold for hires.
+    // Events stay random (rolled at startWave) but the boss schedule is
+    // deterministic (every 10th wave), so we can always show that one.
+    const nextIsBoss = ((wave + 1) % 10 === 0);
+    const preview    = nextIsBoss ? ' \u00b7 BOSS NEXT' : '';
+    waveStateEl.textContent = `next in ${Math.max(1, Math.ceil(waveRestTimer))}s \u00b7 +${rew}g${preview}`;
   }
 }
 
@@ -7327,8 +7542,23 @@ function renderPanel(s) {
   const dC = upgradeCost('dmg', h.lvDmg);
   const rC = upgradeCost('rng', h.lvRng);
   const sC = upgradeCost('spd', h.lvSpd);
+  // Effective DPS — accounts for bard fire-rate aura, bard damage aura,
+  // synergy bonuses, last-stand multiplier, mid-event buffs. Surface the
+  // real combat output so players can compare upgrades vs hires.
+  const effDmg  = (typeof effectiveHeroDamage === 'function' ? effectiveHeroDamage(h) : h.damage)
+                * (typeof bardDamageMul === 'function' ? bardDamageMul(s) : 1);
+  const effRate = h.fireRate * (typeof bardFireRateMul === 'function' ? bardFireRateMul(s) : 1);
+  const dps     = (h.fireRate >= 99) ? 0 : effDmg / Math.max(0.05, effRate);
+  // Show kill count for this hero so the player can spot the carry. Tracked
+  // in `h.kills` (incremented in updateProjectiles when a projectile lands a
+  // killing blow). Untracked heroes (loaded from older saves) start at 0.
+  const kills = h.kills || 0;
+  // Splash hint for cannoneers — answers "is the splash worth it?"
+  const splashLine = (h.splash && h.splashDmg)
+    ? `<div class="row"><span class="stat">SPLASH <b>${h.splashDmg.toFixed(0)}\u00d7${Math.round(h.splash)}px</b></span></div>`
+    : '';
   return `
-    <h3>Slot ${s.index + 1} · ${type.name}</h3>
+    <h3>Slot ${s.index + 1} \u00b7 ${type.name}</h3>
     ${cmdBtn}
     <div class="row">
       <span class="stat">DMG <b>${h.damage.toFixed(1)}</b></span>
@@ -7341,6 +7571,11 @@ function renderPanel(s) {
     <div class="row">
       <span class="stat">SPD <b>${h.fireRate.toFixed(2)}s</b></span>
       <button onclick="upgrade(${s.index},'spd')" ${gold >= sC ? '' : 'disabled'}>faster <span class="cost">${sC}g</span></button>
+    </div>
+    ${splashLine}
+    <div class="row hero-meta">
+      <span class="stat">DPS <b>${dps.toFixed(1)}</b></span>
+      <span class="stat">KILLS <b>${kills}</b></span>
     </div>
     ${renderImbueSection(s, h)}
     <button class="close" onclick="closePanel()">close</button>
@@ -7613,8 +7848,32 @@ function drawHero(s) {
   }
 }
 
+// Per-hero kill count — tiny dim badge above each occupied slot. Lets the
+// player spot the carry without opening every slot panel. Skipped for
+// support heroes (bards) since they don't kill, and hidden if 0.
+function drawHeroKillBadges() {
+  ctx.font = 'bold 6px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const s of SLOTS) {
+    if (!s.filled || !s.hero) continue;
+    const k = s.hero.kills || 0;
+    if (k <= 0) continue;
+    const px = s.cx + 1;
+    const py = s.cy - 10;
+    // Pixel shadow + body
+    ctx.fillStyle = 'rgba(10,6,2,0.85)';
+    ctx.fillText(String(k), px + 1, py + 1);
+    ctx.fillStyle = '#f5d889';
+    ctx.fillText(String(k), px,     py    );
+  }
+  ctx.textAlign = 'start';
+  ctx.textBaseline = 'alphabetic';
+}
+
 function drawHeroes() {
   for (const s of SLOTS) if (s.filled) drawHero(s);
+  drawHeroKillBadges();
 }
 
 // Range indicator — when a hero slot is selected (slot panel open), show a
@@ -7799,6 +8058,7 @@ function spawnProjectileFromHero(from, target, dmg, angleOffset) {
     // hitting the target." Min 2s, max 5s — generous floor + sane ceiling.
     life: Math.max(2.0, Math.min(5.0, (h.range / Math.max(1, h.projSpeed)) * 1.5 + 0.4)),
     type: h.type,
+    sourceSlotIdx: (from && typeof from.index === 'number') ? from.index : -1,
     splash:    h.splash    || 0,
     splashDmg: h.splashDmg || 0,
     pierce: h.type === 'archer' ? effects.pierce : 0,
@@ -7888,6 +8148,9 @@ function updateProjectiles(dt) {
           let dmgScale = 1;
           if (p.element === 'holy' && e.isBoss) dmgScale = 2;
 
+          // Stamp the source so the death handler can credit the kill to
+          // the right hero — used for the per-hero KILLS badge on the panel.
+          e.lastDmgFromSlotIdx = p.sourceSlotIdx;
           // Crossbow ignores armor entirely
           if (p.type === 'crossbow') {
             const dmg = Math.floor(p.damage * dmgScale * (e.hexT > 0 ? 1.25 : 1));
@@ -7931,6 +8194,7 @@ function updateProjectiles(dt) {
               const sdx = other.x - e.x;
               const sdy = other.y - e.y;
               if (sdx * sdx + sdy * sdy <= r2) {
+                other.lastDmgFromSlotIdx = p.sourceSlotIdx;
                 applyDamage(other, p.splashDmg);
                 if (p.element) applyElement(other, p.element, p.elementDmg * 0.6);
               }
@@ -7956,6 +8220,7 @@ function updateProjectiles(dt) {
               }
               if (!next) break;
               spawnBeam(lastX, lastY, next.x, next.y - 3, p.element);
+              next.lastDmgFromSlotIdx = p.sourceSlotIdx;
               applyDamage(next, chainDmg);
               if (p.element) applyElement(next, p.element, chainDmg);
               p.hitTargets.add(next);
@@ -8327,6 +8592,77 @@ function enemyAt(mx, my) {
 }
 
 
+// ---------- Enemy info tooltip — hover (desktop) or tap-and-hold (touch) ----------
+const ENEMY_INFO = {
+  goblin:   { name: 'Goblin',          trait: 'Standard melee infantry.' },
+  charger:  { name: 'Charger',         trait: 'Fast (1.9\u00d7 speed) \u2014 hits the wall quick.' },
+  shielded: { name: 'Shielded Goblin', trait: 'Shield blocks archer arrows. Crossbows pierce.' },
+  archer:   { name: 'Goblin Archer',   trait: 'Stops short to fire arrows at the wall.' },
+  healer:   { name: 'Healer',          trait: 'Heals nearby allies every 1.4s. Kill first.' },
+  witch:    { name: 'Witch',           trait: '50% damage reduction aura to nearby allies.' },
+  ram:      { name: 'Battering Ram',   trait: 'Siege engine \u2014 massive wall damage if it reaches you.' }
+};
+const enemyTooltipEl = document.getElementById('enemy-tooltip');
+let _tooltipEnemy = null;
+let _holdTimer = null;
+function enemyTraitDesc(e) {
+  const base = ENEMY_INFO[e.kind];
+  let trait = base ? base.trait : 'Unknown enemy.';
+  const extras = [];
+  if (e.armor > 0)  extras.push('Armor ' + e.armor);
+  if (e.auraShield) extras.push('under Witch aura');
+  return extras.length ? trait + '\n\u00b7 ' + extras.join(' \u00b7 ') : trait;
+}
+function showEnemyTooltip(en, clientX, clientY) {
+  if (!en) return;
+  const info = ENEMY_INFO[en.kind] || { name: 'Enemy' };
+  const nameEl  = document.getElementById('et-name');
+  const hpEl    = document.getElementById('et-hp');
+  const hpMaxEl = document.getElementById('et-hpmax');
+  const traitEl = document.getElementById('et-trait');
+  if (nameEl) {
+    nameEl.textContent = (en.isBoss ? 'BOSS \u00b7 ' : '') + info.name;
+    nameEl.classList.toggle('boss', !!en.isBoss);
+  }
+  if (hpEl)    hpEl.textContent    = Math.max(0, Math.ceil(en.hp));
+  if (hpMaxEl) hpMaxEl.textContent = Math.max(1, Math.ceil(en.maxHp));
+  if (traitEl) traitEl.textContent = enemyTraitDesc(en);
+  // Position: right of cursor; flip to left if that overflows the viewport.
+  enemyTooltipEl.classList.add('show');
+  const tw = enemyTooltipEl.offsetWidth;
+  const th = enemyTooltipEl.offsetHeight;
+  let left = clientX + 16;
+  let top  = clientY + 12;
+  if (left + tw > window.innerWidth  - 8) left = clientX - tw - 16;
+  if (top  + th > window.innerHeight - 8) top  = clientY - th - 12;
+  left = Math.max(8, left);
+  top  = Math.max(8, top);
+  enemyTooltipEl.style.left = left + 'px';
+  enemyTooltipEl.style.top  = top  + 'px';
+  _tooltipEnemy = en;
+}
+function hideEnemyTooltip() {
+  enemyTooltipEl.classList.remove('show');
+  _tooltipEnemy = null;
+  if (_holdTimer) { clearTimeout(_holdTimer); _holdTimer = null; }
+}
+
+// Single-source coin pickup so the click path and the swipe path agree on
+// gold/sfx/buff handling.
+function pickupCoin(coin) {
+  if (!coin) return false;
+  let v = coin.value;
+  if (runState.coinBuffWaves > 0) v = Math.ceil(v * (1 + runState.coinBuffValue));
+  gold            += v;
+  totalGoldEarned += v;
+  goldDirty = true;
+  const ix = coins.indexOf(coin);
+  if (ix !== -1) coins.splice(ix, 1);
+  Audio.sfx.coin && Audio.sfx.coin();
+  if (typeof Tutorial !== 'undefined') Tutorial.notify('coin');
+  return true;
+}
+
 canvas.addEventListener('pointermove', e => {
   const { x, y } = mouseToCanvas(e);
   mouseX = x; mouseY = y;
@@ -8335,11 +8671,30 @@ canvas.addEventListener('pointermove', e => {
   const enHit = !hit && enemyAt(x, y);
   const coHit = !hit && !enHit && coinAt(x, y);
   if (!armedSkill) canvas.style.cursor = (hit || enHit || coHit) ? 'pointer' : 'default';
+  // Enemy hover tooltip — update or hide. Only runs with a mouse; on touch,
+  // pointermove only fires during an active touch, so the tap-and-hold path
+  // below is the one that matters.
+  if (e.pointerType === 'mouse') {
+    if (enHit) showEnemyTooltip(enHit, e.clientX, e.clientY);
+    else if (_tooltipEnemy) hideEnemyTooltip();
+  }
+  // SWIPE-TO-COLLECT — sweeping over a coin grabs it without a discrete click.
+  // Touch pointermove only fires WHILE held, so any move counts as a swipe.
+  // On mouse, require a held button (drag) so passive hover doesn't auto-grab
+  // and obscure where the player is just looking.
+  if (coHit && (e.pointerType === 'touch' || e.buttons > 0)) {
+    pickupCoin(coHit);
+  }
 });
 
 canvas.addEventListener('pointerleave', () => {
   for (const s of SLOTS) s.hovered = false;
+  hideEnemyTooltip();
 });
+
+// Releasing a touch hides the long-press tooltip immediately.
+canvas.addEventListener('pointerup',     () => { if (_tooltipEnemy || _holdTimer) hideEnemyTooltip(); });
+canvas.addEventListener('pointercancel', () => { if (_tooltipEnemy || _holdTimer) hideEnemyTooltip(); });
 
 canvas.addEventListener('pointerdown', e => {
   e.preventDefault();
@@ -8361,18 +8716,7 @@ canvas.addEventListener('pointerdown', e => {
     }
   }
   const coin = coinAt(x, y);
-  if (coin) {
-    let v = coin.value;
-    if (runState.coinBuffWaves > 0) v = Math.ceil(v * (1 + runState.coinBuffValue));
-    gold            += v;
-    totalGoldEarned += v;
-    goldDirty = true;
-    const ix = coins.indexOf(coin);
-    if (ix !== -1) coins.splice(ix, 1);
-    Audio.sfx.coin();
-    if (typeof Tutorial !== 'undefined') Tutorial.notify('coin');
-    return;
-  }
+  if (coin) { pickupCoin(coin); return; }
   const en = enemyAt(x, y);
   if (en) {
     // Full tap damage regardless of armor — these are deliberate player clicks.
@@ -8384,6 +8728,16 @@ canvas.addEventListener('pointerdown', e => {
     en.hitFlash = 0.08;
     if (typeof spawnFloatingText === 'function') {
       spawnFloatingText(en.x, en.y - 8, '-' + TAP_DAMAGE, '#ffe486');
+    }
+    // Touch tap-and-hold reveals the enemy info tooltip after 400ms. The tap
+    // damage above still fires on press; the long press just unlocks the
+    // info card on top. Mouse uses hover (handled in pointermove).
+    if (e.pointerType !== 'mouse') {
+      if (_holdTimer) clearTimeout(_holdTimer);
+      const cx = e.clientX, cy = e.clientY;
+      _holdTimer = setTimeout(() => {
+        if (en.hp > 0) showEnemyTooltip(en, cx, cy);
+      }, 400);
     }
     return;
   }
@@ -8752,6 +9106,15 @@ function updateEnemies(dt) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     if (e.hp <= 0) {
+      // Credit the kill to whichever hero landed the killing damage. Powers
+      // the per-hero KILLS counter shown on the slot panel — lets players
+      // see at a glance which class is carrying the run.
+      if (typeof e.lastDmgFromSlotIdx === 'number' && e.lastDmgFromSlotIdx >= 0) {
+        const slot = SLOTS[e.lastDmgFromSlotIdx];
+        if (slot && slot.filled && slot.hero) {
+          slot.hero.kills = (slot.hero.kills || 0) + 1;
+        }
+      }
       spawnDeathParticles(e.x, e.y);
       spawnCoin(e.x, e.y - 3, e.coinVal);
       if (e.isBoss) {
@@ -9459,7 +9822,8 @@ function render() {
   ctx.fillRect(0, 0, W, H);
 
   ctx.save();
-  if (shakeT > 0) {
+  // Screen shake — gated by Reduced Motion setting for motion-sensitive players
+  if (shakeT > 0 && !reducedMotion) {
     const mag = 2.5 * (shakeT / 0.18);
     ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
   }
@@ -9489,7 +9853,8 @@ function render() {
   drawEventBanner();
   ctx.restore();
 
-  if (damageFlashT > 0) {
+  // Red wall-damage flash — gated by Reduced Motion
+  if (damageFlashT > 0 && !reducedMotion) {
     ctx.fillStyle = `rgba(220, 60, 40, ${0.28 * (damageFlashT / 0.18)})`;
     ctx.fillRect(0, 0, W, H);
   }
@@ -9605,7 +9970,12 @@ function drawTargetingPreview() {
 // ---------- game loop ----------
 let lastT = 0;
 function loop(t) {
-  const dt = lastT ? Math.min(0.1, (t - lastT) / 1000) : 0.016;
+  // Real elapsed dt (capped at 100ms so a tab-blur stutter doesn't teleport
+  // simulation by a full frame). Then multiplied by gameSpeed and re-capped
+  // to keep physics stable even at 3x — at 60fps with 3x speed that's 48ms,
+  // well under the 100ms ceiling.
+  const baseDt = lastT ? Math.min(0.1, (t - lastT) / 1000) : 0.016;
+  const dt = Math.min(0.1, baseDt * gameSpeed);
   lastT = t;
 
   if (!gameOver && !paused && !_activeMidEvent && _activeCmdIdx < 0) {
@@ -9684,6 +10054,16 @@ function loop(t) {
 
   runRpEl.textContent = currentRpEarned();
 
+  // Refresh enemy tooltip HP live so the player sees the bar drain in real time
+  if (_tooltipEnemy) {
+    if (_tooltipEnemy.hp <= 0 || enemies.indexOf(_tooltipEnemy) < 0) {
+      hideEnemyTooltip();
+    } else {
+      const hpEl = document.getElementById('et-hp');
+      if (hpEl) hpEl.textContent = Math.max(0, Math.ceil(_tooltipEnemy.hp));
+    }
+  }
+
   requestAnimationFrame(loop);
 }
 // ---------- settings ----------
@@ -9692,6 +10072,23 @@ window.openSettings  = function () {
   settingsOverlayEl.classList.add('show');
   const btn = document.getElementById('settings-mute-btn');
   if (btn) btn.textContent = Audio.isMuted() ? 'Sound: OFF' : 'Sound: ON';
+  // Sync volume slider widgets to current values
+  const mv = document.getElementById('settings-music-vol');
+  const sv = document.getElementById('settings-sfx-vol');
+  if (mv) mv.value = Math.round(Audio.musicVolume() * 100);
+  if (sv) sv.value = Math.round(Audio.sfxVolume()   * 100);
+  const mvp = document.getElementById('settings-music-vol-pct');
+  const svp = document.getElementById('settings-sfx-vol-pct');
+  if (mvp) mvp.textContent = Math.round(Audio.musicVolume() * 100) + '%';
+  if (svp) svp.textContent = Math.round(Audio.sfxVolume()   * 100) + '%';
+  // Reduced-motion toggle reflects current state
+  const rmBtn = document.getElementById('settings-reduce-motion-btn');
+  if (rmBtn) {
+    const on = !!reducedMotion;
+    rmBtn.textContent = on ? 'Reduced Motion: ON' : 'Reduced Motion: OFF';
+    rmBtn.classList.toggle('on', on);
+    rmBtn.classList.toggle('off', !on);
+  }
 };
 window.closeSettings = function () {
   settingsOverlayEl.classList.remove('show');
@@ -9712,6 +10109,45 @@ window.settingsToggleMute = function () {
   Audio.setMuted(!Audio.isMuted());
   const btn = document.getElementById('settings-mute-btn');
   if (btn) btn.textContent = Audio.isMuted() ? 'Sound: OFF' : 'Sound: ON';
+};
+window.settingsSetMusicVol = function (v) {
+  Audio.init();
+  const f = Math.max(0, Math.min(1, (parseInt(v, 10) || 0) / 100));
+  Audio.setMusicVolume(f);
+  const lbl = document.getElementById('settings-music-vol-pct');
+  if (lbl) lbl.textContent = Math.round(f * 100) + '%';
+};
+window.settingsSetSfxVol = function (v) {
+  Audio.init();
+  const f = Math.max(0, Math.min(1, (parseInt(v, 10) || 0) / 100));
+  Audio.setSfxVolume(f);
+  const lbl = document.getElementById('settings-sfx-vol-pct');
+  if (lbl) lbl.textContent = Math.round(f * 100) + '%';
+  // Tiny click so the player hears the new SFX volume immediately
+  Audio.sfx.click && Audio.sfx.click();
+};
+window.settingsToggleReduceMotion = function () {
+  reducedMotion = !reducedMotion;
+  try { localStorage.setItem('castleReducedMotion', reducedMotion ? '1' : '0'); } catch {}
+  const btn = document.getElementById('settings-reduce-motion-btn');
+  if (btn) {
+    btn.textContent = reducedMotion ? 'Reduced Motion: ON' : 'Reduced Motion: OFF';
+    btn.classList.toggle('on',  reducedMotion);
+    btn.classList.toggle('off', !reducedMotion);
+  }
+  Audio.sfx.click && Audio.sfx.click();
+};
+window.settingsRestartTutorial = function () {
+  try { localStorage.removeItem('castleTutorialDone'); } catch {}
+  window.closeSettings();
+  if (typeof Tutorial !== 'undefined' && Tutorial.start) {
+    // End any in-flight tutorial first so we always start at step 0
+    if (Tutorial.active) Tutorial.end();
+    Tutorial.active  = false;
+    Tutorial.current = -1;
+    Tutorial.start();
+  }
+  Audio.sfx.click && Audio.sfx.click();
 };
 window.settingsEndRun = function () {
   window.closeSettings();
@@ -9850,6 +10286,36 @@ window.settingsWipe = function () {
   };
   setIcon(isFs());
 })();
+
+// ---------- GAME SPEED MULTIPLIER (1x / 2x / 3x) ----------
+// Persisted across runs. Multiplies the per-frame dt in the main loop so
+// the entire simulation (waves, hero firing, enemy movement, particles)
+// runs faster. Capped at 3x to keep audio + physics readable.
+(function () {
+  try {
+    const raw = localStorage.getItem('castleGameSpeed');
+    const v   = parseInt(raw, 10);
+    if (v === 1 || v === 2 || v === 3) gameSpeed = v;
+  } catch {}
+  refreshSpeedBtn();
+  // Load reduced-motion preference here too — same lifecycle as gameSpeed
+  try {
+    if (localStorage.getItem('castleReducedMotion') === '1') reducedMotion = true;
+  } catch {}
+})();
+function refreshSpeedBtn() {
+  const btn = document.getElementById('speed-btn');
+  if (!btn) return;
+  btn.innerHTML = gameSpeed + '&times;';
+  btn.classList.toggle('fast',   gameSpeed === 2);
+  btn.classList.toggle('faster', gameSpeed === 3);
+}
+window.cycleGameSpeed = function () {
+  gameSpeed = (gameSpeed % 3) + 1;     // 1 -> 2 -> 3 -> 1
+  try { localStorage.setItem('castleGameSpeed', String(gameSpeed)); } catch {}
+  refreshSpeedBtn();
+  Audio.sfx.click && Audio.sfx.click();
+};
 
 // =====================================================================
 //  PRESTIGE MODULE — overlay, tree render, buy, wipe-and-credit action
