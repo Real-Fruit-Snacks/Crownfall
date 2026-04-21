@@ -784,6 +784,33 @@
   #panel .cmd-link-btn:hover:not(:disabled) {
     box-shadow: inset 0 0 0 2px #ffd060, 3px 3px 0 0 #1a0c00;
   }
+  /* Broken state — commander has a hero in the slot that doesn't match
+     its autoHire target. Auto-upgrade/imbue are paused until run reset. */
+  #panel .cmd-link-btn.broken {
+    background: #4a1810;
+    color: #ff8070;
+    box-shadow: inset 0 0 0 2px #c83020, 2px 2px 0 0 #1a0c00;
+    animation: cmdBrokenPulse 1.4s ease-in-out infinite;
+  }
+  #panel .cmd-link-btn.broken:hover {
+    box-shadow: inset 0 0 0 2px #ff5040, 3px 3px 0 0 #1a0c00;
+  }
+  @keyframes cmdBrokenPulse {
+    0%, 100% { box-shadow: inset 0 0 0 2px #c83020, 2px 2px 0 0 #1a0c00; }
+    50%      { box-shadow: inset 0 0 0 2px #ff5040, 2px 2px 0 0 #1a0c00, 0 0 6px rgba(255,80,64,0.45); }
+  }
+  /* Broken banner inside the commander overlay — explains why automation
+     is paused and how to fix it. */
+  #commander-overlay .cmd-broken {
+    background: #4a1810;
+    color: #ffe0d8;
+    padding: 8px 10px;
+    margin: 0 0 10px;
+    box-shadow: inset 0 0 0 2px #c83020, 2px 2px 0 0 #1a0c00;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  #commander-overlay .cmd-broken strong { color: #ff8070; letter-spacing: 1px; }
 
   /* MID-RUN RANDOM EVENT overlay */
   #midevent-overlay {
@@ -3834,6 +3861,12 @@ window.resetRun = function (opts) {
   // every run, including after wall breach. Only the live SLOT instances
   // get cleared (slots become empty, then runCommanderAutomation re-fills
   // them next tick if autoHire is set).
+  // EXCEPT the transient `broken` flag — that's a runtime fault state
+  // ("hero in slot doesn't match autoHire") and should be cleared so a
+  // fresh run gives the commander another chance to fill the slot right.
+  if (typeof COMMANDERS !== 'undefined') {
+    for (const c of COMMANDERS) c.broken = false;
+  }
   opts = opts || {};
   // Daily mode is per-run; clear unless caller asks to keep it (titleStartDaily does)
   if (!opts.keepDaily) {
@@ -4788,7 +4821,13 @@ function defaultCommander(idx) {
     autoImbue:    null,    // null = no auto-imbue
     autoSkin:     null,    // null = default skin
     upgradePreset:null,    // null = no auto-upgrade
-    minGoldReserve: 50     // 50g safety floor when ANY auto-spend is on
+    minGoldReserve: 50,    // 50g safety floor when ANY auto-spend is on
+    // BROKEN flag — set true at runtime when the slot's hero doesn't
+    // match this commander's autoHire (e.g. player manually placed a
+    // different class). While broken, auto-upgrade and auto-imbue are
+    // suspended so the commander doesn't burn gold on the wrong hero.
+    // Cleared every resetRun so a fresh wave loop starts unbroken.
+    broken: false
   };
 }
 for (let i = 0; i < SLOT_COUNT; i++) COMMANDERS.push(defaultCommander(i));
@@ -4879,6 +4918,24 @@ function renderCommanderOverlay() {
   }
   document.getElementById('cmd-save-btn').style.display = '';
 
+  // Broken-state banner — shown when the slot's hero doesn't match
+  // c.autoHire. Auto-imbue + auto-upgrade are paused until either the
+  // player resets the run, fills the slot with the right hero, or picks
+  // a different autoHire target that matches what's there now.
+  let brokenBanner = '';
+  if (c.broken) {
+    const slot = SLOTS[c.idx];
+    const heroName = (slot && slot.filled && slot.hero && HERO_TYPES[slot.hero.type])
+                     ? HERO_TYPES[slot.hero.type].name : 'this hero';
+    const wantName = (c.autoHire && HERO_TYPES[c.autoHire])
+                     ? HERO_TYPES[c.autoHire].name : 'no class';
+    brokenBanner = `<div class="cmd-broken">
+      <strong>\u26A0 BROKEN</strong>
+      \u2014 slot has <b>${heroName}</b> but commander expected <b>${wantName}</b>.
+      Automation is paused until the slot matches or the run resets.
+    </div>`;
+  }
+
   // Build sections
   const heroOpts = ['<button class="cmd-chip ' + (_cmdDraft.autoHire == null ? 'active' : '') + '" onclick="setCmdField(\'autoHire\', null)">Manual</button>']
     .concat(Object.values(HERO_TYPES)
@@ -4929,6 +4986,7 @@ function renderCommanderOverlay() {
   }
 
   body.innerHTML = `
+    ${brokenBanner}
     <div class="cmd-section">
       <div class="label">Auto-Hire</div>
       <div class="cmd-info">Pick one to auto-hire when slot is empty &mdash; <strong>free of gold</strong>, but skipped if another slot already has the same hero type. Manual hire (clicking the slot) still costs gold and allows duplicates.</div>
@@ -4999,8 +5057,19 @@ function runCommanderAutomation() {
         updateUI();
       }
     }
-    if (!s.filled) continue;
+    if (!s.filled) { c.broken = false; continue; }
     const h = s.hero;
+    // BROKEN check — commander only manages a hero IT would have hired.
+    // If the slot has a different class (player manually swapped, or
+    // commander was reconfigured mid-run) we mark broken and skip the
+    // upgrade/imbue paths so we don't waste gold on the wrong hero.
+    // resetRun clears the broken flag so a fresh run gives the commander
+    // another chance to fill the slot correctly.
+    if (!c.autoHire || h.type !== c.autoHire) {
+      c.broken = true;
+      continue;
+    }
+    c.broken = false;
     // 2. Auto-imbue — also IGNORES the reserve (same logic: one-time per-run
     //    cost, the commander shouldn't refuse to apply the chosen element
     //    just because the player hasn't earned much yet).
@@ -7748,8 +7817,20 @@ function showPanel(slot) {
 
 function renderPanel(s) {
   const cmd = COMMANDERS[s.index];
-  const cmdLabel = cmd && cmd.owned ? 'Commander \u2605' : 'Hire Commander';
-  const cmdBtn   = `<button class="cmd-link-btn" onclick="openCommander(${s.index})">${cmdLabel}</button>`;
+  // Commander button: shows star when owned + idle, "BROKEN" in red when
+  // the commander's autoHire doesn't match the hero in this slot. Click
+  // opens the commander overlay so the player can fix the mismatch.
+  let cmdLabel;
+  let cmdClass = 'cmd-link-btn';
+  if (!cmd || !cmd.owned) {
+    cmdLabel = 'Hire Commander';
+  } else if (cmd.broken) {
+    cmdLabel = 'Commander \u26A0 BROKEN';
+    cmdClass += ' broken';
+  } else {
+    cmdLabel = 'Commander \u2605';
+  }
+  const cmdBtn = `<button class="${cmdClass}" onclick="openCommander(${s.index})">${cmdLabel}</button>`;
   // Locked slot (not yet unlocked via research)
   if (s.index >= effects.slotsUnlocked && !s.filled) {
     return `
@@ -8379,7 +8460,7 @@ function updateProjectiles(dt) {
           }
         }
         if (p.isCrit && typeof spawnFloatingText === 'function') {
-          spawnFloatingText(p.x, p.y - 10, 'CRIT BLAST', '#ff8030', { big: true });
+          spawnFloatingText(p.x, p.y - 10, 'CRIT BLAST', '#ff3030', { big: true });
         }
         if (typeof spawnExplosion === 'function') spawnExplosion(p.x, p.y, p.splash);
         projectiles.splice(i, 1);
@@ -8431,13 +8512,21 @@ function updateProjectiles(dt) {
           } else {
             landedDmg = applyDamage(e, p.damage * dmgScale);
           }
-          // Crit feedback — orange "CRIT XX" floating text only on the
-          // primary hit (splash / chain hits don't double up the popup so
-          // the screen doesn't drown in numbers).
-          if (p.isCrit && typeof spawnFloatingText === 'function') {
-            spawnFloatingText(e.x, e.y - 10,
-                              'CRIT ' + Math.max(1, landedDmg | 0),
-                              '#ff8030', { big: true });
+          // Damage feedback. Crits read in red as "CRIT XX"; regular hits
+          // float a small cream-colored "-N" so the player can SEE every
+          // hero hit landing. Splash / chain hits intentionally skip the
+          // popup so the screen doesn't drown in numbers when a cannon
+          // detonates over a swarm.
+          if (typeof spawnFloatingText === 'function' && landedDmg > 0) {
+            if (p.isCrit) {
+              spawnFloatingText(e.x, e.y - 10,
+                                'CRIT ' + Math.max(1, landedDmg | 0),
+                                '#ff3030', { big: true });
+            } else {
+              spawnFloatingText(e.x, e.y - 8,
+                                '-' + Math.max(1, landedDmg | 0),
+                                '#fff8c0');
+            }
           }
           if (p.element) applyElement(e, p.element, p.elementDmg);
           // Cleric — each holy bolt heals the wall (1 HP base + research bonus)
