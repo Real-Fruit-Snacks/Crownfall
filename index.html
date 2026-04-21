@@ -430,6 +430,25 @@
     background: #1f1207;
     box-shadow: inset 0 0 0 2px #6a4528, inset 0 0 0 4px #1a0c00;
   }
+  /* Boss rows get a slightly richer backing + crown-gold accent so they
+     read as "the big guys" without needing a separate layout. */
+  .bestiary-row.boss {
+    background: #2a1a08;
+    box-shadow: inset 0 0 0 2px #8a6428, inset 0 0 0 4px #1a0c00;
+  }
+  .bestiary-section-header {
+    color: #c0a070;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px; letter-spacing: 1.5px;
+    margin: 8px 2px 6px;
+    padding: 4px 0;
+    border-bottom: 1px dashed #5a3818;
+    text-transform: uppercase;
+  }
+  .bestiary-section-header.boss { color: #ffd060; border-bottom-color: #8a6428; margin-top: 14px; }
+  .bestiary-section-header .be-section-sub {
+    color: #7a6448; font-size: 8px; letter-spacing: 1px; margin-left: 6px;
+  }
   .bestiary-row .be-portrait {
     width: 56px; height: 56px;
     image-rendering: pixelated;
@@ -5155,8 +5174,20 @@ function renderStatsOverlay() {
   }).join('');
 }
 window.openStats  = function () { renderStatsOverlay(); document.getElementById('stats-overlay').classList.add('show'); };
-window.closeStats = function () { document.getElementById('stats-overlay').classList.remove('show'); };
-window.pauseOpenStats = function () { exitPause(); window.openStats(); };
+window.closeStats = function () {
+  document.getElementById('stats-overlay').classList.remove('show');
+  // If the player came from Pause -> Stats, drop them back on the pause card
+  // so the game stays frozen instead of silently resuming.
+  if (typeof paused !== 'undefined' && paused && typeof pauseOverlayEl !== 'undefined') {
+    pauseOverlayEl.classList.add('show');
+  }
+};
+window.pauseOpenStats = function () {
+  // Hide pause overlay but keep paused=true. closeStats restores the pause
+  // overlay if we were paused. (Same pattern as pauseOpenSettings etc.)
+  if (typeof pauseOverlayEl !== 'undefined') pauseOverlayEl.classList.remove('show');
+  window.openStats();
+};
 
 // Click anywhere on the achievement popup to dismiss it (and pop the next queued one)
 (function wireAchievementPopup() {
@@ -5996,6 +6027,11 @@ window.closeResearch = function () {
   if (pendingNewRun) {
     pendingNewRun = false;
     window.resetRun();
+    return;   // resetRun handles game state — no pause restore
+  }
+  // Pause -> Research -> close should land back on the pause card
+  if (typeof paused !== 'undefined' && paused && typeof pauseOverlayEl !== 'undefined') {
+    pauseOverlayEl.classList.add('show');
   }
 };
 
@@ -8723,7 +8759,8 @@ function enemyAt(mx, my) {
 }
 
 
-// ---------- Bestiary data — used by the Codex (Settings -> Bestiary) ----------
+// ---------- Bestiary data — used by the Codex (Pause -> Bestiary) ----------
+// Minion entries — 7 base enemy archetypes plus the battering ram.
 const ENEMY_INFO = {
   goblin:   { name: 'Goblin',          trait: 'Standard melee infantry. Walks straight at the wall and swings on arrival.', threat: 'Low' },
   charger:  { name: 'Charger',         trait: 'Fast (1.9\u00d7 speed). Reaches the wall in seconds \u2014 prioritize early kills.', threat: 'Medium' },
@@ -8733,6 +8770,18 @@ const ENEMY_INFO = {
   witch:    { name: 'Witch',           trait: 'Aura grants 50% damage reduction to allies nearby. Pull her out of the pack with Smite or burst.', threat: 'High' },
   ram:      { name: 'Battering Ram',   trait: 'Siege engine. Massive HP and devastating wall damage \u2014 about 10% of an obsidian wall per hit.', threat: 'Severe' }
 };
+// Boss variants — appear every 10th wave. Crowned, larger, much tankier
+// (~150 HP base plus the kind\u2019s hpMul, scaling 1.18x per wave). They drop
+// gold + Crowns and inherit the kind\u2019s special behavior.
+const BOSS_INFO = {
+  goblin:   { name: 'Goblin King',       trait: 'Crowned brute. Big HP, big swings, drops a fistful of gold and Crowns.',                                              threat: 'Severe' },
+  charger:  { name: 'Bull Champion',     trait: 'Boss-form charger. Still 1.9\u00d7 speed \u2014 will close the gap before you can react. Stun him or burst him fast.', threat: 'Severe' },
+  shielded: { name: 'Iron Vanguard',     trait: 'Massive tower shield blocks every archer shot. Crossbows pierce; cannons / mage chains ignore the shield entirely.',  threat: 'Severe' },
+  archer:   { name: 'Master Archer',     trait: 'Boss archer fires faster and harder, parking off-screen if you let him. Smite or focus-fire on sight.',                threat: 'Severe' },
+  healer:   { name: 'High Priest',       trait: 'Boss healer keeps the rest of the wave on their feet. Always priority #1 \u2014 kill before anything else around him.', threat: 'Severe' },
+  witch:    { name: 'Coven Matron',      trait: 'Bigger 50% damage-reduction aura. Pull her out of formation with Smite or Meteor before chewing the swarm.',          threat: 'Severe' },
+  ram:      { name: 'Siege Lord',        trait: 'Boss-form battering ram \u2014 gigantic HP pool, even more devastating wall damage. Throw everything at it.',         threat: 'Severe' }
+};
 
 // renderEnemyPortrait — temporarily hijacks the global `canvas` / `ctx` so
 // the real in-game drawGoblin() pipeline renders the sprite onto a small
@@ -8741,7 +8790,11 @@ const ENEMY_INFO = {
 // drifted from the actual sprite art.
 function renderEnemyPortrait(kind, opts) {
   opts = opts || {};
-  const cw = 32, ch = 28;     // logical canvas size (ram needs ~24 wide; allow margin)
+  const isBoss = !!opts.isBoss;
+  // Boss sprites are larger (crowns, tusks, accessories extending out) and
+  // boss ram is REALLY wide (~30px). Make the canvas big enough to fit them.
+  const cw = isBoss ? 44 : 32;
+  const ch = isBoss ? 36 : 28;
   const off = document.createElement('canvas');
   off.width = cw; off.height = ch;
   const offCtx = off.getContext('2d');
@@ -8755,10 +8808,10 @@ function renderEnemyPortrait(kind, opts) {
   const fake = {
     kind,
     x: cw / 2,                  // center horizontally
-    y: ch - 6,                  // anchor "feet" near bottom
+    y: isBoss ? ch - 8 : ch - 6, // bosses are taller — leave headroom for crown
     phase: 0,
     lungeT: 0,
-    isBoss: false,
+    isBoss,
     hp: 100, maxHp: 100,
     hitFlash: 0,
     stuckArrows: [],
@@ -8778,13 +8831,15 @@ function renderEnemyPortrait(kind, opts) {
 }
 
 // Built lazily on first Bestiary open so the page-load cost stays tiny.
+// Cache key is `${kind}:${isBoss?1:0}` so minion + boss portraits coexist.
 let _enemyPortraitCache = null;
-function getEnemyPortraitURL(kind) {
+function getEnemyPortraitURL(kind, isBoss) {
   if (!_enemyPortraitCache) _enemyPortraitCache = {};
-  if (!_enemyPortraitCache[kind]) {
-    _enemyPortraitCache[kind] = renderEnemyPortrait(kind);
+  const key = kind + ':' + (isBoss ? 'b' : 'm');
+  if (!_enemyPortraitCache[key]) {
+    _enemyPortraitCache[key] = renderEnemyPortrait(kind, { isBoss: !!isBoss });
   }
-  return _enemyPortraitCache[kind];
+  return _enemyPortraitCache[key];
 }
 
 // Legacy SVG portraits — kept as a safety net for the case where canvas
@@ -10314,6 +10369,11 @@ window.closeSettings = function () {
   const exportTa = document.getElementById('export-text');   if (exportTa) exportTa.value = '';
   const importTa = document.getElementById('import-text');   if (importTa) importTa.value = '';
   const status   = document.getElementById('import-status'); if (status) { status.classList.remove('show', 'ok', 'err'); status.textContent = ''; }
+  // If the player came from Pause -> Settings, drop them back on the pause
+  // card so the game stays frozen instead of silently resuming.
+  if (typeof paused !== 'undefined' && paused && typeof pauseOverlayEl !== 'undefined') {
+    pauseOverlayEl.classList.add('show');
+  }
 };
 window.settingsReset = function () {
   window.resetRun();
@@ -10372,20 +10432,17 @@ function renderBestiary() {
   if (!list) return;
   // Render in a stable order so the layout doesn't reshuffle between opens
   const order = ['goblin', 'charger', 'shielded', 'archer', 'healer', 'witch', 'ram'];
-  list.innerHTML = order.map(kind => {
-    const info = ENEMY_INFO[kind];
-    if (!info) return '';
-    // Try the real game sprite first; fall back to the legacy SVG icon if
-    // the canvas hijack ever misbehaves.
+  function rowHtml(kind, info, isBoss) {
     let portraitHTML;
     try {
-      const url = getEnemyPortraitURL(kind);
-      portraitHTML = `<img class="be-portrait-img" alt="${info.name}" src="${url}">`;
+      const url = getEnemyPortraitURL(kind, isBoss);
+      portraitHTML = `<img class="be-portrait-img${isBoss ? ' boss' : ''}" alt="${info.name}" src="${url}">`;
     } catch (e) {
-      portraitHTML = ENEMY_PORTRAITS[kind] || '';
+      // Defensive fallback to the legacy SVG icons (minion only)
+      portraitHTML = (!isBoss && ENEMY_PORTRAITS[kind]) ? ENEMY_PORTRAITS[kind] : '';
     }
     const threatClass = (info.threat || 'low').toLowerCase();
-    return `<div class="bestiary-row">
+    return `<div class="bestiary-row${isBoss ? ' boss' : ''}">
       <div class="be-portrait">${portraitHTML}</div>
       <div class="be-text">
         <div class="be-name">${info.name}</div>
@@ -10393,7 +10450,16 @@ function renderBestiary() {
       </div>
       <div class="be-threat ${threatClass}">${info.threat}</div>
     </div>`;
-  }).join('');
+  }
+  // Section: minions
+  const minionRows = order.map(k => ENEMY_INFO[k] ? rowHtml(k, ENEMY_INFO[k], false) : '').join('');
+  // Section: bosses
+  const bossRows   = order.map(k => BOSS_INFO[k]  ? rowHtml(k, BOSS_INFO[k],  true)  : '').join('');
+  list.innerHTML =
+    `<div class="bestiary-section-header">Minions</div>` +
+    minionRows +
+    `<div class="bestiary-section-header boss">Boss Variants <span class="be-section-sub">\u2014 every 10th wave</span></div>` +
+    bossRows;
 }
 window.openBestiary = function () {
   renderBestiary();
@@ -10402,6 +10468,10 @@ window.openBestiary = function () {
 };
 window.closeBestiary = function () {
   bestiaryEl.classList.remove('show');
+  // Pause -> Bestiary -> close should land back on the pause card
+  if (typeof paused !== 'undefined' && paused && typeof pauseOverlayEl !== 'undefined') {
+    pauseOverlayEl.classList.add('show');
+  }
 };
 bestiaryEl.addEventListener('click', (e) => { if (e.target === bestiaryEl) window.closeBestiary(); });
 window.settingsEndRun = function () {
@@ -10589,6 +10659,10 @@ window.openPrestige = function () {
 };
 window.closePrestige = function () {
   prestigeEl.classList.remove('show');
+  // Pause -> Prestige -> close should land back on the pause card
+  if (typeof paused !== 'undefined' && paused && typeof pauseOverlayEl !== 'undefined') {
+    pauseOverlayEl.classList.add('show');
+  }
 };
 
 function renderPrestige() {
@@ -11188,10 +11262,16 @@ window.togglePause = function () {
   _pauseStatsT = setInterval(refreshPauseStats, 250);
   Audio.sfx.click && Audio.sfx.click();
 };
-window.pauseOpenResearch = function () { exitPause(); window.openResearch(); };
-window.pauseOpenSettings = function () { exitPause(); window.openSettings(); };
-window.pauseOpenBestiary = function () { exitPause(); window.openBestiary(); };
-window.pauseOpenPrestige = function () { exitPause(); window.openPrestige(); };
+// pause -> sub-menu transitions used to call exitPause() which unpaused the
+// game while the player browsed Settings / Stats / Research / Bestiary /
+// Prestige. The game would silently keep ticking. Instead, just hide the
+// pause overlay and KEEP paused=true; the matching closeX functions
+// (closeSettings etc.) re-show the pause overlay if we're still paused.
+function _hidePauseOverlay() { pauseOverlayEl.classList.remove('show'); }
+window.pauseOpenResearch = function () { _hidePauseOverlay(); window.openResearch(); };
+window.pauseOpenSettings = function () { _hidePauseOverlay(); window.openSettings(); };
+window.pauseOpenBestiary = function () { _hidePauseOverlay(); window.openBestiary(); };
+window.pauseOpenPrestige = function () { _hidePauseOverlay(); window.openPrestige(); };
 window.pauseEndRun       = function () { exitPause(); endRunForResearch(); };
 window.pauseOpenTitle    = function () {
   exitPause();
