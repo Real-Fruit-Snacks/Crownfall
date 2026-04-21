@@ -2,25 +2,211 @@
 
 <p>You will die. A lot. Every run makes the next one stronger.</p>
 
+<hr>
+
+<h2>Latest Update &mdash; Prestige Tree Expansion</h2>
+<p>The prestige tree went from 10 bonuses to <strong>20</strong>, with a full reshuffle of what the late game looks like. New lategame-scaling damage, new compounding shard returns, a roaming hero, comeback mechanics, a node-preservation modal, and a fix for the two bugs flagged in JohnSmith88's review thread. No enemy nerfs &mdash; the wall stays real, but so does the door next to it.</p>
+
+<h3>10 new prestige bonuses</h3>
+<ul>
+  <li><strong>Empire's Reach</strong> (8 shards &times; 3) &mdash; +0.5% hero damage per wave cleared past 20 per stack. Maxed, your wave-50 army hits +45% harder than your wave-20 army. Solves the wave 40-50 DPS wall without nerfing enemies.</li>
+  <li><strong>Endless March</strong> (12 shards) &mdash; +1 bonus Crown Shard per lifetime prestige cycle. Later prestiges pay bigger than earlier ones &mdash; compounding returns for dedicated players.</li>
+  <li><strong>Hunter's Mark</strong> (8 shards) &mdash; first hit on each enemy marks it; every hit after deals +15% damage. Rewards focus-firing one target at a time.</li>
+  <li><strong>Bank Vault</strong> (15 shards) &mdash; 25% of your unspent gold at run end carries to next run's starting purse. That 40k gold you died with isn't a total loss anymore.</li>
+  <li><strong>Promotion</strong> (6 shards) &mdash; every prestige, one random hero type gains a permanent +10% damage stack. Uncapped lottery pull per prestige. A big gold toast tells you which class just got promoted.</li>
+  <li><strong>Skill Mastery</strong> (8 shards &times; 3) &mdash; -10% active skill cooldown per stack. Smite drops 6s &rarr; 4.2s, Meteor drops 22s &rarr; 15.4s at max. Skill shop highlights the reduced CD in green.</li>
+  <li><strong>Phoenix Down</strong> (18 shards) &mdash; first wall-HP-zero each run revives the wall to 50% HP. Once per run. Stacks-from-source with the existing Phoenix Will keystone (shared flag &mdash; one revive regardless).</li>
+  <li><strong>Dual Imbue</strong> (25 shards) &mdash; heroes can stack a <em>second</em> element on top of their primary. Fire+Poison, Ice+Bleed, Holy+Stun, Mending+Knockback &mdash; every imbue combo becomes playable. Both elements trigger on direct hits, splash, and mage chain jumps.</li>
+  <li><strong>The Hound</strong> (25 shards) &mdash; unlocks a roaming war hound on the battlefield. Bites for 50% of your wall's average hero damage and slows bitten targets 30% for 1.2s. Has 60 HP; respawns at each wave start if killed. Small tan pixel sprite that seeks the nearest enemy on its own.</li>
+  <li><strong>Ancestry</strong> (20 shards &times; 3) &mdash; on prestige, preserve 1/2/3 currently-owned research nodes across the wipe. A picker modal opens at prestige time &mdash; check off your favorite keystones and they carry through. The biggest sting-reducer in the tree.</li>
+</ul>
+
+<h3>Existing prestige bonuses buffed</h3>
+<ul>
+  <li><strong>Sharpened Edge</strong> now stacks up to <strong>10</strong> (was 5). Max damage bonus: +25% &rarr; <strong>+50%</strong>.</li>
+  <li><strong>Crowned Legacy</strong> doubled: +1% per prior prestige per stack &rarr; <strong>+2%</strong>. With 10 prestiges + 5 stacks that's +100% damage instead of +50%.</li>
+  <li><strong>Shard formula rewards depth</strong> &mdash; new formula is <code>sqrt(totalRp/50) + floor(deepestWave/10)</code>. Pushing past your previous best wave pays an extra shard per 10-wave milestone.</li>
+</ul>
+
+<h3>Discoverability fixes</h3>
+<ul>
+  <li><strong>Prestige Unlock toast</strong> &mdash; when you first cross 500 lifetime RP, a big gold <em>&#9818; PRESTIGE UNLOCKED</em> popup points you at the Pause menu. Review feedback: several players missed the menu for hours.</li>
+  <li><strong>Pulsing pause-button badge</strong> &mdash; persists with a gold glow and a &#9819; crown badge until you open the prestige screen for the first time. Clears forever once you've seen it.</li>
+  <li><strong>Endless Zone milestone</strong> &mdash; clearing wave 50 pops a <em>&#128081; ENDLESS ZONE REACHED</em> toast. Every wave from 50 onward banks <strong>1.5&times; Research Points</strong>, so pushing deep actually pays.</li>
+  <li><strong>Prestige screen is more informative</strong> &mdash; the blurb now shows your current depth bonus (&ldquo;Deepest wave 42 is giving you +4 bonus shards&rdquo;) and your list of active Promotions (&ldquo;&#9733; Promotions: Mage +30% &middot; Archer +20%&rdquo;).</li>
+</ul>
+
+<h3>Bug fixes from player reviews</h3>
+<ul>
+  <li><strong>Bard phantom tooltip fixed</strong> &mdash; bards used to show an &ldquo;Unlock Bard Alchemy&rdquo; message pointing at a research node that was never created. The imbue section now correctly hides for support heroes.</li>
+  <li><strong>Projectile hitbox scales with enemy size</strong> &mdash; was a flat 5px radius, now 6px base scaled by enemy <em>sizeMul</em> (ram bosses get 9px). Fixes fast-attacking heroes skimming past targets at certain angles.</li>
+</ul>
+
+<hr>
+
+<details>
+<summary><strong>Previous update &mdash; Levels, Crits &amp; Commander Polish</strong> &nbsp;(click to expand)</summary>
+<br>
+<p>A real progression layer for your heroes plus a top-to-bottom commander upgrade. Heroes now feel like characters, not stat sticks.</p>
+
+<h3>Hero progression</h3>
+<ul>
+  <li><strong>XP per kill</strong> &mdash; every hero gains XP from kills they land. Wave 1-2 minions pay 1 XP, deeper waves scale; bosses pay <em>5&times;</em>.</li>
+  <li><strong>Levels with a real reward curve</strong> &mdash; level 1 needs 5 XP, level 10 needs 50 XP, capped at 99. Linear and predictable.</li>
+  <li><strong>Crit chance scales with level</strong> &mdash; +1% per level above 1, capped at <strong>30% crit chance</strong>. Crits hit for <strong>2&times; damage</strong>.</li>
+  <li><strong>Single roll per shot</strong> &mdash; cannon splash, mage chains, and timer-detonations all inherit the same crit fate as the launch shot. No double-rolls, no surprises.</li>
+  <li><strong>Hero panel rebuilt</strong> &mdash; the slot panel now shows current Level, Crit %, and a live XP bar in addition to DPS / Kills / Splash. See exactly what's carrying.</li>
+  <li><strong>Bards stay at level 1</strong> &mdash; they don't kill or shoot, so leveling doesn't make sense. Their value is the aura.</li>
+</ul>
+
+<h3>Combat clarity</h3>
+<ul>
+  <li><strong>Every hero hit shows a damage number</strong> &mdash; small cream <em>-N</em> floats above the enemy on every direct hit. You can finally see your DPS.</li>
+  <li><strong>Crits read in red</strong> &mdash; <em>CRIT XX</em> in bright red so you instantly know when a 2&times; landed. Cannon timer-detonates also flash <em>CRIT BLAST</em>.</li>
+  <li><strong>Splash and chain damage stay quiet</strong> &mdash; popups only fire on the primary hit so a cannon over a swarm doesn't bury the screen.</li>
+</ul>
+
+<h3>Bestiary upgrades</h3>
+<ul>
+  <li><strong>Moved to the Pause menu</strong> &mdash; sits next to Research and Stats where you'd actually look it up mid-run.</li>
+  <li><strong>Boss section added</strong> &mdash; all 7 boss variants (Goblin King, Bull Champion, Iron Vanguard, Master Archer, High Priest, Coven Matron, Siege Lord) with their own portraits and threat-tier descriptions.</li>
+  <li><strong>Real in-game sprites</strong> &mdash; each portrait is a snapshot of the actual sprite that walks onto the field, including bosses with their crowns, tusks, oversized accessories, and the boss-ram's iron-banded cart.</li>
+</ul>
+
+<h3>Commander upgrades</h3>
+<ul>
+  <li><strong>Auto-hire is free</strong> &mdash; commanders no longer spend gold to spawn their chosen hero, but each hero type can only be auto-hired once across all your slots. Manual hires (player click) still cost gold and still allow duplicates.</li>
+  <li><strong>BROKEN flag</strong> &mdash; if you manually place a hero that doesn't match the commander's expected class, the commander's auto-upgrade and auto-imbue paths shut off so it doesn't burn gold on the wrong hero. The slot panel shows "Commander &#9888; BROKEN" in pulsing red and the commander overlay explains how to fix it. Cleared automatically when the run resets.</li>
+  <li><strong>Reliable auto-hire at low gold</strong> &mdash; the gold reserve no longer blocks the one-time hire purchase, so your archer spawns on wave 1 even when you start with 25g and a 50g reserve.</li>
+</ul>
+
+<h3>UX fixes</h3>
+<ul>
+  <li><strong>Game stays paused through sub-menus</strong> &mdash; Pause &rarr; Settings / Stats / Research / Bestiary / Prestige used to silently resume the game in the background. Now the run stays frozen exactly where you left it; closing the sub-menu drops you back on the pause card.</li>
+  <li><strong>Damage numbers stay readable on every screen size</strong> &mdash; the new DOM-based render keeps text at a fixed CSS size regardless of canvas zoom. The wave-clear popup shrinks too.</li>
+  <li><strong>Wave-skip RP exploit fixed</strong> &mdash; previously you could mash the next-wave button for endless RP. Now RP only credits waves whose spawned enemies actually died.</li>
+  <li><strong>Always Show Hero Ranges toggle</strong> &mdash; Settings option that keeps range indicators visible on every hero even when no slot is selected. Critical for mobile where the hero panel covers the battlefield.</li>
+</ul>
+</details>
+
+<details>
+<summary><strong>Older update &mdash; Controls &amp; Comfort Pass</strong> &nbsp;(click to expand)</summary>
+<br>
+<p>Focused round of quality-of-life: information, automation, accessibility, and a top-to-bottom commander rebuild.</p>
+
+<h3>Hands-off when you want it</h3>
+<ul>
+  <li><strong>Game-speed toggle</strong> &mdash; new button in the top-left cycles <em>1&times; / 2&times; / 3&times;</em>. Persisted across runs.</li>
+  <li><strong>Hold-to-damage</strong> &mdash; keep your finger or mouse pressed on an enemy to chain-tap them. Default is a deliberate ~1.4 hits per second; the new <strong>Restless Hand</strong> research node (Command chapter, 4 stacks) scales all the way to ~5.5 hits per second.</li>
+  <li><strong>Swipe to collect coins</strong> &mdash; just drag your cursor / finger through coins on the field. Click still works.</li>
+</ul>
+
+<h3>Know what you're looking at</h3>
+<ul>
+  <li><strong>DPS &amp; kill count on the hero panel</strong> &mdash; every slot panel now shows the hero's effective DPS and per-run kill count.</li>
+  <li><strong>Hero range indicator</strong> &mdash; selecting a hero slot draws a pulsing gold arc showing exactly how far that hero can reach.</li>
+  <li><strong>Wave preview</strong> &mdash; the HUD flags <em>"BOSS NEXT"</em> during the rest period before a boss wave so you can pre-cast Rally or stockpile gold.</li>
+  <li><strong>Bestiary</strong> &mdash; codex listing every enemy with pixel-art portrait, behavior description, and color-coded threat tier.</li>
+  <li><strong>Affordable research nodes pulse gold</strong> &mdash; no more reading every cost to find what you can buy right now.</li>
+</ul>
+
+<h3>Accessibility + options</h3>
+<ul>
+  <li><strong>Music &amp; SFX volume sliders</strong> &mdash; separated in Settings instead of a single mute toggle. Each channel persists.</li>
+  <li><strong>Reduced Motion toggle</strong> &mdash; disables screen shake and damage flashes for motion-sensitive players.</li>
+  <li><strong>Restart Tutorial button</strong> in Settings for players who skipped it the first time.</li>
+  <li><strong>Consistent pixel scrollbars</strong> &mdash; every scrollable menu now uses the same chunky brown/gold chrome instead of the default OS scrollbar.</li>
+</ul>
+
+<h3>Commander overhaul</h3>
+<ul>
+  <li><strong>Every setting is opt-in</strong> &mdash; Auto-Hire, Auto-Upgrade, Auto-Imbue, and Auto-Skin each start at <em>Off</em> so commanders never surprise you by draining your treasury.</li>
+  <li><strong>Default 50g reserve</strong> &mdash; commander upgrades stop above this floor so you always have spending money.</li>
+  <li><strong>Commanders persist across every run</strong> &mdash; including wall breaches. They're meta-progression, not run-specific.</li>
+</ul>
+
+<h3>Combat fixes</h3>
+<ul>
+  <li><strong>Projectile lifespan scales with range</strong> &mdash; mage / cleric / crossbow bolts no longer vanish mid-flight at upgraded ranges.</li>
+  <li><strong>Cannons always splash</strong> &mdash; shells detonate on a timer at the predicted impact point. Even if the target dodges, nearby enemies still eat the blast.</li>
+  <li><strong>Mage damage bumped</strong> &mdash; base 6 &rarr; 7 so it feels competitive with Crossbow and Cannoneer.</li>
+</ul>
+
+<h3>Under the hood</h3>
+<ul>
+  <li><strong>Damage numbers now render as crisp DOM text at a fixed size</strong> &mdash; they used to scale 4-5&times; with the canvas and dominated the screen.</li>
+  <li><strong>Save-backup reminder</strong> &mdash; a one-time nudge after three runs points you at <em>Settings &rarr; Export Save</em> so a cleared browser can't wipe your progress without warning.</li>
+</ul>
+</details>
+
+<details>
+<summary><strong>Older update &mdash; Player Feedback Patch</strong> &nbsp;(click to expand)</summary>
+<br>
+<p>Big quality-of-life pass based directly on early reviews. If you bounced off an early build, give it another shot &mdash; the rough edges you hit are gone.</p>
+
+<h3>Better aim, better fights</h3>
+<ul>
+  <li><strong>Heroes now lead their targets</strong> &mdash; archers stop firing behind moving chargers. The arrow predicts where the enemy will be when it arrives.</li>
+  <li><strong>Cannoneers always land their splash</strong> &mdash; shells detonate on a timer at the predicted impact point, so even if the target dodges at the last second, nearby enemies still eat the blast.</li>
+  <li><strong>Bosses register taps clearly</strong> &mdash; bigger click hitboxes scaled to sprite size, plus a floating damage number on every tap so you can see your clicks landing.</li>
+  <li><strong>Ranged enemies stay on-screen</strong> &mdash; archer goblins can no longer park past the visible edge and snipe the wall from nowhere.</li>
+</ul>
+
+<h3>Less grind, faster onboarding</h3>
+<ul>
+  <li><strong>Start with 3 hero slots open</strong> (was 1) &mdash; build a real team from your very first run.</li>
+  <li><strong>First skill slot visible from run 1</strong> &mdash; no more discovering skills exist hours in.</li>
+  <li><strong>First skill is WAY cheaper</strong> &mdash; 5 Research Points and 15 gold to equip Smite (was 12 RP and 25 gold).</li>
+  <li><strong>+25% Research Points per wave</strong> &mdash; early-run progression actually feels earned.</li>
+  <li><strong>Enemy HP nudged down</strong> and Cannoneer/Crossbow/Cleric base damage nudged up &mdash; heroes actually kill things.</li>
+</ul>
+
+<h3>New content</h3>
+<ul>
+  <li><strong>Battering Ram</strong> &mdash; siege-engine enemy with massive HP and devastating wall damage. Shows up as a 10th-wave boss or during the new <strong>SIEGE event wave</strong>.</li>
+  <li><strong>Sentry Marksmen research</strong> &mdash; unlocks wall auto-tap so the guards chip at the closest enemy automatically.</li>
+  <li><strong>5th skill slot</strong> &mdash; one more slot unlockable in the late game.</li>
+  <li><strong>Double-click the WAVE block</strong> to skip rest between waves &mdash; or to force the next wave in mid-fight. Enemies stack between waves.</li>
+  <li><strong>Wave-clear gold is held until the last enemy dies</strong> &mdash; skipping waves no longer hands out free gold for enemies you didn't kill.</li>
+</ul>
+
+<h3>Bugs squashed</h3>
+<ul>
+  <li>Browser zoom no longer teleports enemies around the field.</li>
+  <li>Tutorial coachmarks can no longer cover the button they're pointing at.</li>
+  <li>Skill buy menu is smaller so it doesn't cover the battlefield.</li>
+  <li>Save progress auto-flushes when the tab closes or the page hides.</li>
+  <li><em>Wipe Everything</em> in Settings is now a true factory reset.</li>
+</ul>
+</details>
+
+<hr>
+
 <h2>Features</h2>
 <ul>
   <li><strong>6 hero classes</strong> &mdash; Archer, Crossbow, Cannoneer, Mage, Cleric, Bard. Each with its own pool of weapon imbuements (Fire, Ice, Poison, Bleed, Knockback, Stun, Holy, Hex&hellip;).</li>
-  <li><strong>6 enemy archetypes</strong> plus boss variants every 10th wave.</li>
+  <li><strong>Hero leveling &amp; crits</strong> &mdash; heroes earn XP per kill, level up, and unlock crit chance scaling 0% &rarr; 30% across the run. Crits hit for 2&times; damage and inherit through splash + chains.</li>
+  <li><strong>7 enemy archetypes</strong> including the Battering Ram, plus 7 boss variants every 10th wave.</li>
   <li><strong>6 active skills</strong> &mdash; Smite, Meteor, Heal Wall, Rally, Frost Nova, Stun Bomb.</li>
   <li><strong>5 field hazards</strong> you can place &mdash; Wooden Spikes, Caltrops, Tar Pits, Watchfire Braziers, Bear Traps.</li>
-  <li><strong>Special event waves</strong> &mdash; Blood Moon, Night of the Restless, Goblin Horde, Champion's Challenge, Plague Wave.</li>
+  <li><strong>Special event waves</strong> &mdash; Blood Moon, Night of the Restless, Goblin Horde, Champion's Challenge, Plague Wave, Siege Engines.</li>
   <li><strong>Research Book</strong> with 11 chapters and 100+ nodes &mdash; your meta-progression spine.</li>
-  <li><strong>Prestige layer</strong> &mdash; wipe research for permanent <strong>Crown Shards</strong> to spend on a 10-bonus tree.</li>
+  <li><strong>20-bonus Prestige tree</strong> &mdash; wipe research for permanent <strong>Crown Shards</strong> to spend on bonuses including lategame damage scaling, a roaming war hound, dual elemental imbues, wall-revive safety nets, and node-preservation across wipes.</li>
+  <li><strong>Endless Zone</strong> &mdash; clear wave 50 to unlock a 1.5&times; Research Points multiplier on everything you bank from there on.</li>
   <li><strong>Daily Challenge</strong> &mdash; same seed for every player on a given day, score-chase mode.</li>
-  <li><strong>Commander automation</strong> &mdash; assign per-slot commanders (auto-hire, auto-upgrade, auto-imbue, auto-skin).</li>
+  <li><strong>Commander automation</strong> &mdash; per-slot commanders with independent Auto-Hire / Auto-Upgrade / Auto-Imbue / Auto-Skin toggles. Auto-hire is free but unique per hero type. Wall auto-tap available via research.</li>
   <li><strong>15 achievements</strong> + a Hall of Records stats page.</li>
+  <li><strong>Bestiary</strong> &mdash; look up every enemy and boss variant from the Pause menu.</li>
   <li><strong>Save export/import</strong> &mdash; back up your progress to a single text code.</li>
   <li><strong>Mobile-friendly</strong> &mdash; works in landscape on phones; built-in fullscreen button.</li>
 </ul>
 
 <h2>Controls</h2>
 <ul>
-  <li><strong>Click</strong> &mdash; hire heroes, buy upgrades, collect coins</li>
+  <li><strong>Click</strong> &mdash; hire heroes, buy upgrades, collect coins, tap enemies</li>
+  <li><strong>Hold</strong> on an enemy &mdash; keep damaging it while pressed</li>
+  <li><strong>Swipe</strong> over coins &mdash; auto-collect as your cursor passes through</li>
+  <li><strong>Double-click WAVE block</strong> &mdash; skip to the next wave (works mid-fight)</li>
   <li><strong>1&ndash;5</strong> &mdash; cast skill in slot N</li>
   <li><strong>Q</strong> &mdash; end run, bank Research Points</li>
   <li><strong>R</strong> &mdash; open research book</li>
