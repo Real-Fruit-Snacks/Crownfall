@@ -20,6 +20,43 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
+  /* Floating combat text — DOM-based so font size stays constant regardless
+     of canvas scale. Spawns at canvas-mapped position, rises + fades in
+     950ms, then a JS timeout removes the node. Pointer-events:none so it
+     never eats clicks meant for the canvas. */
+  .floating-text {
+    position: fixed;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    user-select: none;
+    z-index: 25;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff8c0;
+    text-shadow:
+      1px 1px 0 #1a0c00,
+      -1px 0  0 #1a0c00,
+      0  -1px 0 #1a0c00,
+      1px 0  0 #1a0c00,
+      0  1px 0 #1a0c00;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+    animation: floatUpFade 0.95s ease-out forwards;
+    will-change: transform, opacity;
+  }
+  .floating-text.big { font-size: 13px; }
+  @keyframes floatUpFade {
+    0%   { transform: translate(-50%, -50%)               translateY(0);    opacity: 0.0; }
+    15%  { transform: translate(-50%, -50%)               translateY(-4px); opacity: 1.0; }
+    100% { transform: translate(-50%, -50%)               translateY(-32px); opacity: 0.0; }
+  }
+  /* Mobile — slightly smaller so it doesn't dominate a 600-800px viewport */
+  @media (max-height: 650px), (max-width: 900px) {
+    .floating-text     { font-size: 10px; }
+    .floating-text.big { font-size: 12px; }
+  }
+
   /* Universal scrollbar styling — every scrollable area in the app gets
      the same chunky pixel chrome instead of the default OS scrollbar.
      Firefox uses the standard properties; Chromium / Safari use ::-webkit-*. */
@@ -2428,7 +2465,7 @@
       <div class="row"><span>Gold earned</span><b id="go-gold">0</b></div>
       <div class="row rp-row"><span>Research Points earned</span><b id="go-rp">0</b></div>
       <div class="actions">
-        <button class="research-btn" onclick="openResearch()">Research</button>
+        <button class="research-btn" onclick="gameoverOpenResearch()">Research</button>
         <button onclick="resetRun()">Try Again</button>
       </div>
     </div>
@@ -3769,7 +3806,9 @@ window.resetRun = function (opts) {
   autoTapTimer = 0;
   skillFx.length       = 0;
   firePatches.length   = 0;
-  floatingTexts.length = 0;
+  floatingTexts.length = 0;     // legacy array (DOM-based now), kept tidy
+  // Sweep any in-flight DOM floating text from the previous run
+  document.querySelectorAll('.floating-text').forEach(el => el.remove());
   PLAGUE_CLOUDS.length = 0;
   pendingWaveRewards.length = 0;       // any unpaid skip-rewards die with the run
   currentEvent  = null;
@@ -4873,10 +4912,14 @@ function runCommanderAutomation() {
     if (!c.owned) continue;
     if (s.index >= effects.slotsUnlocked) continue;
     const reserve = c.minGoldReserve || 0;
-    // 1. Auto-hire
+    // 1. Auto-hire — IGNORES the reserve. The reserve is meant to stop the
+    //    auto-upgrade loop from draining the treasury into one hero's stats,
+    //    NOT to block the one-time hire purchase. Bug from the prior pass:
+    //    default reserve 50g + starting gold 25g meant the commander would
+    //    never hire an Archer (10g) on a fresh run because 25-10=15 < 50.
     if (!s.filled && c.autoHire && effects.unlockedHeroTypes.has(c.autoHire)) {
       const cost = heroCost(c.autoHire);
-      if (gold - cost >= reserve) {
+      if (gold >= cost) {
         const skin = (c.autoSkin && HERO_SKINS[c.autoSkin] && HERO_SKINS[c.autoSkin].hero === c.autoHire &&
                      effects.unlockedSkins && effects.unlockedSkins.has(c.autoSkin)) ? c.autoSkin : null;
         buyHero(s.index, c.autoHire, skin);
@@ -4884,11 +4927,13 @@ function runCommanderAutomation() {
     }
     if (!s.filled) continue;
     const h = s.hero;
-    // 2. Auto-imbue
+    // 2. Auto-imbue — also IGNORES the reserve (same logic: one-time per-run
+    //    cost, the commander shouldn't refuse to apply the chosen element
+    //    just because the player hasn't earned much yet).
     if (!h.element && c.autoImbue && effects.imbueAllowed.has(h.type) &&
         effects.unlockedElements && effects.unlockedElements.has(h.type + ':' + c.autoImbue)) {
       const ic = imbueCost(c.autoImbue);
-      if (gold - ic >= reserve) imbue(s.index, c.autoImbue);
+      if (gold >= ic) imbue(s.index, c.autoImbue);
     }
     // 3. Auto-upgrade — only runs if the player explicitly picked a preset.
     //    Null preset = no auto-upgrade (the player just wants auto-hire or
@@ -5903,6 +5948,18 @@ window.openResearch = function () {
   applyResearch();
   renderResearch();
   document.getElementById('research-overlay').classList.add('show');
+};
+
+// Wall-breach screen "Research" button. Closes the gameover overlay AND
+// flags a fresh run so closeResearch -> resetRun -> runCommanderAutomation
+// fires the moment the player closes the book. Without this, players had
+// to click Try Again separately after spending RP, and complained their
+// commander "doesn't auto-hire" because resetRun never ran.
+window.gameoverOpenResearch = function () {
+  const goEl = document.getElementById('gameover');
+  if (goEl) goEl.classList.remove('show');
+  pendingNewRun = true;
+  window.openResearch();
 };
 
 window.closeResearch = function () {
@@ -7103,42 +7160,33 @@ function flashScreen(color, duration) {
   screenFlashMaxT  = duration;
 }
 
-function spawnFloatingText(x, y, text, color) {
-  floatingTexts.push({ x, y, vy: -28, text, color: color || '#fff8c0', life: 0.95, maxLife: 0.95 });
+// DOM-based floating text. Canvas-rendered text was a moving target: the
+// canvas is upscaled 4-5x via CSS, so even a 6px font on canvas became a
+// 24-30 visual-px wall of text. Rendering as a DOM <div> instead lets the
+// font size live in CSS pixels — a fixed 12px stays 12px regardless of
+// canvas scale. CSS handles the rise + fade; JS just spawns and times out.
+function spawnFloatingText(x, y, text, color, opts) {
+  if (typeof document === 'undefined') return;
+  const el = document.createElement('div');
+  el.className = 'floating-text' + (opts && opts.big ? ' big' : '');
+  el.textContent = text;
+  if (color) el.style.color = color;
+  // Convert canvas coords (x,y) to viewport coords using the canvas's CSS rect
+  const rect = canvas.getBoundingClientRect();
+  const sx = rect.left + (x / W) * rect.width;
+  const sy = rect.top  + (y / H) * rect.height;
+  el.style.left = sx + 'px';
+  el.style.top  = sy + 'px';
+  document.body.appendChild(el);
+  // CSS keyframe runs 950ms; remove a hair after to avoid flicker
+  setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 1000);
 }
 
-function updateFloatingTexts(dt) {
-  for (let i = floatingTexts.length - 1; i >= 0; i--) {
-    const t = floatingTexts[i];
-    t.y  += t.vy * dt;
-    t.vy += 26 * dt;
-    t.life -= dt;
-    if (t.life <= 0) floatingTexts.splice(i, 1);
-  }
-}
-
-function drawFloatingTexts() {
-  ctx.save();
-  // Floating text was drawn with 8px Press Start 2P which renders huge at 4-5x
-  // canvas scale. Switched to VT323 at 11px — ~half the visual footprint while
-  // staying readable. Keeps the 1-px shadow for legibility on grass.
-  ctx.font         = 'bold 11px "VT323", monospace';
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
-  for (const t of floatingTexts) {
-    // Larger payouts (e.g. wave-clear bonus, big-event rewards) opt into a
-    // slightly bigger font via t.big. Default is the compact size.
-    if (t.big) ctx.font = 'bold 13px "VT323", monospace';
-    else       ctx.font = 'bold 11px "VT323", monospace';
-    const a = Math.min(1, t.life / t.maxLife);
-    ctx.globalAlpha = a;
-    ctx.fillStyle = '#1a0c00';
-    ctx.fillText(t.text, t.x + 1, t.y + 1);
-    ctx.fillStyle = t.color;
-    ctx.fillText(t.text, t.x, t.y);
-  }
-  ctx.restore();
-}
+// Legacy stubs — the canvas-side update/draw used to maintain the floating
+// text array. Now everything lives in the DOM, so these are no-ops kept
+// around so the existing call sites in render() / loop() don't NPE.
+function updateFloatingTexts(_dt) { /* DOM-side now */ }
+function drawFloatingTexts()      { /* DOM-side now */ }
 
 function updateSkillFx(dt) {
   for (let i = skillFx.length - 1; i >= 0; i--) {
