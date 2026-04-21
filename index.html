@@ -4130,6 +4130,15 @@ const RESEARCH_NODES = [
   { id:'bd2',     x:16, y:32, name:'Crescendo',         desc:'+10% additional fire-rate buff from Bards',              cost:7, req:['hBard'],            effect:{ bardAuraAdd:0.10 } },
   { id:'bd3',     x:18, y:40, name:'Battle Hymn',       desc:'Bard aura also grants +10% damage to nearby heroes',     cost:8, req:['bd1'],              effect:{ bardDmgAuraAdd:0.10 } },
   { id:'bdkey',   x:14, y:36, name:'Maestro',           desc:'+15% bard fire-rate buff and +10% damage buff',           cost:16, req:['bd2','bd3'],       keystone:true, effect:{ bardAuraAdd:0.15, bardDmgAuraAdd:0.10 } },
+  // Repeatable strength upgrades — give the Bard a real long-term grind.
+  // Feedback: "the bard should have the ability to buff other heros. and you
+  // upgrade its buff strenght, how often, etc." — existing nodes only added
+  // static buffs; these stack up to 3 times each for serious scaling.
+  { id:'bd4',     x:12, y:30, name:'Double Time',       desc:'+5% additional fire-rate buff from Bards.',              cost:5,  req:['bd2'], repeatable:true, maxStacks:3, effect:{ bardAuraAdd:0.05 } },
+  { id:'bd5',     x:14, y:44, name:'War March',         desc:'+5% additional Bard damage buff.',                       cost:6,  req:['bd3'], repeatable:true, maxStacks:3, effect:{ bardDmgAuraAdd:0.05 } },
+  { id:'bd6',     x:22, y:30, name:'Extended Refrain',  desc:'+15 additional Bard aura range.',                        cost:5,  req:['bd1'], repeatable:true, maxStacks:3, effect:{ bardRngAdd:15 } },
+  // Utility unlock — Bards now also top up wall HP, small but constant.
+  { id:'bd7',     x:10, y:38, name:'Healing Chorus',    desc:'Bards also restore 0.5 wall HP/sec each.',               cost:10, req:['bdkey'],            effect:{ bardWallRegen:0.5 } },
 
 
 
@@ -4591,7 +4600,7 @@ const effects = {
   mageDmgMul: 1, mageRngAdd: 0, mageFireRateMul: 1,
   crossbowDmgMul: 1, crossbowRngAdd: 0, crossbowFireRateMul: 1,
   clericDmgMul: 1, clericHealAdd: 0, clericFireRateMul: 1,
-  bardAuraAdd: 0, bardRngAdd: 0, bardDmgAuraAdd: 0,
+  bardAuraAdd: 0, bardRngAdd: 0, bardDmgAuraAdd: 0, bardWallRegen: 0,
   // skills — start with 1 slot unlocked so the skill bar is visible on the
   // very first run. Players used to not know skills existed until they
   // opened the Research book; review feedback: "can't even afford first skill".
@@ -4632,7 +4641,7 @@ function applyResearch() {
   effects.mageDmgMul = 1; effects.mageRngAdd = 0; effects.mageFireRateMul = 1;
   effects.crossbowDmgMul = 1; effects.crossbowRngAdd = 0; effects.crossbowFireRateMul = 1;
   effects.clericDmgMul = 1; effects.clericHealAdd = 0; effects.clericFireRateMul = 1;
-  effects.bardAuraAdd = 0; effects.bardRngAdd = 0; effects.bardDmgAuraAdd = 0;
+  effects.bardAuraAdd = 0; effects.bardRngAdd = 0; effects.bardDmgAuraAdd = 0; effects.bardWallRegen = 0;
   effects.skillSlotsUnlocked = 1;   // default 1 slot visible from start
   effects.unlockedSkills = new Set();
   effects.unlockedSkins  = new Set();
@@ -4708,6 +4717,7 @@ function applyResearch() {
     if (e.bardAuraAdd)          effects.bardAuraAdd         += e.bardAuraAdd         * m;
     if (e.bardRngAdd)           effects.bardRngAdd          += e.bardRngAdd          * m;
     if (e.bardDmgAuraAdd)       effects.bardDmgAuraAdd      += e.bardDmgAuraAdd      * m;
+    if (e.bardWallRegen)        effects.bardWallRegen       += e.bardWallRegen       * m;
     if (e.skillSlotsUnlocked)   effects.skillSlotsUnlocked   = Math.max(effects.skillSlotsUnlocked, e.skillSlotsUnlocked);
     if (e.unlockSkill)          effects.unlockedSkills.add(e.unlockSkill);
     if (e.unlockSkin)           effects.unlockedSkins.add(e.unlockSkin);
@@ -8615,22 +8625,47 @@ function drawHeroRangeIndicator() {
   //
   // When both conditions are true, the open slot still gets the brighter ring
   // and the other slots get the dim overlay.
+  //
+  // Rings are COLOR-CODED per hero class using HERO_TYPES[type].accentTag so
+  // the player can tell at a glance which hero owns which ring. Bard rings
+  // are the buff aura (not attack range) so they read as a distinct color
+  // from damage classes.
   const pulse = 0.7 + 0.3 * Math.sin(performance.now() / 320);
+  // Parse #rrggbb to {r,g,b} once so we can emit rgba with varying alpha.
+  // Accepts #rgb and #rrggbb; falls back to gold.
+  function hexToRgb(hex) {
+    if (!hex || hex[0] !== '#') return { r: 245, g: 216, b: 137 };
+    let s = hex.slice(1);
+    if (s.length === 3) s = s.split('').map(c => c + c).join('');
+    const n = parseInt(s, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
   ctx.save();
   function drawOne(slot, dim) {
     if (!slot || !slot.filled || !slot.hero) return;
     const h = slot.hero;
-    if (!h.range || h.range <= 0) return;     // bards / supports — skip
+    if (!h.range || h.range <= 0) return;     // no range at all — skip entirely
     const cx = slot.cx + 3;
     const cy = slot.cy;
     const r  = h.range;
-    const fillA   = dim ? 0.03 * pulse : 0.07 * pulse;
-    const strokeA = dim ? 0.25 * pulse : 0.55 * pulse;
-    ctx.fillStyle   = `rgba(245, 216, 137, ${fillA})`;
-    ctx.strokeStyle = `rgba(245, 216, 137, ${strokeA})`;
+    const t  = HERO_TYPES[h.type];
+    // Bards use range as their BUFF AURA radius (not attack range), so they
+    // also draw — but with a slightly different dash pattern so the player
+    // can visually distinguish "this is a buff aura, not a weapon range."
+    const isSupport = t && t.isSupport;
+    const c  = hexToRgb(t && t.accentTag);
+    const fillA   = dim ? 0.05 * pulse : 0.12 * pulse;
+    const strokeA = dim ? 0.32 * pulse : 0.70 * pulse;
+    ctx.fillStyle   = `rgba(${c.r}, ${c.g}, ${c.b}, ${fillA})`;
+    ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${strokeA})`;
     ctx.lineWidth   = 1;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-    ctx.setLineDash(dim ? [2, 3] : [3, 2]);
+    // Support auras get a dotted ring; weapon ranges get a dashed ring.
+    if (isSupport) {
+      ctx.setLineDash(dim ? [1, 3] : [2, 3]);
+    } else {
+      ctx.setLineDash(dim ? [2, 3] : [3, 2]);
+    }
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
     ctx.setLineDash([]);
   }
@@ -11186,6 +11221,19 @@ function loop(t) {
     }
 
     updateHeroes(dt);
+    // Bard wall-regen — Healing Chorus research adds `bardWallRegen` HP/sec
+    // per Bard on the wall. Separate from wave-end regen (Mason's Repair etc.)
+    // which still fires on wave clear.
+    if (effects.bardWallRegen > 0 && wallHP < effects.wallMaxHp) {
+      let bards = 0;
+      for (const s of SLOTS) {
+        if (s.filled && s.hero && s.hero.type === 'bard') bards++;
+      }
+      if (bards > 0) {
+        wallHP = Math.min(effects.wallMaxHp, wallHP + effects.bardWallRegen * bards * dt);
+        updateWallHp();
+      }
+    }
     updateProjectiles(dt);
     updateEnemies(dt);
     updateHound(dt);
