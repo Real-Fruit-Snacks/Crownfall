@@ -3838,8 +3838,13 @@ function currentRpEarned() {
   if (effectiveCleared >= 50) {
     scaled = Math.floor(scaled * 1.5);
   }
-  // Prestige "Scholar's Mind" adds flat RP per run (stacks)
-  return Math.max(0, scaled + (runState.rpBonus || 0) + (effects.rpFlatBonus || 0));
+  // Prestige "Scholar's Mind" adds flat RP per run (stacks). Review feedback
+  // flagged this as gameable: kill one goblin, end run, claim the flat bonus,
+  // repeat for free RP. Gate it behind actual run progress — at least one
+  // cleared wave OR twenty kills. "You didn't play the game" = no flat bonus.
+  const madeProgress = (totalWavesCleared >= 1) || (totalKills >= 20);
+  const flatBonus = madeProgress ? (effects.rpFlatBonus || 0) : 0;
+  return Math.max(0, scaled + (runState.rpBonus || 0) + flatBonus);
 }
 
 let pendingNewRun = false;
@@ -6950,9 +6955,14 @@ const MID_EVENTS = {
     title: 'Wandering Merchant',
     blurb: 'A robed traveller offers wares from the road. Choose one or send him on his way.',
     options: [
-      { label: 'Healing Tonic',     subnote: 'Restore 30 wall HP',                   cost: 40,  apply() { wallHP = Math.min(effects.wallMaxHp, wallHP + 30); updateWallHp(); spawnFloatingText(WALL_W + 6, H/2 - 12, '+30', '#a8ffb0'); } },
-      { label: 'Sharpening Stone',  subnote: '+20% hero damage \u00b7 3 waves',      cost: 75,  apply() { runState.dmgBuffWaves = 3; runState.dmgBuffValue = 0.20; } },
-      { label: 'Lucky Charm',       subnote: 'Coins worth +50% \u00b7 3 waves',      cost: 60,  apply() { runState.coinBuffWaves = 3; runState.coinBuffValue = 0.50; } },
+      // Prices dropped ~40% from the original tuning. Review feedback: "every
+      // time I get a merchant event I have no gold because of my commander" —
+      // commanders drain the purse on auto-upgrade, so by the time the event
+      // fires the player can't afford anything. Reducing costs makes the
+      // merchant a viable pick even on a freshly-drained treasury.
+      { label: 'Healing Tonic',     subnote: 'Restore 30 wall HP',                   cost: 25,  apply() { wallHP = Math.min(effects.wallMaxHp, wallHP + 30); updateWallHp(); spawnFloatingText(WALL_W + 6, H/2 - 12, '+30', '#a8ffb0'); } },
+      { label: 'Sharpening Stone',  subnote: '+20% hero damage \u00b7 3 waves',      cost: 45,  apply() { runState.dmgBuffWaves = 3; runState.dmgBuffValue = 0.20; } },
+      { label: 'Lucky Charm',       subnote: 'Coins worth +50% \u00b7 3 waves',      cost: 40,  apply() { runState.coinBuffWaves = 3; runState.coinBuffValue = 0.50; } },
       { label: 'Send him on his way', skip: true }
     ]
   },
@@ -10107,17 +10117,29 @@ function spawnHealParticles(x, y) {
 }
 
 function spawnEnemy(w, asBoss) {
-  const r = Math.random();
   let x, y;
-  if (r < 0.6) {            // right edge
+  if (asBoss) {
+    // Bosses ALWAYS spawn from the far right edge — review feedback flagged
+    // top/bottom spawns as unfair when a boss appears inches from the wall
+    // with no time to react. A wall-charge from off-screen-right gives the
+    // player a full field to whittle it down.
     x = W + 4;
     y = 10 + Math.random() * (H - 20);
-  } else if (r < 0.8) {     // top edge
-    y = -4;
-    x = WALL_W + 50 + Math.random() * (W - WALL_W - 60);
-  } else {                  // bottom edge
-    y = H + 4;
-    x = WALL_W + 50 + Math.random() * (W - WALL_W - 60);
+  } else {
+    const r = Math.random();
+    if (r < 0.6) {            // right edge
+      x = W + 4;
+      y = 10 + Math.random() * (H - 20);
+    } else if (r < 0.8) {     // top edge
+      y = -4;
+      // Push off-right spawns deeper into the field so they have to walk to
+      // the wall. 50 -> 90 means the closest top/bottom spawn is ~100px from
+      // the wall instead of 50 — still surprising, but no instant wall hits.
+      x = WALL_W + 90 + Math.random() * (W - WALL_W - 100);
+    } else {                  // bottom edge
+      y = H + 4;
+      x = WALL_W + 90 + Math.random() * (W - WALL_W - 100);
+    }
   }
 
   // SIEGE event forces every spawn (non-boss) to be a ram. The waveEnemyCount
@@ -10337,8 +10359,11 @@ function updateEnemies(dt) {
         damageWall(e.attackDmg);
         // Wall Spikes — counter-damage when an enemy swings
         if (effects.wallSpikes > 0) applyDamage(e, effects.wallSpikes);
-        shakeT = 0.18;
-        damageFlashT = 0.18;
+        // Rate-limit the flash + shake so lategame swarms (100+ enemies hitting
+        // the wall every frame) don't lock the screen in a permanent red pulse.
+        // Only re-trigger when the previous effect is nearly done fading.
+        if (shakeT       <= 0.05) shakeT       = 0.18;
+        if (damageFlashT <= 0.05) damageFlashT = 0.18;
         e.attackCd = e.attackRate;
         e.lungeT = 0.14;
       }
