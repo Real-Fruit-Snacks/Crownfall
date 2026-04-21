@@ -7650,7 +7650,9 @@ function openSkillBuyMenu(idx) {
     body = `<div class="locked-msg">No skills researched yet.<br>Open the <b>Research \u2192 Skills</b> chapter.</div>`;
   } else {
     body = unlocked.map(sk => {
-      const ok = gold >= sk.cost;
+      // Skills are free to equip AND free to cast — gated only by cooldown.
+      // Review feedback: "skills cost nothing to cast, they just have a
+      // cooldown" was the preferred experience. Cost pulled entirely.
       // Show the effective CD so Skill Mastery prestige reduction is visible
       // in the shop. Falls back to base cd when no prestige reduction is active.
       const effCd = sk.cd * (effects.skillCdMul || 1);
@@ -7660,13 +7662,10 @@ function openSkillBuyMenu(idx) {
       return `<div class="sk-opt">
         <div class="sk-head">
           <span class="sk-name" style="background:${sk.tag};">${sk.name}</span>
-          <span class="sk-cost">${sk.cost}g</span>
         </div>
         <div class="sk-desc">${sk.desc}</div>
         <div class="sk-meta">${cdLabel} \u00b7 ${sk.target === 'enemy' ? 'click an enemy' : sk.target === 'point' ? 'click any spot' : 'instant'}</div>
-        <button onclick="buySkill(${idx},'${sk.id}')" ${ok ? '' : 'disabled'}>
-          ${ok ? `Equip ${sk.name}` : `Need ${sk.cost - Math.floor(gold)}g`}
-        </button>
+        <button onclick="buySkill(${idx},'${sk.id}')">Equip ${sk.name}</button>
       </div>`;
     }).join('');
   }
@@ -7694,11 +7693,11 @@ window.buySkill = function (idx, skillId) {
   if (idx >= effects.skillSlotsUnlocked) return;
   if (!effects.unlockedSkills.has(skillId)) return;
   const sk = SKILLS[skillId];
-  if (!sk || gold < sk.cost) return;
-  gold -= sk.cost;
+  if (!sk) return;
+  // Equipping is free — skills are researched once, then live on cooldown.
+  // (Kept the `buy` name for API-compat; it's really "equip this slot".)
   slot.skillId = skillId;
   slot.cooldown = 0;
-  goldDirty = true;
   closeSkillPanel();
   renderSkillBar();
   updateUI();
