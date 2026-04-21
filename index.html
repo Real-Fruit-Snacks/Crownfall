@@ -11651,8 +11651,10 @@ window.doPrestige = function () {
   }
 };
 function _runPrestigeConfirm(gain, keptNodes) {
+  // showConfirm.message is rendered as textContent, so no HTML here — use a
+  // punctuation break to make the Ancestry line stand out.
   const keptBlurb = keptNodes.length > 0
-    ? ' <b>Ancestry will preserve ' + keptNodes.length + ' node' + (keptNodes.length === 1 ? '' : 's') + '.</b>'
+    ? '  \u2014  Ancestry will preserve ' + keptNodes.length + ' node' + (keptNodes.length === 1 ? '' : 's') + '.'
     : '';
   window.showConfirm({
     title:    'Prestige?',
