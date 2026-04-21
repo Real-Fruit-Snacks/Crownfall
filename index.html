@@ -4475,10 +4475,12 @@ const PRESTIGE_BONUSES = [
   // Fire+Poison, Ice+Bleed, Holy+Stun become real options.
   { id: 'dualImbue',       name: 'Dual Imbue',        cost: 25, desc: 'Heroes can imbue a second element on top of their primary.',
     effect: { dualImbue: true } },
-  // The Hound: unlocks a roaming war hound that bites nearby enemies for a
+  // The Hound: unlocks a roaming WAR WOLF that bites nearby enemies for a
   // fraction of wall-hero average damage + applies a 30% slow for 1.2s.
   // Respawns each wave if killed. New entity class; see updateHound().
-  { id: 'hound',           name: 'The Hound',         cost: 25, desc: 'Unlocks a roaming war hound — bites enemies for extra damage and slows them. Respawns each wave.',
+  // Name reads "Hound" but the sprite is a lean grey wolf — medieval wargs
+  // were called hounds in the chronicles, so the name fits the aesthetic.
+  { id: 'hound',           name: 'The Hound',         cost: 25, desc: 'Unlocks a feral war-wolf that roams the field — bites enemies for extra damage and slows them with every snap of its jaws. Respawns each wave.',
     effect: { hound: true } },
   // Ancestry: on prestige, keep N currently-owned research nodes (player picks).
   // Stacks 1/2/3 let you preserve 1/2/3 nodes. Big sting-reducer for players
@@ -9654,15 +9656,16 @@ const enemies = [];
 const enemyProjectiles = [];
 
 // =====================================================================
-//  THE HOUND — prestige-unlocked roaming ally (Batch 3 of tree expansion)
+//  THE HOUND (war wolf) — prestige-unlocked roaming ally (Batch 3)
 // =====================================================================
-// A single persistent unit that spawns when effects.houndUnlocked is true.
-// Seeks the nearest enemy, bites for a fraction of the wall's average hero
-// damage, and applies a 30% slow for 1.2s. Has its own HP — overlapping
-// enemies chip 10 HP/s off it, and at 0 HP it stays "down" until the next
-// wave begins, when it respawns at full HP. Uniquely ISN'T a hero — lives
-// outside SLOTS, has its own render/update pass, and moves on the field
-// instead of standing on the wall.
+// A lean grey wolf that spawns when effects.houndUnlocked is true. Seeks the
+// nearest enemy, bites for a fraction of the wall's average hero damage, and
+// applies a 30% slow for 1.2s. Has its own HP — overlapping enemies chip
+// 10 HP/s off it, and at 0 HP it stays "down" until the next wave begins,
+// when it respawns at full HP. Uniquely ISN'T a hero — lives outside SLOTS,
+// has its own render/update pass, and moves on the field instead of standing
+// on the wall. The variable names say "hound" (the prestige bonus name) but
+// the sprite drawn by drawHound() is a proper wolf — see there for palette.
 let hound = null;   // null when disabled OR downed this wave
 const HOUND_MAX_HP       = 60;
 const HOUND_BITE_CD      = 0.6;     // seconds between bites
@@ -9749,42 +9752,113 @@ function updateHound(dt) {
   }
 }
 
-// Simple pixel-art hound — 4 brown rects + dark outline + tiny red mouth during bite.
-// Scales with the canvas via the draw transform, same as other field sprites.
+// Pixel-art WOLF sprite — lean silhouette, cool dark-grey coat with a glowing
+// yellow eye. Hand-built from ~20 rects so the shape reads unmistakably as a
+// wolf at small size: pointed ears, elongated muzzle, bushy raised tail,
+// hunched back, four spindly legs, bared teeth when biting.
+// Coordinate convention: x = horizontal center of torso; y = spine line.
+// f flips the sprite horizontally (facing right +1, facing left -1).
 function drawHound() {
   if (!hound) return;
   const x = Math.round(hound.x);
   const y = Math.round(hound.y);
-  const f = hound.facing;  // +1 face right, -1 face left
-  // Outline (dark)
-  ctx.fillStyle = '#2a1808';
-  ctx.fillRect(x - 5, y - 2, 10, 5);      // body
-  ctx.fillRect(x + 3 * f - 1, y - 3, 3, 3); // head
-  ctx.fillRect(x - 4, y + 2, 2, 2);        // front leg
-  ctx.fillRect(x + 2, y + 2, 2, 2);        // back leg
-  ctx.fillRect(x - 5 * f, y - 1, 2, 1);    // tail base
-  // Body fill (tan)
-  ctx.fillStyle = '#a8783a';
-  ctx.fillRect(x - 4, y - 1, 8, 3);
-  ctx.fillRect(x + 3 * f, y - 2, 2, 2);    // head fill
-  // Highlight (bright tan along top)
-  ctx.fillStyle = '#d4a268';
-  ctx.fillRect(x - 3, y - 1, 6, 1);
-  // Eye dot
-  ctx.fillStyle = '#1a0c00';
-  ctx.fillRect(x + 3 * f + (f > 0 ? 1 : 0), y - 2, 1, 1);
-  // Bite flash — tiny red mouth pixel
+  const f = hound.facing;
+
+  // Palette
+  const OUTLINE = '#0a0705';    // near-black outline / shadow
+  const COAT    = '#4a464e';    // cool dark grey coat
+  const COAT_HI = '#7a7682';    // lighter ridge along spine
+  const BELLY   = '#2e2a32';    // shadow under body / jaw
+  const EYE     = '#ffd040';    // glowing amber eye
+  const TOOTH   = '#f0ece0';    // bared fangs during bite
+  const MOUTH   = '#b82010';    // red inside of mouth
+
+  // Helper — flip-safe rect. Pass coords in facing-right frame; the helper
+  // mirrors the x offset when f = -1 so we only describe the sprite once.
+  const rx = (ox) => x + ox * f;
+  const px = (ox, oy, w, h) => ctx.fillRect(rx(ox) - (f < 0 ? (w - 1) : 0), y + oy, w, h);
+
+  // === 1. OUTLINE pass — drawn first, fill pieces cover the interior. ===
+  ctx.fillStyle = OUTLINE;
+  // Ears — triangular tufts (2-pixel-tall stepped wedge each)
+  px( 3, -4, 1, 1);      // back-ear tip
+  px( 3, -3, 2, 1);      // back-ear base (2 wide)
+  px( 5, -4, 1, 1);      // front-ear tip
+  px( 5, -3, 2, 1);      // front-ear base (2 wide)
+  // Head shell
+  px( 3, -2, 4, 1);      // skull top
+  px( 7, -2, 1, 1);      // muzzle top
+  px( 7, -1, 1, 1);      // nose ridge
+  px( 8, -1, 1, 1);      // nose tip
+  px( 7,  0, 1, 1);      // jaw line
+  px( 6,  1, 2, 1);      // lower jaw
+  // Back / spine (arched over shoulders)
+  px(-2, -2, 5, 1);
+  // Tail — raised high and bushy, a proper wolf tail curl
+  px(-3, -2, 1, 1);      // tail haunch
+  px(-4, -3, 2, 1);      // tail mid (upper sweep)
+  px(-5, -2, 1, 1);      // tail outer curve
+  px(-6, -3, 1, 1);      // tail tip
+  px(-4, -1, 1, 1);      // tail under-curve root
+  // Belly + chest
+  px(-2,  1, 8, 1);      // belly line
+  // Legs — 2 visible pairs, slender
+  px(-1,  2, 1, 2);      // rear leg
+  px( 1,  2, 1, 2);      // rear leg pair
+  px( 4,  2, 1, 2);      // front leg
+  px( 6,  2, 1, 2);      // front leg pair
+  // Paws
+  px(-1,  4, 1, 1);
+  px( 1,  4, 1, 1);
+  px( 4,  4, 1, 1);
+  px( 6,  4, 1, 1);
+
+  // === 2. COAT fill (grey body mass) ===
+  ctx.fillStyle = COAT;
+  // Torso
+  px(-2, -1, 5, 2);
+  // Hindquarters / haunch
+  px(-2, -2, 1, 1);      // spot at rear shoulder
+  // Neck + head (connects torso to muzzle)
+  px( 3, -1, 4, 2);
+  // Ears inside
+  px( 4, -3, 1, 1);      // ear interior
+  // Under-ear cheek
+  px( 3, -2, 1, 1);      // left cheek
+  px( 6, -2, 1, 1);      // right cheek (toward muzzle)
+  // Tail fill (bushy)
+  px(-5, -2, 1, 1);      // bushy upper tail
+  px(-4, -2, 1, 1);      // tail mid fill
+
+  // === 3. HIGHLIGHT ridge along the spine (lighter grey top) ===
+  ctx.fillStyle = COAT_HI;
+  px(-1, -1, 3, 1);      // spine stripe
+  px( 3, -1, 1, 1);      // neck ridge
+
+  // === 4. BELLY/UNDER shadow (darker tint below spine line) ===
+  ctx.fillStyle = BELLY;
+  px(-1,  0, 4, 1);      // torso underbelly
+  px( 4,  0, 3, 1);      // jaw shadow
+
+  // === 5. EYE — single pixel, glowing amber ===
+  ctx.fillStyle = EYE;
+  px( 5, -1, 1, 1);
+
+  // === 6. BITE FLASH — teeth + red mouth briefly after a bite ===
   if (hound.biteFlash > 0.1) {
-    ctx.fillStyle = '#c83020';
-    ctx.fillRect(x + 4 * f, y - 1, 1, 1);
+    ctx.fillStyle = MOUTH;
+    px( 7,  0, 1, 1);    // mouth interior
+    ctx.fillStyle = TOOTH;
+    px( 8,  0, 1, 1);    // fang tip
   }
-  // HP bar when damaged (only visible when not at full)
+
+  // HP bar (only visible when wolf has taken damage)
   if (hound.hp < hound.maxHp) {
     const pct = Math.max(0, hound.hp) / hound.maxHp;
     ctx.fillStyle = '#1a0c00';
-    ctx.fillRect(x - 5, y - 6, 10, 2);
+    ctx.fillRect(x - 6, y - 7, 12, 2);
     ctx.fillStyle = pct > 0.5 ? '#6a9a3a' : pct > 0.25 ? '#c8a828' : '#c83020';
-    ctx.fillRect(x - 5, y - 6, Math.round(10 * pct), 2);
+    ctx.fillRect(x - 6, y - 7, Math.round(12 * pct), 2);
   }
 }
 
