@@ -126,6 +126,37 @@
   }
   #panel .row.hero-meta .stat { color: #a89070; font-size: 11px; letter-spacing: 0.5px; }
   #panel .row.hero-meta .stat b { color: #ffd060; }
+  /* LVL + CRIT row + XP bar — leveling panel */
+  #panel .row.hero-level {
+    background: #1f1207;
+    padding: 5px 8px;
+    margin: 4px -2px 0;
+    box-shadow: inset 0 0 0 1px #4a352a;
+    justify-content: space-around;
+  }
+  #panel .row.hero-level .stat { color: #a89070; font-size: 11px; letter-spacing: 0.5px; }
+  #panel .row.hero-level .stat b { color: #ffd060; }
+  #panel .row.hero-level .hero-crit b { color: #ff8030; }
+  #panel .hero-xp-bar {
+    position: relative;
+    height: 12px;
+    margin: 0 -2px 6px;
+    background: #1a0c00;
+    box-shadow: inset 0 0 0 2px #4a352a;
+  }
+  #panel .hero-xp-bar .fill {
+    height: 100%;
+    background: linear-gradient(180deg, #f5d889 0%, #c89030 100%);
+    box-shadow: inset 0 1px 0 0 #fff8c0;
+    transition: width 0.18s ease-out;
+  }
+  #panel .hero-xp-bar .hero-xp-txt {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #1a0c00; font-family: 'VT323', monospace;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.25);
+  }
   #panel .stat b { color: #f5d889; font-family: 'VT323', monospace; font-size: 18px; font-weight: 400; letter-spacing: 1px; vertical-align: -1px; }
   #panel .cost { color: #f5d889; font-family: 'VT323', monospace; font-size: 18px; font-weight: 400; letter-spacing: 1px; }
   #panel button {
@@ -7006,8 +7037,51 @@ function makeHero(typeId, skinId) {
     fireFlash: 0,
     lvDmg: 0, lvRng: 0, lvSpd: 0,
     element: null,
-    skin: resolvedSkin
+    skin: resolvedSkin,
+    // Per-run progression: heroes earn XP for kills they land, level up,
+    // and gain crit chance per level. Bards (no kills, no shots) stay at
+    // level 1 throughout — their value lives in the aura.
+    xp:    0,
+    level: 1,
+    kills: 0
   };
+}
+
+// ---------- HERO LEVELING ----------
+// Linear curve so leveling stays fast enough to feel rewarding through a
+// run but doesn't trivialize bosses. xpForNextLevel(1) = 5 XP, level 5
+// needs 25, level 10 needs 50, etc.
+const HERO_CRIT_PER_LEVEL = 0.01;   // +1% per level
+const HERO_CRIT_MAX       = 0.30;   // capped at 30%
+const HERO_CRIT_MUL       = 2.0;    // crits hit 2x base damage
+function xpForNextLevel(level) { return 5 * Math.max(1, level); }
+function heroCritChance(h) {
+  if (!h || h.level <= 1) return 0;
+  return Math.min(HERO_CRIT_MAX, (h.level - 1) * HERO_CRIT_PER_LEVEL);
+}
+// Award XP to the hero who landed a killing blow. Wave scaling so kills
+// at deeper waves feel more meaningful; bosses pay 5x XP because they're
+// rare and tank a lot of damage.
+function grantHeroXP(slot, killedEnemy) {
+  if (!slot || !slot.filled || !slot.hero || !killedEnemy) return;
+  const h = slot.hero;
+  const isBoss = !!killedEnemy.isBoss;
+  const wave = (killedEnemy.spawnedAtWave || 1);
+  const baseXp = Math.max(1, Math.floor(wave / 3) + 1);
+  const gained = isBoss ? baseXp * 5 : baseXp;
+  h.xp = (h.xp || 0) + gained;
+  // Roll level-ups (multiple in one tick possible against a tough boss)
+  let leveled = 0;
+  while (h.xp >= xpForNextLevel(h.level)) {
+    h.xp -= xpForNextLevel(h.level);
+    h.level++;
+    leveled++;
+    if (h.level > 99) { h.level = 99; h.xp = 0; break; }
+  }
+  if (leveled > 0 && typeof spawnFloatingText === 'function') {
+    spawnFloatingText(slot.cx + 6, slot.cy - 12,
+                      'LVL ' + h.level + '!', '#ffd060', { big: true });
+  }
 }
 
 function upgradeCost(type, level) {
@@ -7744,6 +7818,21 @@ function renderPanel(s) {
   // in `h.kills` (incremented in updateProjectiles when a projectile lands a
   // killing blow). Untracked heroes (loaded from older saves) start at 0.
   const kills = h.kills || 0;
+  // Per-hero leveling — XP from kills grants levels, levels grant crit
+  // chance. Bards stay at level 1 (no kills) and don't get a crit row.
+  const lvl     = h.level || 1;
+  const xp      = h.xp    || 0;
+  const xpNeed  = (typeof xpForNextLevel === 'function') ? xpForNextLevel(lvl) : 5;
+  const xpPct   = Math.max(0, Math.min(100, Math.round((xp / xpNeed) * 100)));
+  const critPct = (typeof heroCritChance === 'function') ? Math.round(heroCritChance(h) * 100) : 0;
+  const isSupport = type && type.isSupport;
+  const levelLine = `
+    <div class="row hero-level">
+      <span class="stat">LVL <b>${lvl}</b></span>
+      <span class="stat hero-crit">CRIT <b>${critPct}%</b></span>
+    </div>
+    <div class="hero-xp-bar"><div class="fill" style="width:${xpPct}%"></div><span class="hero-xp-txt">${xp} / ${xpNeed} XP</span></div>
+  `;
   // Splash hint for cannoneers — answers "is the splash worth it?"
   const splashLine = (h.splash && h.splashDmg)
     ? `<div class="row"><span class="stat">SPLASH <b>${h.splashDmg.toFixed(0)}\u00d7${Math.round(h.splash)}px</b></span></div>`
@@ -7768,6 +7857,7 @@ function renderPanel(s) {
       <span class="stat">DPS <b>${dps.toFixed(1)}</b></span>
       <span class="stat">KILLS <b>${kills}</b></span>
     </div>
+    ${isSupport ? '' : levelLine}
     ${renderImbueSection(s, h)}
     <button class="close" onclick="closePanel()">close</button>
   `;
@@ -8226,6 +8316,10 @@ function spawnProjectileFromHero(from, target, dmg, angleOffset) {
     life: Math.max(2.0, Math.min(5.0, (h.range / Math.max(1, h.projSpeed)) * 1.5 + 0.4)),
     type: h.type,
     sourceSlotIdx: (from && typeof from.index === 'number') ? from.index : -1,
+    // Crit roll happens at LAUNCH so the whole projectile (splash, chain,
+    // pierce hits) shares the same crit fate. heroCritChance scales with
+    // level (1% per level above 1, capped at 30%); HERO_CRIT_MUL is 2x.
+    isCrit: (Math.random() < heroCritChance(h)),
     splash:    h.splash    || 0,
     splashDmg: h.splashDmg || 0,
     pierce: h.type === 'archer' ? effects.pierce : 0,
@@ -8272,14 +8366,20 @@ function updateProjectiles(dt) {
       p.detonateT -= dt;
       if (p.detonateT <= 0) {
         const r2 = p.splash * p.splash;
+        // Crits inherit the launch roll
+        const detonateCritMul = p.isCrit ? HERO_CRIT_MUL : 1;
         for (const other of enemies) {
           if (other.hp <= 0) continue;
           const sdx = other.x - p.x;
           const sdy = other.y - p.y;
           if (sdx * sdx + sdy * sdy <= r2) {
-            applyDamage(other, Math.max(p.damage, p.splashDmg));
+            other.lastDmgFromSlotIdx = p.sourceSlotIdx;
+            applyDamage(other, Math.max(p.damage, p.splashDmg) * detonateCritMul);
             if (p.element) applyElement(other, p.element, p.elementDmg * 0.6);
           }
+        }
+        if (p.isCrit && typeof spawnFloatingText === 'function') {
+          spawnFloatingText(p.x, p.y - 10, 'CRIT BLAST', '#ff8030', { big: true });
         }
         if (typeof spawnExplosion === 'function') spawnExplosion(p.x, p.y, p.splash);
         projectiles.splice(i, 1);
@@ -8314,17 +8414,30 @@ function updateProjectiles(dt) {
           // Holy element — bonus damage vs bosses applied BEFORE armor reduction
           let dmgScale = 1;
           if (p.element === 'holy' && e.isBoss) dmgScale = 2;
+          // Crit multiplier — rolled at projectile launch so the whole hit
+          // (and any splash / chain that follows) shares the same outcome.
+          const critMul = p.isCrit ? HERO_CRIT_MUL : 1;
+          dmgScale *= critMul;
 
           // Stamp the source so the death handler can credit the kill to
           // the right hero — used for the per-hero KILLS badge on the panel.
           e.lastDmgFromSlotIdx = p.sourceSlotIdx;
           // Crossbow ignores armor entirely
+          let landedDmg;
           if (p.type === 'crossbow') {
-            const dmg = Math.floor(p.damage * dmgScale * (e.hexT > 0 ? 1.25 : 1));
-            e.hp -= dmg;
+            landedDmg = Math.floor(p.damage * dmgScale * (e.hexT > 0 ? 1.25 : 1));
+            e.hp -= landedDmg;
             e.hitFlash = 0.08;
           } else {
-            applyDamage(e, p.damage * dmgScale);
+            landedDmg = applyDamage(e, p.damage * dmgScale);
+          }
+          // Crit feedback — orange "CRIT XX" floating text only on the
+          // primary hit (splash / chain hits don't double up the popup so
+          // the screen doesn't drown in numbers).
+          if (p.isCrit && typeof spawnFloatingText === 'function') {
+            spawnFloatingText(e.x, e.y - 10,
+                              'CRIT ' + Math.max(1, landedDmg | 0),
+                              '#ff8030', { big: true });
           }
           if (p.element) applyElement(e, p.element, p.elementDmg);
           // Cleric — each holy bolt heals the wall (1 HP base + research bonus)
@@ -8353,7 +8466,8 @@ function updateProjectiles(dt) {
             });
           }
 
-          // CANNONEER: splash damage + visible explosion burst
+          // CANNONEER: splash damage + visible explosion burst. Splash
+          // inherits the crit (single roll covers the whole shell).
           if (p.splash > 0 && p.splashDmg > 0) {
             const r2 = p.splash * p.splash;
             for (const other of enemies) {
@@ -8362,7 +8476,7 @@ function updateProjectiles(dt) {
               const sdy = other.y - e.y;
               if (sdx * sdx + sdy * sdy <= r2) {
                 other.lastDmgFromSlotIdx = p.sourceSlotIdx;
-                applyDamage(other, p.splashDmg);
+                applyDamage(other, p.splashDmg * critMul);
                 if (p.element) applyElement(other, p.element, p.elementDmg * 0.6);
               }
             }
@@ -8371,11 +8485,12 @@ function updateProjectiles(dt) {
             break;
           }
 
-          // MAGE: chain to nearby unhit enemies (with falloff)
+          // MAGE: chain to nearby unhit enemies (with falloff). Chains
+          // inherit the crit too (the bolt either crits or doesn't).
           if (p.type === 'mage' && p.chains > 0) {
             let lastX = p.x, lastY = p.y;
             let chainsLeft = p.chains;
-            let chainDmg   = p.damage * 0.75;
+            let chainDmg   = p.damage * 0.75 * critMul;
             while (chainsLeft > 0) {
               let next = null, bestD = 40 * 40;
               for (const other of enemies) {
@@ -9368,12 +9483,13 @@ function updateEnemies(dt) {
     const e = enemies[i];
     if (e.hp <= 0) {
       // Credit the kill to whichever hero landed the killing damage. Powers
-      // the per-hero KILLS counter shown on the slot panel — lets players
-      // see at a glance which class is carrying the run.
+      // the per-hero KILLS counter on the slot panel + grants XP for
+      // leveling. Bosses give 5x XP via grantHeroXP.
       if (typeof e.lastDmgFromSlotIdx === 'number' && e.lastDmgFromSlotIdx >= 0) {
         const slot = SLOTS[e.lastDmgFromSlotIdx];
         if (slot && slot.filled && slot.hero) {
           slot.hero.kills = (slot.hero.kills || 0) + 1;
+          if (typeof grantHeroXP === 'function') grantHeroXP(slot, e);
         }
       }
       spawnDeathParticles(e.x, e.y);
