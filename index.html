@@ -8787,9 +8787,21 @@ function pickupCoin(coin) {
   return true;
 }
 
+// HOLD-TO-DAMAGE state — when the player presses on the canvas, we keep
+// dealing tap damage every HOLD_TAP_INTERVAL seconds to whatever enemy is
+// currently under the cursor. Player request: "I should be able to hold
+// down either my finger or mouse over an enemy and do damage to it."
+let _pointerHeld     = false;
+let _holdCanvasX     = 0;
+let _holdCanvasY     = 0;
+let _holdTapTimer    = 0;
+const HOLD_TAP_INTERVAL = 0.18;     // ~5.5 hits/sec; matches a fast manual tap
+
 canvas.addEventListener('pointermove', e => {
   const { x, y } = mouseToCanvas(e);
   mouseX = x; mouseY = y;
+  // Track cursor for hold-tap so movement re-targets enemies under the finger
+  if (_pointerHeld) { _holdCanvasX = x; _holdCanvasY = y; }
   const hit = slotAt(x, y);
   for (const s of SLOTS) s.hovered = (s === hit);
   const enHit = !hit && enemyAt(x, y);
@@ -8806,12 +8818,17 @@ canvas.addEventListener('pointermove', e => {
 
 canvas.addEventListener('pointerleave', () => {
   for (const s of SLOTS) s.hovered = false;
+  _pointerHeld = false;
 });
+
+// Releasing the pointer / cancelling the gesture stops hold-tap.
+canvas.addEventListener('pointerup',     () => { _pointerHeld = false; });
+canvas.addEventListener('pointercancel', () => { _pointerHeld = false; });
 
 canvas.addEventListener('pointerdown', e => {
   e.preventDefault();
   const { x, y } = mouseToCanvas(e);
-  // ARMED SKILL — consumes the click for targeting
+  // ARMED SKILL — consumes the click for targeting (no hold-tap during cast)
   if (armedSkill && !gameOver) {
     const sk = SKILLS[armedSkill.skillId];
     if (sk) {
@@ -8827,6 +8844,13 @@ canvas.addEventListener('pointerdown', e => {
       }
     }
   }
+  // Begin hold-tap tracking on every canvas press. The main-loop tick
+  // checks whether the cursor is over an enemy and applies damage every
+  // HOLD_TAP_INTERVAL seconds — even if the cursor drifts to other enemies.
+  _pointerHeld   = true;
+  _holdCanvasX   = x;
+  _holdCanvasY   = y;
+  _holdTapTimer  = HOLD_TAP_INTERVAL;   // wait one tick before second hit
   const coin = coinAt(x, y);
   if (coin) { pickupCoin(coin); return; }
   const en = enemyAt(x, y);
@@ -10107,6 +10131,25 @@ function loop(t) {
     updateHeroes(dt);
     updateProjectiles(dt);
     updateEnemies(dt);
+    // Hold-to-damage — while the player keeps the pointer pressed, deal a
+    // tap-damage tick every HOLD_TAP_INTERVAL seconds to whichever enemy is
+    // currently under the cursor. Re-targets if the cursor moves to a new
+    // enemy or an enemy walks under the held cursor.
+    if (_pointerHeld && !armedSkill && !gameOver) {
+      _holdTapTimer -= dt;
+      if (_holdTapTimer <= 0) {
+        _holdTapTimer = HOLD_TAP_INTERVAL;
+        const en = enemyAt(_holdCanvasX, _holdCanvasY);
+        if (en && en.hp > 0) {
+          en.hp -= TAP_DAMAGE;
+          en.hitFlash = 0.08;
+          if (typeof spawnFloatingText === 'function') {
+            spawnFloatingText(en.x, en.y - 8, '-' + TAP_DAMAGE, '#ffe486');
+          }
+        }
+      }
+    }
+
     // Auto-tap — the wall's stationed guards automatically chip at the closest
     // live enemy on a timer. Review: "constantly click on the enemies and there
     // seems to be no way to automate around that. That clicking gets tiresome
