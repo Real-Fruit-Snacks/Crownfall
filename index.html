@@ -3935,6 +3935,7 @@ const RESEARCH_NODES = [
   { id:'eauto',x:50, y:66, name:'Coin Magnet',       desc:'Coins fly to the wall on their own.', cost:9, req:['e2','e3'], effect:{ autoCollect:true } },
   { id:'autoTap', x:44, y:62, name:'Sentry Marksmen', desc:'Wall guards auto-tap the closest enemy every 1.4s \u2014 no more clicking RSI.', cost:8, req:['e1'], effect:{ autoTap:1.4 } },
   { id:'autoTap2', x:38, y:58, name:'Keen Sentries',  desc:'Sentries fire even faster \u2014 auto-tap every 0.8s.', cost:12, req:['autoTap'], effect:{ autoTap:0.8 } },
+  { id:'rRestlessHand', x:46, y:56, name:'Restless Hand', desc:'Holding the cursor on an enemy ticks 0.13s faster per level. Buy up to 4 times \u2014 caps near 5 hits per second.', cost:5, req:['root'], repeatable:true, maxStacks:4, effect:{ holdTapInterval:-0.13 } },
   { id:'ws1',  x:26, y:90, name:'Expeditionary',     desc:'Start each run at wave 3. Toggle off if you want to grind from wave 1.',     cost:9,  req:['e4'],         toggleable:true, effect:{ startingWave:3 } },
   { id:'ws2',  x:18, y:96, name:'Vanguard',          desc:'Start each run at wave 5. Toggle on/off any time.',                          cost:18, req:['ws1'],        toggleable:true, effect:{ startingWave:5 } },
   { id:'ws3',  x:14, y:80, name:'Veteran',           desc:'Start each run at wave 8.',                                                  cost:28, req:['ws2'],        toggleable:true, effect:{ startingWave:8 } },
@@ -4249,7 +4250,7 @@ function todaysBest() {
 
 const effects = {
   dmgMul: 1, fireRateMul: 1, rngAdd: 0,
-  wallMaxHp: 50, startGold: 25, killGold: 2, pierce: 0, autoCollect: false, autoTap: 0,
+  wallMaxHp: 50, startGold: 25, killGold: 2, pierce: 0, autoCollect: false, autoTap: 0, holdTapInterval: 0.7,
   startingWave: 1, waveRewardMul: 1,
   slotsUnlocked: 3,   // start with 3 hero slots open; gold cost still gates how many you can fill
   unlockedHeroTypes: new Set(['archer']),
@@ -4291,7 +4292,7 @@ const effects = {
 function applyResearch() {
   effects.dmgMul = 1; effects.fireRateMul = 1; effects.rngAdd = 0;
   effects.wallMaxHp = 50; effects.startGold = 25; effects.killGold = 2;
-  effects.pierce = 0; effects.autoCollect = false; effects.autoTap = 0;
+  effects.pierce = 0; effects.autoCollect = false; effects.autoTap = 0; effects.holdTapInterval = 0.7;
   effects.startingWave = 1; effects.waveRewardMul = 1;
   effects.slotsUnlocked = 3;   // default 3 slots open from run 1
   effects.unlockedHeroTypes = new Set(['archer']);
@@ -4335,6 +4336,7 @@ function applyResearch() {
     if (e.pierce)               effects.pierce               = Math.max(effects.pierce, e.pierce);
     if (e.autoCollect)          effects.autoCollect          = true;
     if (e.autoTap)              effects.autoTap              = effects.autoTap ? Math.min(effects.autoTap, e.autoTap) : e.autoTap;
+    if (e.holdTapInterval)      effects.holdTapInterval      = Math.max(0.1, effects.holdTapInterval + e.holdTapInterval * m);
     if (e.startingWave)         effects.startingWave         = Math.max(effects.startingWave, e.startingWave);
     if (e.waveRewardMul)        effects.waveRewardMul       += e.waveRewardMul       * m;
     if (e.slotsUnlocked)        effects.slotsUnlocked        = Math.max(effects.slotsUnlocked, e.slotsUnlocked);
@@ -5295,7 +5297,7 @@ function nodeChapter(n) {
   // meta economy / regen nodes
   if (e.rpMul || e.bossBountyMul || e.bossGoldDrop || e.bossCrownAdd) return 'coffers';
   if (e.wallRegenPerWave || e.wallSpikes || e.wallDamageMul || e.lastStandMul || e.phoenixWill || e.wallMaterial) return 'fortifications';
-  if (e.synergyDmgPerHero || e.autoTap) return 'command';
+  if (e.synergyDmgPerHero || e.autoTap || e.holdTapInterval) return 'command';
   if (e.skillSlotsUnlocked || e.unlockSkill) return 'skills';
   if (e.unlockHazard || e.hazardUpgrade) return 'defenses';
   // generic effects
@@ -8788,14 +8790,15 @@ function pickupCoin(coin) {
 }
 
 // HOLD-TO-DAMAGE state — when the player presses on the canvas, we keep
-// dealing tap damage every HOLD_TAP_INTERVAL seconds to whatever enemy is
-// currently under the cursor. Player request: "I should be able to hold
-// down either my finger or mouse over an enemy and do damage to it."
+// dealing tap damage every effects.holdTapInterval seconds to whatever
+// enemy is currently under the cursor. Default 0.7s (~1.4 hits/sec) so
+// the base feel is "rapid jab" not "death ray". The Restless Hand
+// research node reduces the interval, eventually reaching ~0.18s
+// (~5.5 hits/sec) at max stacks.
 let _pointerHeld     = false;
 let _holdCanvasX     = 0;
 let _holdCanvasY     = 0;
 let _holdTapTimer    = 0;
-const HOLD_TAP_INTERVAL = 0.18;     // ~5.5 hits/sec; matches a fast manual tap
 
 canvas.addEventListener('pointermove', e => {
   const { x, y } = mouseToCanvas(e);
@@ -8846,11 +8849,12 @@ canvas.addEventListener('pointerdown', e => {
   }
   // Begin hold-tap tracking on every canvas press. The main-loop tick
   // checks whether the cursor is over an enemy and applies damage every
-  // HOLD_TAP_INTERVAL seconds — even if the cursor drifts to other enemies.
+  // effects.holdTapInterval seconds — even if the cursor drifts to
+  // other enemies.
   _pointerHeld   = true;
   _holdCanvasX   = x;
   _holdCanvasY   = y;
-  _holdTapTimer  = HOLD_TAP_INTERVAL;   // wait one tick before second hit
+  _holdTapTimer  = effects.holdTapInterval || 0.7;   // wait one tick before second hit
   const coin = coinAt(x, y);
   if (coin) { pickupCoin(coin); return; }
   const en = enemyAt(x, y);
@@ -10132,13 +10136,13 @@ function loop(t) {
     updateProjectiles(dt);
     updateEnemies(dt);
     // Hold-to-damage — while the player keeps the pointer pressed, deal a
-    // tap-damage tick every HOLD_TAP_INTERVAL seconds to whichever enemy is
-    // currently under the cursor. Re-targets if the cursor moves to a new
-    // enemy or an enemy walks under the held cursor.
+    // tap-damage tick every effects.holdTapInterval seconds to whichever
+    // enemy is currently under the cursor. Re-targets if the cursor moves
+    // to a new enemy or an enemy walks under the held cursor.
     if (_pointerHeld && !armedSkill && !gameOver) {
       _holdTapTimer -= dt;
       if (_holdTapTimer <= 0) {
-        _holdTapTimer = HOLD_TAP_INTERVAL;
+        _holdTapTimer = effects.holdTapInterval || 0.7;
         const en = enemyAt(_holdCanvasX, _holdCanvasY);
         if (en && en.hp > 0) {
           en.hp -= TAP_DAMAGE;
