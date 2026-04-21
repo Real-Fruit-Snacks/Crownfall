@@ -2731,6 +2731,11 @@
         <button id="settings-reduce-motion-btn" class="toggle off" onclick="settingsToggleReduceMotion()">Reduced Motion: OFF</button>
       </div>
       <div class="item">
+        <div class="name">Always Show Hero Ranges</div>
+        <div class="desc">Draw every hero's range circle on the field, not just the one you've clicked. Useful on mobile where the slot panel covers the heroes.</div>
+        <button id="settings-always-ranges-btn" class="toggle off" onclick="settingsToggleAlwaysRanges()">Ranges: OFF</button>
+      </div>
+      <div class="item">
         <div class="name">Restart Tutorial</div>
         <div class="desc">Replay the onboarding tour from step one.</div>
         <button onclick="settingsRestartTutorial()">Restart Tutorial</button>
@@ -3708,6 +3713,7 @@ let openSlot = null;
 let autoTapTimer = 0;     // Sentry Marksmen research — ticks down every frame
 let gameSpeed = 1;        // 1x / 2x / 3x — multiplies dt in the main loop
 let reducedMotion = false;// Settings toggle — suppresses screen shake / damage flash
+let alwaysShowRanges = false; // Settings toggle — draw every hero's range ring, not just the selected slot's
 
 // ---------- wall ----------
 let wallHP = 100;
@@ -6527,15 +6533,18 @@ waveHudEl.addEventListener('dblclick', () => {
         spawnFloatingText(WALL_W + 12, H / 2 + 10, '+' + reward + 'g held \u00b7 W' + wave, '#a89070');
       }
     }
-    // Non-gold bookkeeping that endWave would normally do
-    totalWavesCleared++;
+    // Non-gold bookkeeping that endWave would normally do.
+    // IMPORTANT: totalWavesCleared is NOT incremented here. That was an
+    // exploit — mashing skip bumped the counter without actually killing
+    // anything, and currentRpEarned() scales with it. Credit is now given
+    // in endWave via `Math.max(totalWavesCleared, wave)` so you only get
+    // RP for waves whose enemies actually die on the field.
     if (effects.wallRegenPerWave > 0 && wallHP < effects.wallMaxHp) {
       wallHP = Math.min(effects.wallMaxHp, wallHP + effects.wallRegenPerWave);
       if (typeof updateWallHp === 'function') updateWallHp();
     }
     if (runState.dmgBuffWaves  > 0) runState.dmgBuffWaves--;
     if (runState.coinBuffWaves > 0) runState.coinBuffWaves--;
-    if (typeof bumpStat === 'function') bumpStat('totalWavesCleared', 1);
     // Transition to resting; main loop's resting branch starts the next wave
     wavePhase = 'resting';
   }
@@ -6595,7 +6604,12 @@ function endWave() {
   gold += reward;
   totalGoldEarned += reward;
   goldDirty = true;
-  totalWavesCleared++;
+  // Credit totalWavesCleared up to the current wave number — covers the
+  // case where the player skipped through several waves and ALL of their
+  // enemies finally died here. Using Math.max means mashing skip without
+  // ever killing anything doesn't inflate the count; you only get RP credit
+  // for waves whose spawned enemies actually died on the field.
+  totalWavesCleared = Math.max(totalWavesCleared, wave);
   // Wall regen from research
   if (effects.wallRegenPerWave > 0 && wallHP < effects.wallMaxHp) {
     wallHP = Math.min(effects.wallMaxHp, wallHP + effects.wallRegenPerWave);
@@ -8219,22 +8233,40 @@ function drawHeroes() {
 // knows where they can hit. Drawn between heroes and enemies so live action
 // stays visible on top of the overlay.
 function drawHeroRangeIndicator() {
-  if (!openSlot || !openSlot.filled || !openSlot.hero) return;
-  const h = openSlot.hero;
-  if (!h.range || h.range <= 0) return;     // bards / supports — skip
-  const cx = openSlot.cx + 3;                // arrows fire from cx+3
-  const cy = openSlot.cy;
-  const r  = h.range;
-  // Soft 0.6-1.0 pulse so the indicator is visible but not jarring
+  // Two modes:
+  //   1. A slot panel is open — draw ONE bright pulsing ring for that hero.
+  //   2. alwaysShowRanges is on — draw dimmer rings for ALL filled heroes so
+  //      the player can plan placement + see coverage gaps (especially on
+  //      mobile, where the hero panel covers the heroes themselves).
+  //
+  // When both conditions are true, the open slot still gets the brighter ring
+  // and the other slots get the dim overlay.
   const pulse = 0.7 + 0.3 * Math.sin(performance.now() / 320);
   ctx.save();
-  ctx.fillStyle   = `rgba(245, 216, 137, ${0.07 * pulse})`;
-  ctx.strokeStyle = `rgba(245, 216, 137, ${0.55 * pulse})`;
-  ctx.lineWidth   = 1;
-  ctx.beginPath();  ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-  ctx.setLineDash([3, 2]);
-  ctx.beginPath();  ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
-  ctx.setLineDash([]);
+  function drawOne(slot, dim) {
+    if (!slot || !slot.filled || !slot.hero) return;
+    const h = slot.hero;
+    if (!h.range || h.range <= 0) return;     // bards / supports — skip
+    const cx = slot.cx + 3;
+    const cy = slot.cy;
+    const r  = h.range;
+    const fillA   = dim ? 0.03 * pulse : 0.07 * pulse;
+    const strokeA = dim ? 0.25 * pulse : 0.55 * pulse;
+    ctx.fillStyle   = `rgba(245, 216, 137, ${fillA})`;
+    ctx.strokeStyle = `rgba(245, 216, 137, ${strokeA})`;
+    ctx.lineWidth   = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.setLineDash(dim ? [2, 3] : [3, 2]);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (alwaysShowRanges) {
+    for (const s of SLOTS) {
+      if (openSlot && s === openSlot) continue;   // openSlot gets the bright pass below
+      drawOne(s, /* dim */ true);
+    }
+  }
+  if (openSlot && openSlot.filled) drawOne(openSlot, /* dim */ false);
   ctx.restore();
 }
 
@@ -10564,6 +10596,14 @@ window.openSettings  = function () {
     rmBtn.classList.toggle('on', on);
     rmBtn.classList.toggle('off', !on);
   }
+  // Always-show-ranges toggle reflects current state
+  const arBtn = document.getElementById('settings-always-ranges-btn');
+  if (arBtn) {
+    const on = !!alwaysShowRanges;
+    arBtn.textContent = on ? 'Ranges: ON' : 'Ranges: OFF';
+    arBtn.classList.toggle('on', on);
+    arBtn.classList.toggle('off', !on);
+  }
 };
 window.closeSettings = function () {
   settingsOverlayEl.classList.remove('show');
@@ -10614,6 +10654,17 @@ window.settingsToggleReduceMotion = function () {
     btn.textContent = reducedMotion ? 'Reduced Motion: ON' : 'Reduced Motion: OFF';
     btn.classList.toggle('on',  reducedMotion);
     btn.classList.toggle('off', !reducedMotion);
+  }
+  Audio.sfx.click && Audio.sfx.click();
+};
+window.settingsToggleAlwaysRanges = function () {
+  alwaysShowRanges = !alwaysShowRanges;
+  try { localStorage.setItem('castleAlwaysShowRanges', alwaysShowRanges ? '1' : '0'); } catch {}
+  const btn = document.getElementById('settings-always-ranges-btn');
+  if (btn) {
+    btn.textContent = alwaysShowRanges ? 'Ranges: ON' : 'Ranges: OFF';
+    btn.classList.toggle('on',  alwaysShowRanges);
+    btn.classList.toggle('off', !alwaysShowRanges);
   }
   Audio.sfx.click && Audio.sfx.click();
 };
@@ -10831,6 +10882,10 @@ window.settingsWipe = function () {
   // Load reduced-motion preference here too — same lifecycle as gameSpeed
   try {
     if (localStorage.getItem('castleReducedMotion') === '1') reducedMotion = true;
+  } catch {}
+  // Always-show-hero-ranges preference
+  try {
+    if (localStorage.getItem('castleAlwaysShowRanges') === '1') alwaysShowRanges = true;
   } catch {}
 })();
 function refreshSpeedBtn() {
