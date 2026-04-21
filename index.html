@@ -435,6 +435,17 @@
     image-rendering: pixelated;
     background: #6d9438;     /* match field grass tone */
     box-shadow: inset 0 0 0 2px #1a0c00;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  /* Real-sprite snapshot — the offscreen canvas is 32x28; scale it up with
+     pixelated rendering so the chunky pixels stay sharp. */
+  .bestiary-row .be-portrait-img {
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    object-fit: contain;
+    display: block;
   }
   .bestiary-row .be-text { min-width: 0; }
   .bestiary-row .be-name {
@@ -2896,8 +2907,12 @@
   </div>
 <script>
 // ---------- canvas + scaling (responsive) ----------
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+// `canvas` / `ctx` are LET (not const) so the Bestiary can briefly hijack
+// them to render real enemy sprites onto small offscreen canvases (then
+// restore). All draw helpers use these globals so the swap reaches every
+// path without a wider refactor.
+let canvas = document.getElementById('game');
+let ctx = canvas.getContext('2d');
 
 // =====================================================================
 //  AUDIO — synth-only SFX + simple medieval ambient music (no assets)
@@ -8712,8 +8727,62 @@ const ENEMY_INFO = {
   ram:      { name: 'Battering Ram',   trait: 'Siege engine. Massive HP and devastating wall damage \u2014 about 10% of an obsidian wall per hit.', threat: 'Severe' }
 };
 
-// Pixel-art SVG portraits for the Bestiary. 16x16 viewBox, rendered crisp.
-// Same chunky 1-px outline + body + highlight style as the in-canvas sprites.
+// renderEnemyPortrait — temporarily hijacks the global `canvas` / `ctx` so
+// the real in-game drawGoblin() pipeline renders the sprite onto a small
+// offscreen canvas. Returns a data URL so the Bestiary <img> can use it as
+// a portrait. Without this, the bestiary used hand-rolled SVG icons that
+// drifted from the actual sprite art.
+function renderEnemyPortrait(kind, opts) {
+  opts = opts || {};
+  const cw = 32, ch = 28;     // logical canvas size (ram needs ~24 wide; allow margin)
+  const off = document.createElement('canvas');
+  off.width = cw; off.height = ch;
+  const offCtx = off.getContext('2d');
+  offCtx.imageSmoothingEnabled = false;
+  // Hijack globals so drawGoblin draws into our offscreen canvas
+  const oldCanvas = canvas, oldCtx = ctx;
+  canvas = off;
+  ctx    = offCtx;
+  // Construct a clean, animation-free fake enemy. Full HP suppresses the HP
+  // bar; phase=0 freezes any phase-keyed wobble; status timers all zero.
+  const fake = {
+    kind,
+    x: cw / 2,                  // center horizontally
+    y: ch - 6,                  // anchor "feet" near bottom
+    phase: 0,
+    lungeT: 0,
+    isBoss: false,
+    hp: 100, maxHp: 100,
+    hitFlash: 0,
+    stuckArrows: [],
+    auraShield: false,
+    burnT: 0, slowT: 0, poisonStacks: 0, bleedT: 0, stunT: 0, hexT: 0,
+    sizeMul: 1,
+    armor: 0,
+    auraRadius: 0,
+    healRadius: 0
+  };
+  try { drawGoblin(fake); }
+  catch (e) { /* defensive — fall back to empty if any draw helper trips */ }
+  // Restore globals
+  canvas = oldCanvas;
+  ctx    = oldCtx;
+  return off.toDataURL();
+}
+
+// Built lazily on first Bestiary open so the page-load cost stays tiny.
+let _enemyPortraitCache = null;
+function getEnemyPortraitURL(kind) {
+  if (!_enemyPortraitCache) _enemyPortraitCache = {};
+  if (!_enemyPortraitCache[kind]) {
+    _enemyPortraitCache[kind] = renderEnemyPortrait(kind);
+  }
+  return _enemyPortraitCache[kind];
+}
+
+// Legacy SVG portraits — kept as a safety net for the case where canvas
+// hijack fails (e.g. a draw helper changes shape unexpectedly). Only used
+// if renderEnemyPortrait throws and the cache lookup returns null.
 const ENEMY_PORTRAITS = {
   goblin: `<svg viewBox="0 0 16 16" shape-rendering="crispEdges" width="100%" height="100%">
     <g fill="#1a3a18"><rect x="5" y="2" width="6" height="1"/><rect x="4" y="3" width="1" height="3"/><rect x="11" y="3" width="1" height="3"/><rect x="3" y="6" width="1" height="6"/><rect x="12" y="6" width="1" height="6"/><rect x="4" y="12" width="1" height="2"/><rect x="11" y="12" width="1" height="2"/><rect x="5" y="14" width="2" height="1"/><rect x="9" y="14" width="2" height="1"/></g>
@@ -10299,10 +10368,18 @@ function renderBestiary() {
   list.innerHTML = order.map(kind => {
     const info = ENEMY_INFO[kind];
     if (!info) return '';
-    const portrait = ENEMY_PORTRAITS[kind] || '';
+    // Try the real game sprite first; fall back to the legacy SVG icon if
+    // the canvas hijack ever misbehaves.
+    let portraitHTML;
+    try {
+      const url = getEnemyPortraitURL(kind);
+      portraitHTML = `<img class="be-portrait-img" alt="${info.name}" src="${url}">`;
+    } catch (e) {
+      portraitHTML = ENEMY_PORTRAITS[kind] || '';
+    }
     const threatClass = (info.threat || 'low').toLowerCase();
     return `<div class="bestiary-row">
-      <div class="be-portrait">${portrait}</div>
+      <div class="be-portrait">${portraitHTML}</div>
       <div class="be-text">
         <div class="be-name">${info.name}</div>
         <div class="be-trait">${info.trait}</div>
