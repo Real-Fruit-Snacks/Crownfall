@@ -316,6 +316,26 @@
   }
   #pause-btn:active { transform: translate(1px, 1px); box-shadow: inset 0 0 0 2px #6a4528, inset 0 0 0 4px #1a0c00, 2px 2px 0 0 rgba(0,0,0,0.78); }
   #pause-btn svg { image-rendering: pixelated; }
+  /* Prestige-unlock pulse — draws the eye to the pause button the first time
+     prestige becomes available. Removed when the player opens prestige. */
+  #pause-btn.prestige-ready {
+    box-shadow: inset 0 0 0 2px #f5d889, inset 0 0 0 4px #1a0c00, 4px 4px 0 0 rgba(0,0,0,0.78), 0 0 12px 2px rgba(255,208,96,0.6);
+    animation: pausePrestigePulse 1.3s ease-in-out infinite;
+  }
+  #pause-btn.prestige-ready::after {
+    content: '\265B';
+    position: absolute; top: -6px; right: -6px;
+    background: #f5d889; color: #2a1a08;
+    width: 16px; height: 16px; border-radius: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'VT323', monospace; font-size: 14px; font-weight: bold;
+    box-shadow: 0 0 0 2px #1a0c00;
+    pointer-events: none;
+  }
+  @keyframes pausePrestigePulse {
+    0%,100% { box-shadow: inset 0 0 0 2px #f5d889, inset 0 0 0 4px #1a0c00, 4px 4px 0 0 rgba(0,0,0,0.78), 0 0 8px 1px rgba(255,208,96,0.5); }
+    50%     { box-shadow: inset 0 0 0 2px #ffeab0, inset 0 0 0 4px #1a0c00, 4px 4px 0 0 rgba(0,0,0,0.78), 0 0 16px 4px rgba(255,208,96,0.8); }
+  }
 
   /* STATS / ACHIEVEMENTS — Hall of Records */
   #stats-overlay {
@@ -3737,12 +3757,29 @@ function currentRpEarned() {
   const fromBosses = Math.floor(effectiveCleared / 10);
   const fromKills  = Math.floor(totalKills / 40);   // kills stay run-only — actual effort
   const base = fromWaves + fromBosses + fromKills;
-  const scaled = Math.floor(base * (effects.rpMul || 1));
+  let scaled = Math.floor(base * (effects.rpMul || 1));
+  // Endless Zone — runs that pushed into wave 50+ earn a 1.5x RP multiplier
+  // on the entire run's banking. Rewards depth-over-breadth and gives the
+  // player tangible compound shards to spend on prestige.
+  if (effectiveCleared >= 50) {
+    scaled = Math.floor(scaled * 1.5);
+  }
   // Prestige "Scholar's Mind" adds flat RP per run (stacks)
   return Math.max(0, scaled + (runState.rpBonus || 0) + (effects.rpFlatBonus || 0));
 }
 
 let pendingNewRun = false;
+
+// Prestige: Bank Vault — at end of run, stash 25% of unspent gold so the next
+// run starts with it. Clobbers any prior stash (single-shot, no compounding).
+// Daily runs don't stash (the daily is a one-off score attempt).
+function bankVaultStash() {
+  if (!effects.bankVaultEnabled) return;
+  if (dailyMode) return;
+  const stash = Math.floor(Math.max(0, gold) * 0.25);
+  prestige.bankedGold = stash;
+  savePrestige();
+}
 
 function triggerGameOver() {
   if (gameOver) return;
@@ -3753,6 +3790,7 @@ function triggerGameOver() {
     finishDailyRun(/* via wall breach */);
     return;
   }
+  bankVaultStash();
   const rpEarned     = currentRpEarned();
   const crownsEarned = runState.crownsThisRun || 0;
   research.rp           += rpEarned;
@@ -3760,6 +3798,10 @@ function triggerGameOver() {
   research.crowns       += crownsEarned;
   research.totalCrowns  += crownsEarned;
   saveResearch();
+  // Discoverability: fire the prestige toast the first time the player crosses
+  // the 500-totalRp threshold (runs back-to-back against saveResearch so the
+  // flag persists even if the browser is closed mid-session).
+  if (typeof maybeFirePrestigeUnlockToast === 'function') maybeFirePrestigeUnlockToast();
   bumpStat('totalRuns', 1);
   bumpStat('totalGoldEarned', totalGoldEarned);
   document.getElementById('go-wave').textContent  = wave;
@@ -3784,6 +3826,7 @@ function endRunForResearch() {
     return;
   }
   gameOver = true;
+  bankVaultStash();
   const rpEarned     = currentRpEarned();
   const crownsEarned = runState.crownsThisRun || 0;
   research.rp           += rpEarned;
@@ -3791,6 +3834,7 @@ function endRunForResearch() {
   research.crowns       += crownsEarned;
   research.totalCrowns  += crownsEarned;
   saveResearch();
+  if (typeof maybeFirePrestigeUnlockToast === 'function') maybeFirePrestigeUnlockToast();
   bumpStat('totalRuns', 1);
   bumpStat('totalGoldEarned', totalGoldEarned);
   pendingNewRun = true;
@@ -3932,6 +3976,13 @@ window.resetRun = function (opts) {
   particles.length = 0;
   coins.length = 0;
   gold = effects.startGold;
+  // Prestige: Bank Vault — consume any banked gold carried over from a prior
+  // run's death. Single-shot: the stash clears on spend, no compounding.
+  if (effects.bankVaultEnabled && prestige.bankedGold > 0) {
+    gold += prestige.bankedGold;
+    prestige.bankedGold = 0;
+    savePrestige();
+  }
   totalKills = 0;
   totalGoldEarned = 0;
   totalWavesCleared = 0;
@@ -4197,7 +4248,12 @@ let research = {
   rp: 0, totalRp: 0, crowns: 0, totalCrowns: 0,
   purchased:    new Set(['root']),
   disabled:     new Set(),     // owned + toggleable nodes the player has switched OFF
-  repeatCounts: {}             // current stack count per repeatable node id
+  repeatCounts: {},            // current stack count per repeatable node id
+  // Discoverability flags — one-shot toasts that fire the first time a threshold
+  // is crossed. Review feedback: JohnSmith88 missed the prestige menu entirely.
+  sawPrestigeUnlock:   false,  // true after the big "PRESTIGE UNLOCKED" toast has fired
+  openedPrestigeOnce:  false,  // clears the pause-btn pulse badge; persists across reloads
+  reachedEndless:      false   // true after wave 50 milestone popup has fired
 };
 
 // ---------- PRESTIGE ----------
@@ -4208,11 +4264,27 @@ let prestige = {
   shards:             0,   // current spendable shards
   totalShardsEarned:  0,   // lifetime shards
   prestigeCount:      0,   // number of times prestiged
-  purchased:          {}   // { bonusId: stackCount }
+  purchased:          {},  // { bonusId: stackCount }
+  // Bank Vault — 25% of unspent gold at death carries over. Consumed at next
+  // run start; never negative. Separate field so save migration is additive.
+  bankedGold:         0,
+  // Shard formula depth bonus — deepest wave cleared across all lifetime runs.
+  // Updated on wave-clear; persists across prestige (it's a lifetime record).
+  deepestWave:        0
 };
 const PRESTIGE_UNLOCK_RP = 500;   // totalRp threshold to unlock the feature
-function prestigeShardsFor(totalRp) {
-  return Math.max(1, Math.floor(Math.sqrt(totalRp / 50)));
+// Shard award formula: base from lifetime RP + depth bonus from best wave
+// ever cleared + Endless March per prestige cycle. Rewards breadth (many
+// runs = RP pile), depth (one deep run = standalone bonus), AND compounding
+// (more prestiges = more bonus from Endless March). Deepest-wave tracked in
+// prestige state; Endless March stack comes from effects (reapplied each load).
+function prestigeShardsFor(totalRp, deepestWave) {
+  const base  = Math.max(1, Math.floor(Math.sqrt((totalRp || 0) / 50)));
+  const depth = Math.floor(Math.max(0, deepestWave || 0) / 10);
+  // Endless March: +N shards per lifetime prestige cycle (N = stacks, currently 0 or 1).
+  const march = (typeof effects !== 'undefined' && effects.endlessMarchShards)
+              ? effects.endlessMarchShards * (prestige.prestigeCount || 0) : 0;
+  return base + depth + march;
 }
 function loadPrestige() {
   try {
@@ -4222,6 +4294,8 @@ function loadPrestige() {
     prestige.shards            = Math.max(0, p.shards            || 0);
     prestige.totalShardsEarned = Math.max(0, p.totalShardsEarned || 0);
     prestige.prestigeCount     = Math.max(0, p.prestigeCount     || 0);
+    prestige.bankedGold        = Math.max(0, Math.floor(p.bankedGold  || 0));
+    prestige.deepestWave       = Math.max(0, Math.floor(p.deepestWave || 0));
     // Defensive: must be a plain object (not an array, not corrupt). Coerce stack
     // counts to safe integers and clamp to each bonus's maxStacks so a bad import
     // can't grant infinite damage etc.
@@ -4245,7 +4319,10 @@ const PRESTIGE_BONUSES = [
     effect: { startGold: 50 } },
   { id: 'veteranSquad',    name: 'Veteran Squad',     cost: 2,  desc: 'Slot 1 starts each run with an Archer already hired.',
     effect: { autoHireSlot0: true } },
-  { id: 'sharpenedEdge',   name: 'Sharpened Edge',    cost: 3,  desc: '+5% hero damage (stacks up to 5).', maxStacks: 5,
+  // Sharpened Edge buffed: max stacks 5 -> 10 (+25% -> +50% total). Review
+  // feedback: fully-maxed prestige tree wasn't pushing past the wave 40-50
+  // HP wall; doubling the cap gives dedicated players a real scaling lever.
+  { id: 'sharpenedEdge',   name: 'Sharpened Edge',    cost: 3,  desc: '+5% hero damage (stacks up to 10).', maxStacks: 10,
     effect: { dmgMul: 0.05 } },
   { id: 'quickCoffers',    name: 'Quick Coffers',     cost: 3,  desc: '+10% wave-clear gold (stacks up to 5).', maxStacks: 5,
     effect: { waveRewardMul: 0.10 } },
@@ -4259,8 +4336,33 @@ const PRESTIGE_BONUSES = [
     effect: { startingWave: 5 } },
   { id: 'goldenTouch',     name: 'Golden Touch',      cost: 10, desc: 'Base kill-gold permanently doubled.',
     effect: { killGoldMul: 2 } },
-  { id: 'crownedLegacy',   name: 'Crowned Legacy',    cost: 10, desc: '+1% hero damage per prior prestige (stacks up to 5).', maxStacks: 5,
-    effect: { dmgMulPerPrestige: 0.01 } }
+  // Crowned Legacy buffed: +1% -> +2% per prestige per stack. With 10 prior
+  // prestiges + 5 stacks that's +100% dmg (was +50%). Real compounding
+  // reward for players who prestige often.
+  { id: 'crownedLegacy',   name: 'Crowned Legacy',    cost: 10, desc: '+2% hero damage per prior prestige (stacks up to 5).', maxStacks: 5,
+    effect: { dmgMulPerPrestige: 0.02 } },
+  // ----- BATCH 1 expansions (Commit 1) -----
+  // Empire's Reach: scales with run depth past wave 20. Each stack adds
+  // +0.5% dmg per wave past 20, so 3 stacks x 30 waves past the threshold
+  // = +45% dmg at wave 50. Solves the "lategame DPS wall" review feedback
+  // without nerfing enemies.
+  { id: 'empiresReach',    name: 'Empire\u2019s Reach',  cost: 8,  desc: '+0.5% hero damage per wave cleared past 20 (stacks up to 3).', maxStacks: 3,
+    effect: { empiresReachStack: 1 } },
+  // Endless March: +1 bonus Shard per lifetime prestige cycle. A player
+  // who's prestiged 10 times gets +10 shards on top of the sqrt formula.
+  // Compounds returns so deeper into the meta-loop pays bigger.
+  { id: 'endlessMarch',    name: 'Endless March',     cost: 12, desc: '+1 bonus Crown Shard awarded per lifetime prestige cycle.',
+    effect: { endlessMarchShards: 1 } },
+  // Hunter's Mark: first hit on each enemy marks it; subsequent hits deal
+  // +15% damage. Tactical flavor — rewards focus-firing one target at a time
+  // rather than spreading attention across a wave.
+  { id: 'huntersMark',     name: 'Hunter\u2019s Mark',   cost: 8,  desc: 'First hit marks enemies; subsequent hits deal +15% damage.',
+    effect: { huntersMark: true } },
+  // Bank Vault: 25% of unspent gold at death carries to next run's starting
+  // gold. Turns "I saved up 40k and died" from pure loss into seed capital.
+  // Reset on new run (spent) — not compound-interest infinite storage.
+  { id: 'bankVault',       name: 'Bank Vault',        cost: 15, desc: '25% of your unspent gold at run end carries to the next run.',
+    effect: { bankVault: true } }
 ];
 // Per-run flags reset each run (not persisted)
 let runState = {
@@ -4497,6 +4599,11 @@ function applyResearch() {
   effects.autoHireSlot0 = false;
   effects.killGoldMul   = 1;
   effects.rpFlatBonus   = 0;
+  // Batch 1 prestige fields (new): per-wave scaling, shard mods, flags.
+  effects.empiresReachStacks = 0;   // 0..3 — read by effectiveHeroDamage each frame
+  effects.endlessMarchShards = 0;   // 0 or 1 — read by prestigeShardsFor caller path
+  effects.huntersMark        = false;
+  effects.bankVaultEnabled   = false;
   for (const b of PRESTIGE_BONUSES) {
     const stacks = prestige.purchased[b.id] || 0;
     if (stacks === 0) continue;
@@ -4511,6 +4618,11 @@ function applyResearch() {
     if (pe.autoHireSlot0)  effects.autoHireSlot0 = true;
     if (pe.killGoldMul)    effects.killGoldMul   *= pe.killGoldMul;          // multiplicative
     if (pe.dmgMulPerPrestige) effects.dmgMul     += pe.dmgMulPerPrestige * stacks * prestige.prestigeCount;
+    // Batch 1
+    if (pe.empiresReachStack)  effects.empiresReachStacks += pe.empiresReachStack * stacks;
+    if (pe.endlessMarchShards) effects.endlessMarchShards += pe.endlessMarchShards * stacks;
+    if (pe.huntersMark)        effects.huntersMark        = true;
+    if (pe.bankVault)          effects.bankVaultEnabled   = true;
   }
   // Apply multiplicative killGold AFTER research additions
   effects.killGold = Math.max(1, Math.floor(effects.killGold * effects.killGoldMul));
@@ -4523,7 +4635,10 @@ function saveResearch() {
       crowns: research.crowns, totalCrowns: research.totalCrowns,
       purchased:    [...research.purchased],
       disabled:     [...research.disabled],
-      repeatCounts: research.repeatCounts
+      repeatCounts: research.repeatCounts,
+      sawPrestigeUnlock:  !!research.sawPrestigeUnlock,
+      openedPrestigeOnce: !!research.openedPrestigeOnce,
+      reachedEndless:     !!research.reachedEndless
     }));
   } catch {}
 }
@@ -5209,6 +5324,43 @@ let _achPopupShown = false;
 let _achAutoTimer  = null;
 const ACH_AUTO_DISMISS_MS = 3500;
 
+// Fires once the first time prestige becomes available. Review feedback:
+// JohnSmith88 played hours before realising the prestige menu existed — the
+// gate was quietly unlocking with no signal. Now it pops a toast that sends
+// the player straight to the pause menu. Reuses the achievement popup path.
+function maybeFirePrestigeUnlockToast() {
+  if (!research || research.sawPrestigeUnlock) return;
+  if (typeof prestigeIsUnlocked !== 'function' || !prestigeIsUnlocked()) return;
+  research.sawPrestigeUnlock = true;
+  try { saveResearch(); } catch {}
+  showAchievementToast({
+    name: '\u2655 PRESTIGE UNLOCKED',
+    desc: 'Open the Pause menu \u2192 Prestige. Wipe research for Crown Shards that buy permanent bonuses.'
+  });
+  // Glowing badge on the pause button until the player opens prestige once.
+  applyPrestigeReadyBadge();
+}
+// Toggled from two places: maybeFirePrestigeUnlockToast (on first unlock) and
+// on load / startup when the flag is already set but prestige has never been
+// opened. Cleared by openPrestige().
+function applyPrestigeReadyBadge() {
+  const btn = document.getElementById('pause-btn');
+  if (btn) btn.classList.add('prestige-ready');
+}
+function clearPrestigeReadyBadge() {
+  const btn = document.getElementById('pause-btn');
+  if (btn) btn.classList.remove('prestige-ready');
+}
+
+// Fires once the first time the player clears wave 50. Flags lategame territory
+// and flips on the 1.5x late-wave RP multiplier used in currentRpEarned().
+function showEndlessMilestone() {
+  showAchievementToast({
+    name: '\uD83D\uDC51 ENDLESS ZONE REACHED',
+    desc: 'From here every wave banks 1.5x RP. Die, Prestige, and return stronger.'
+  });
+}
+
 function showAchievementToast(a) {
   // Queue, then drain
   _achQueue.push(a);
@@ -5330,6 +5482,10 @@ function loadResearch() {
       if (clamped > 0) research.repeatCounts[n.id] = clamped;
     }
     research.purchased.add('root');
+    // Discoverability flags — default false for old saves; no migration needed.
+    research.sawPrestigeUnlock  = !!d.sawPrestigeUnlock;
+    research.openedPrestigeOnce = !!d.openedPrestigeOnce;
+    research.reachedEndless     = !!d.reachedEndless;
   } catch {}
 }
 
@@ -6610,6 +6766,20 @@ function endWave() {
   // ever killing anything doesn't inflate the count; you only get RP credit
   // for waves whose spawned enemies actually died on the field.
   totalWavesCleared = Math.max(totalWavesCleared, wave);
+  // Lifetime deepest-wave watermark — feeds the prestige shard depth bonus.
+  // Updated on every wave-clear so pushing past your previous record shows up
+  // instantly on the prestige screen.
+  if (wave > (prestige.deepestWave || 0)) {
+    prestige.deepestWave = wave;
+    savePrestige();
+  }
+  // Endless Zone milestone — fires once the first time a player clears wave 50.
+  // Also flips on the 1.5x late-wave RP multiplier used in endRunForResearch().
+  if (wave >= 50 && !research.reachedEndless) {
+    research.reachedEndless = true;
+    saveResearch();
+    if (typeof showEndlessMilestone === 'function') showEndlessMilestone();
+  }
   // Wall regen from research
   if (effects.wallRegenPerWave > 0 && wallHP < effects.wallMaxHp) {
     wallHP = Math.min(effects.wallMaxHp, wallHP + effects.wallRegenPerWave);
@@ -7959,6 +8129,12 @@ function renderPanel(s) {
 }
 
 function renderImbueSection(s, h) {
+  // Support heroes (Bard) don't fire projectiles — no imbue path applies.
+  // Previously showed a dead-end "Unlock Bard Alchemy" message pointing at a
+  // node that was never created (Bards are deliberately excluded from the
+  // Alchemy research tree). Review feedback flagged this as confusing.
+  const heroType = HERO_TYPES[h.type];
+  if (heroType && heroType.isSupport) return '';
   if (h.element) {
     const el = ELEMENTS[h.element];
     return `
@@ -8360,6 +8536,13 @@ function effectiveHeroDamage(h) {
   }
   // Mid-run event: temporary damage buff
   if (runState.dmgBuffWaves > 0) dmg *= (1 + runState.dmgBuffValue);
+  // Prestige: Empire's Reach — +0.5% per stack per wave cleared past 20.
+  // Scales lategame DPS as the run goes deeper. At wave 50 with 3 stacks:
+  // 3 * 0.5% * 30 = +45% damage. Zero effect before wave 21.
+  if (effects.empiresReachStacks > 0) {
+    const pastTwenty = Math.max(0, (wave || 0) - 20);
+    if (pastTwenty > 0) dmg *= (1 + 0.005 * effects.empiresReachStacks * pastTwenty);
+  }
   return dmg;
 }
 
@@ -8514,7 +8697,13 @@ function updateProjectiles(dt) {
         if (p.hitTargets.has(e)) continue;  // already hit by this projectile
         const dx = e.x - p.x;
         const dy = (e.y - 3) - p.y;
-        if (dx * dx + dy * dy <= 25) {
+        // Hit radius scales with enemy size so big bosses (ram, sizeMul 1.5)
+        // get a proportionally larger hitbox. Review feedback flagged that
+        // fast-attacking heroes would skim past targets at certain angles —
+        // the old flat 5px radius was too tight. 6px base + size scaling.
+        const hitR  = 6 * (e.sizeMul || 1);
+        const hitR2 = hitR * hitR;
+        if (dx * dx + dy * dy <= hitR2) {
           // SHIELDED: archer arrows ricochet off the shield — no damage, no stick, no pierce
           // Crossbow bolts pierce shields; everything else (cannons / mage chains) bypasses too
           if (e.kind === 'shielded' && p.type === 'archer') {
@@ -9340,7 +9529,15 @@ function applyElement(e, elementId, srcDmg) {
 
 // Final damage after armor, witch aura, and Hex vulnerability — heroes still see at least 1 dmg per hit
 function applyDamage(e, raw) {
-  let d = raw - (e.armor || 0);
+  // Prestige: Hunter's Mark — first hit on each enemy marks it; all SUBSEQUENT
+  // hits deal +15% damage. First hit is unmodified but flips the flag. Applied
+  // pre-armor so chunky-armored targets don't eat the bonus.
+  let base = raw;
+  if (effects.huntersMark) {
+    if (e.marked) base *= 1.15;
+    else          e.marked = true;
+  }
+  let d = base - (e.armor || 0);
   if (e.auraShield) d *= 0.5;
   if (e.hexT > 0)   d *= 1.25;
   d = Math.max(1, Math.floor(d));
@@ -10783,8 +10980,10 @@ window.settingsWipe = function () {
       } catch {}
       // Reset in-memory state to fresh defaults
       research  = { rp: 0, totalRp: 0, crowns: 0, totalCrowns: 0,
-                    purchased: new Set(['root']), disabled: new Set(), repeatCounts: {} };
-      prestige  = { shards: 0, totalShardsEarned: 0, prestigeCount: 0, purchased: {} };
+                    purchased: new Set(['root']), disabled: new Set(), repeatCounts: {},
+                    sawPrestigeUnlock: false, openedPrestigeOnce: false, reachedEndless: false };
+      prestige  = { shards: 0, totalShardsEarned: 0, prestigeCount: 0, purchased: {},
+                    bankedGold: 0, deepestWave: 0 };
       if (typeof stats !== 'undefined') {
         for (const k in stats) { if (typeof stats[k] === 'number') stats[k] = 0; }
       }
@@ -10913,6 +11112,12 @@ function prestigeIsUnlocked() {
 
 window.openPrestige = function () {
   if (!prestigeIsUnlocked()) return;
+  // First-open clears the pause-btn pulse badge permanently (via saved flag).
+  if (!research.openedPrestigeOnce) {
+    research.openedPrestigeOnce = true;
+    try { saveResearch(); } catch {}
+  }
+  if (typeof clearPrestigeReadyBadge === 'function') clearPrestigeReadyBadge();
   renderPrestige();
   prestigeEl.classList.add('show');
   Audio.sfx.click && Audio.sfx.click();
@@ -10928,14 +11133,18 @@ window.closePrestige = function () {
 function renderPrestige() {
   document.getElementById('pr-shards').textContent = prestige.shards;
   document.getElementById('pr-count').textContent  = prestige.prestigeCount;
-  const wouldGive = prestigeShardsFor(research.totalRp || 0);
+  const wouldGive = prestigeShardsFor(research.totalRp || 0, prestige.deepestWave || 0);
   document.getElementById('pr-next').textContent = '+' + wouldGive + ' shards';
-  // Blurb explaining current state
+  // Blurb explaining current state + the three shard-earning levers.
   const blurb = document.getElementById('prestige-blurb');
+  const depthBonus = Math.floor(Math.max(0, prestige.deepestWave || 0) / 10);
+  const depthLine  = depthBonus > 0
+    ? ' Deepest wave <span class="hl">' + (prestige.deepestWave || 0) + '</span> is giving you <span class="hl">+' + depthBonus + '</span> bonus shards.'
+    : ' Push past wave 10 for a depth bonus on shards (one extra shard per 10 waves deeper you reach).';
   if (prestige.prestigeCount === 0) {
-    blurb.innerHTML = '<span class="hl">First prestige!</span> Prestiging resets all research, RP, Crowns, and purchased nodes. In exchange you earn <span class="hl">Crown Shards</span> to spend on permanent bonuses that apply to every future run. Stats and achievements are kept.';
+    blurb.innerHTML = '<span class="hl">First prestige!</span> Prestiging resets all research, RP, Crowns, and purchased nodes. In exchange you earn <span class="hl">Crown Shards</span> to spend on permanent bonuses that apply to every future run. Stats and achievements are kept.' + depthLine;
   } else {
-    blurb.innerHTML = 'You have prestiged <span class="hl">' + prestige.prestigeCount + '</span> time' + (prestige.prestigeCount === 1 ? '' : 's') + '. <span class="warn">Prestiging again wipes your current research and Crowns.</span> Stats and previously-purchased prestige bonuses are kept.';
+    blurb.innerHTML = 'You have prestiged <span class="hl">' + prestige.prestigeCount + '</span> time' + (prestige.prestigeCount === 1 ? '' : 's') + '. <span class="warn">Prestiging again wipes your current research and Crowns.</span> Stats and previously-purchased prestige bonuses are kept.' + depthLine;
   }
   // Tree
   const tree = document.getElementById('prestige-tree');
@@ -10983,7 +11192,7 @@ window.buyPrestigeBonus = function (id) {
 };
 
 window.doPrestige = function () {
-  const gain = prestigeShardsFor(research.totalRp || 0);
+  const gain = prestigeShardsFor(research.totalRp || 0, prestige.deepestWave || 0);
   if ((research.totalRp || 0) < PRESTIGE_UNLOCK_RP) return;
   window.showConfirm({
     title:    'Prestige?',
@@ -11151,7 +11360,13 @@ loadStats();
 loadCommanders();
 loadPrestige();
 applyResearch();
-gold   = effects.startGold;
+// Bank Vault — if a prior run stashed gold, fold it into the starting purse
+// and clear the stash. Zero effect if bonus not owned or stash is 0.
+gold   = effects.startGold + (effects.bankVaultEnabled ? (prestige.bankedGold || 0) : 0);
+if (effects.bankVaultEnabled && prestige.bankedGold > 0) {
+  prestige.bankedGold = 0;
+  savePrestige();
+}
 wallHP = effects.wallMaxHp;
 // Prestige bonus: Veteran Squad — auto-hire slot 0 on boot if owned
 if (effects.autoHireSlot0 && SLOTS[0] && !SLOTS[0].filled && typeof makeHero === 'function') {
@@ -11159,6 +11374,14 @@ if (effects.autoHireSlot0 && SLOTS[0] && !SLOTS[0].filled && typeof makeHero ===
   SLOTS[0].hero   = makeHero('archer');
 }
 startWave(effects.startingWave || 1);
+// Returning-player badge: if prestige is unlocked but the player hasn't opened
+// it yet (maybe they crossed the threshold in a previous session and missed
+// the toast), light up the pause button now.
+if (typeof prestigeIsUnlocked === 'function' && prestigeIsUnlocked()
+    && research.sawPrestigeUnlock && !research.openedPrestigeOnce
+    && typeof applyPrestigeReadyBadge === 'function') {
+  applyPrestigeReadyBadge();
+}
 resize();
 updateUI();
 renderSkillBar();
