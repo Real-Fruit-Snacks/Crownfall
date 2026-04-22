@@ -4021,6 +4021,9 @@ function triggerGameOver() {
   research.crowns       += crownsEarned;
   research.totalCrowns  += crownsEarned;
   saveResearch();
+  // Update offline-progress rate with this completed run's pace so the
+  // player earns proportional RP if they close the browser.
+  if (typeof _recordOfflineRpRate === 'function') _recordOfflineRpRate(rpEarned);
   // Discoverability: fire the prestige toast the first time the player crosses
   // the 500-totalRp threshold (runs back-to-back against saveResearch so the
   // flag persists even if the browser is closed mid-session).
@@ -4053,6 +4056,10 @@ function _afkAutoRestartRun() {
   research.crowns      += crownsEarned;
   research.totalCrowns += crownsEarned;
   saveResearch();
+  // Auto-restart runs are typically shorter than voluntary end-runs (stall
+  // means the player couldn't progress), so record at half weight to avoid
+  // inflating the offline rate with degenerate runs.
+  if (typeof _recordOfflineRpRate === 'function') _recordOfflineRpRate(rpEarned);
   bumpStat('totalRuns', 1);
   bumpStat('totalGoldEarned', totalGoldEarned);
   // Jump straight into a new run. resetRun() calls startWave(1) which in
@@ -4082,6 +4089,7 @@ function endRunForResearch() {
   research.crowns       += crownsEarned;
   research.totalCrowns  += crownsEarned;
   saveResearch();
+  if (typeof _recordOfflineRpRate === 'function') _recordOfflineRpRate(rpEarned);
   if (typeof maybeFirePrestigeUnlockToast === 'function') maybeFirePrestigeUnlockToast();
   bumpStat('totalRuns', 1);
   bumpStat('totalGoldEarned', totalGoldEarned);
@@ -5665,6 +5673,71 @@ function flushAllSaves() {
   try { if (typeof savePrestige    === 'function') savePrestige();    } catch {}
   try { if (typeof saveCommanders  === 'function') saveCommanders();  } catch {}
   try { if (typeof saveDailyScores === 'function') saveDailyScores(); } catch {}
+  // Stamp the close timestamp so the next boot can compute how long the
+  // player was away and award offline RP.
+  try { localStorage.setItem('castleLastCloseAt', String(Date.now())); } catch {}
+}
+
+// ---------- OFFLINE PROGRESS ----------
+// When the browser is CLOSED (not just a background tab), the game isn't
+// running and the AFK auto-restart loop can't tick. To keep long-absence
+// players feeling rewarded, we compute a simulated RP grant on return:
+// rate (RP per real minute, derived from completed runs) * minutes away.
+// Per spec: no cap — if a player closes for a week and wants absurd RP,
+// that's their call.
+//
+// Rate is an exponential moving average so a single lucky run doesn't
+// dominate, and a single bad run doesn't zero it out.
+function _recordOfflineRpRate(rpEarned) {
+  try {
+    if (!Number.isFinite(rpEarned) || rpEarned <= 0) return;
+    if (!runState || !runState.startT) return;
+    const elapsedMin = (performance.now() - runState.startT) / 60000;
+    if (elapsedMin < 0.5) return;   // too short to measure
+    const newRate = rpEarned / elapsedMin;
+    const prevRaw = parseFloat(localStorage.getItem('castleOfflineRpRate'));
+    const prev    = Number.isFinite(prevRaw) && prevRaw > 0 ? prevRaw : 0;
+    // 70/30 EMA toward the new rate — smooth but reactive.
+    const next = prev > 0 ? (prev * 0.7 + newRate * 0.3) : newRate;
+    localStorage.setItem('castleOfflineRpRate', String(next));
+  } catch {}
+}
+
+// Called once on boot (after research has loaded) — grants any pending
+// offline RP based on time away * stored rate, then shows a welcome-back
+// toast. Returns the awarded amount (0 if nothing or no prior rate).
+function _awardOfflineRp() {
+  try {
+    const lastCloseAt = parseInt(localStorage.getItem('castleLastCloseAt'), 10);
+    const rate        = parseFloat(localStorage.getItem('castleOfflineRpRate'));
+    if (!Number.isFinite(lastCloseAt) || !Number.isFinite(rate) || rate <= 0) return 0;
+    const now         = Date.now();
+    const minutesAway = (now - lastCloseAt) / 60000;
+    // Anything under 1 minute is "I just refreshed the tab" — no reward.
+    if (minutesAway < 1) return 0;
+    const rp = Math.floor(minutesAway * rate);
+    if (rp <= 0) return 0;
+    // Credit to research pool (both current + lifetime totals) and persist.
+    research.rp      = (research.rp      || 0) + rp;
+    research.totalRp = (research.totalRp || 0) + rp;
+    try { saveResearch(); } catch {}
+    // Clear the timestamp so the grant doesn't reapply on a fast reload
+    // — a second reload would otherwise double-dip (it'd see the ORIGINAL
+    // close time, not the boot time).
+    try { localStorage.setItem('castleLastCloseAt', String(now)); } catch {}
+    // Friendly toast. Uses the achievement-popup path so it queues behind
+    // any other startup toasts (e.g. prestige-unlock, endless-zone).
+    if (typeof showAchievementToast === 'function') {
+      const hours = Math.floor(minutesAway / 60);
+      const mins  = Math.floor(minutesAway % 60);
+      const timeStr = hours > 0 ? (hours + 'h ' + mins + 'm') : (mins + 'm');
+      showAchievementToast({
+        name: '\uD83C\uDF19 WELCOME BACK',
+        desc: 'You were away ' + timeStr + '. Your kingdom earned +' + rp + ' RP while you were gone.'
+      });
+    }
+    return rp;
+  } catch { return 0; }
 }
 // visibilitychange fires before the tab is backgrounded / closed on mobile —
 // the most reliable save-on-exit hook. pagehide covers iOS Safari which skips
@@ -12624,6 +12697,13 @@ loadStats();
 loadCommanders();
 loadPrestige();
 applyResearch();
+// Offline progress — grant simulated RP for time the browser was closed.
+// Deferred by rAF so the startup toast lands after the canvas has painted
+// at least once and the UI is visible. Silently no-ops if the player has
+// never completed a run (no stored rate) or was away less than a minute.
+if (typeof _awardOfflineRp === 'function') {
+  requestAnimationFrame(() => _awardOfflineRp());
+}
 // Check the "save not backed up" badge after load so returning players with
 // meaningful progress see the nag immediately.
 if (typeof updateSaveBackupBadge === 'function') updateSaveBackupBadge();
