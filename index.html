@@ -299,30 +299,6 @@
   }
   #gameover button:hover { transform: translate(-1px, -1px); box-shadow: inset 0 0 0 2px #f5d889, 4px 4px 0 0 #1a0c00; }
   #gameover button:active { transform: translate(0, 0); box-shadow: inset 0 0 0 2px #a87a3e, 2px 2px 0 0 #1a0c00; }
-  /* Subtle one-liner shown under the action buttons when AFK Auto-Restart
-     is OFF, teaching the feature to players who've died a few times. Muted
-     so it doesn't compete with the stats; the bold keyword + clickable link
-     invite a click. Hidden by default; shown via JS. */
-  #gameover .go-afk-hint {
-    display: none;
-    margin: 14px 4px 0;
-    color: #8a7a60;
-    font-size: 11px;
-    line-height: 1.5;
-    letter-spacing: 0.3px;
-    font-style: italic;
-  }
-  #gameover .go-afk-hint.show { display: block; }
-  #gameover .go-afk-hint b { color: #c0b090; font-style: normal; }
-  #gameover .go-afk-hint a {
-    color: #ffd060;
-    font-style: normal;
-    cursor: pointer;
-    text-decoration: underline;
-    text-decoration-color: #8a6a20;
-    text-underline-offset: 2px;
-  }
-  #gameover .go-afk-hint a:hover { color: #fff8c0; text-decoration-color: #ffd060; }
   /* Auto-retry banner — only visible when AFK Auto-Restart is on. Pulses
      gently so it reads as an active timer, not a passive label. */
   #gameover .go-auto-retry {
@@ -2790,7 +2766,6 @@
         <button class="research-btn" onclick="gameoverOpenResearch()">Research</button>
         <button onclick="resetRun()">Try Again</button>
       </div>
-      <div class="go-afk-hint" id="go-afk-hint"></div>
     </div>
   </div>
   <div id="research-overlay">
@@ -4004,10 +3979,12 @@ let alwaysShowRanges = true; // Settings toggle — draw every hero's range ring
 // Mid-event auto-dismiss: if enabled, mid-run event popups automatically
 // close after N real seconds with NO choice picked (no reward, no penalty)
 // — lets idle / overnight players have events not block their AFK run.
-// Default OFF so active players aren't surprised by disappearing events.
-// 15s default gives enough time to read the flavor text; adjustable.
-let midEventAutoSkip    = false;
-let midEventAutoSkipSec = 15;
+// Default ON at the longest 60-second duration so active players have
+// plenty of time to read and pick, while idle players get auto-cleanup
+// for free. Players can turn it off via Settings if they want the old
+// "modal blocks forever" behavior.
+let midEventAutoSkip    = true;
+let midEventAutoSkipSec = 60;
 // AFK auto-restart: if enabled, a wave that stays in "active" phase for
 // longer than `afkAutoRestartSec` real seconds auto-ends the run, banks
 // whatever RP was earned, and immediately starts a fresh run. Commanders
@@ -4015,9 +3992,13 @@ let midEventAutoSkipSec = 15;
 // auto-dismiss events this forms a full unattended AFK loop for players
 // who want to leave the game running overnight to farm RP. No cap on
 // restart frequency or RP earned — per spec, "let players ruin it if
-// they want." Default OFF so active players don't get surprised resets.
-let afkAutoRestart    = false;
-let afkAutoRestartSec = 120;
+// they want."
+// Default ON at 600s (10 minutes) — long enough that it never fires on
+// normal play (waves typically clear in seconds to a minute), so it
+// reads as an invisible safety net for stalemates while still enabling
+// overnight farming for players who know to lower the threshold.
+let afkAutoRestart    = true;
+let afkAutoRestartSec = 600;
 // Tracks REAL-time wall clock since the current wave entered 'active'.
 // Uses baseDt (pre-gameSpeed) so 2x/3x speed doesn't skew the threshold.
 // Reset whenever wavePhase changes away from 'active'.
@@ -4144,25 +4125,7 @@ function triggerGameOver() {
   // AFK Auto-Restart ON → kick off the gameover auto-retry countdown so
   // the overnight loop survives a wall breach. Starts a 10s countdown;
   // expires → hide modal + resetRun. Cancelled by either button click.
-  // AFK OFF + player has some runs under their belt → show a subtle
-  // discoverability hint about the feature. Gated by totalRuns >= 3 so
-  // first-timers aren't cognitive-loaded on their earliest wipes.
-  const hintEl = document.getElementById('go-afk-hint');
-  if (hintEl) {
-    if (afkAutoRestart) {
-      _startGameOverAutoRetry();
-      hintEl.classList.remove('show');
-      hintEl.innerHTML = '';
-    } else if ((stats.totalRuns || 0) >= 3) {
-      hintEl.innerHTML = '\uD83D\uDCA1 Tip: enable <b>AFK Auto-Restart</b> in '
-                       + '<a onclick="(typeof openSettings===\'function\')&&openSettings()">Settings</a>'
-                       + ' to auto-retry next time &mdash; great for idle / overnight runs.';
-      hintEl.classList.add('show');
-    } else {
-      hintEl.classList.remove('show');
-      hintEl.innerHTML = '';
-    }
-  }
+  if (afkAutoRestart) _startGameOverAutoRetry();
   // Nudge the player to export a save backup once they have a few runs of progress
   if (typeof maybePromptSaveBackup === 'function') maybePromptSaveBackup();
 }
@@ -12349,18 +12312,21 @@ window.settingsWipe = function () {
   try {
     if (localStorage.getItem('castleAlwaysShowRanges') === '0') alwaysShowRanges = false;
   } catch {}
-  // Load auto-dismiss event preferences. Opt-in so default behavior
-  // (modal pauses + waits for input) matches what every existing player
-  // has been seeing.
+  // Load auto-dismiss event preferences. Explicit opt-OUT: the setting
+  // defaults to ON, and we only flip to OFF when the player has stored '0'.
+  // Missing key = keep the true default, matching the alwaysShowRanges
+  // pattern so new installs get the feature automatically.
   try {
-    if (localStorage.getItem('castleMidEventAutoSkip') === '1') midEventAutoSkip = true;
+    if (localStorage.getItem('castleMidEventAutoSkip') === '0') midEventAutoSkip = false;
     const s = parseInt(localStorage.getItem('castleMidEventAutoSkipSec'), 10);
     if (Number.isFinite(s) && s > 0 && s <= 600) midEventAutoSkipSec = s;
   } catch {}
-  // Load AFK auto-restart preferences. No max clamp on duration — if the
-  // player wants 1h stalls before restart, that's fine.
+  // Load AFK auto-restart preferences. Same explicit opt-OUT shape as
+  // above — default ON at 10 minutes unless the player has stored '0'.
+  // No max clamp on duration: if the player wants 1h stalls before
+  // restart, that's fine.
   try {
-    if (localStorage.getItem('castleAfkAutoRestart') === '1') afkAutoRestart = true;
+    if (localStorage.getItem('castleAfkAutoRestart') === '0') afkAutoRestart = false;
     const s = parseInt(localStorage.getItem('castleAfkAutoRestartSec'), 10);
     if (Number.isFinite(s) && s > 0) afkAutoRestartSec = s;
   } catch {}
