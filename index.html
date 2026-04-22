@@ -854,6 +854,48 @@
     0%, 100% { box-shadow: inset 0 0 0 2px #c83020, 2px 2px 0 0 #1a0c00; }
     50%      { box-shadow: inset 0 0 0 2px #ff5040, 2px 2px 0 0 #1a0c00, 0 0 6px rgba(255,80,64,0.45); }
   }
+  /* Sell-hero button — small red-tinted warning style next to close */
+  #panel .slot-actions {
+    display: flex; gap: 6px; margin-top: 10px;
+  }
+  #panel .slot-actions .sell-hero-btn {
+    flex: 1 1 50%;
+    background: #3a1a10;
+    color: #ffb090;
+    padding: 5px;
+    font-size: 11px;
+    box-shadow: inset 0 0 0 2px #8a3820;
+    margin: 0;
+  }
+  #panel .slot-actions .sell-hero-btn:hover:not(:disabled) {
+    background: #4a2214;
+    color: #ffd0a0;
+    box-shadow: inset 0 0 0 2px #c86040, 2px 2px 0 0 #1a0c00;
+  }
+  #panel .slot-actions .sell-hero-btn .cost { color: #ffd060; }
+  #panel .slot-actions .close {
+    flex: 1 1 50%;
+    margin-top: 0;
+  }
+  /* Priority-targeting dropdown row */
+  #panel .target-row {
+    display: flex; align-items: center; gap: 6px;
+    margin: 4px 0 2px;
+    font-size: 11px;
+  }
+  #panel .target-row label { color: #c0b090; letter-spacing: 0.5px; }
+  #panel .target-row select {
+    flex: 1;
+    background: #1a0c00;
+    color: #e8d9b8;
+    border: 0;
+    padding: 3px 4px;
+    font-family: inherit;
+    font-size: 11px;
+    box-shadow: inset 0 0 0 2px #6a4528;
+    cursor: pointer;
+  }
+  #panel .target-row select:focus { outline: 0; box-shadow: inset 0 0 0 2px #ffd060; }
   /* Broken banner inside the commander overlay — explains why automation
      is paused and how to fix it. */
   #commander-overlay .cmd-broken {
@@ -7490,6 +7532,11 @@ function makeHero(typeId, skinId) {
     type: typeId,
     name: t.name,
     damage:   dmg,
+    // baseDmg snapshots the starting damage so the +2%/level upgrade path
+    // scales with this hero's actual base (post-prestige dmgMul, class
+    // bonuses, skin bonuses) rather than a hard-coded constant. Stored so
+    // save/load preserves the intended rescale across sessions.
+    baseDmg:  dmg,
     range:    rng,
     fireRate: rate,
     cooldown: 0.4,
@@ -7497,6 +7544,17 @@ function makeHero(typeId, skinId) {
     splash, splashDmg,
     fireFlash: 0,
     lvDmg: 0, lvRng: 0, lvSpd: 0,
+    // goldSpent tracks total gold sunk into this hero (purchase + upgrades +
+    // imbues) so Sell Hero can refund 50%. Starts at purchase cost; buyHero
+    // sets it after the cost is deducted.
+    goldSpent: 0,
+    // targetPriority controls which enemy in range gets fired on.
+    //   'closest' (default) — nearest to the hero, matches pre-upgrade behavior
+    //   'first'             — enemy closest to the wall (smallest x) — kill what'll hit first
+    //   'lowHp'             — weakest current HP — finisher
+    //   'highHp'            — tankiest current HP — focus durable targets
+    //   'strongest'         — highest max HP — bosses / elites first
+    targetPriority: 'closest',
     element: null,
     skin: resolvedSkin,
     // Per-run progression: heroes earn XP for kills they land, level up,
@@ -7564,6 +7622,9 @@ window.buyHero = function (idx, typeId, skinId) {
   gold -= cost;
   s.filled = true;
   s.hero = makeHero(typeId, skinId);
+  // Seed gold-spent tracker with hire cost so Sell Hero's 50% refund
+  // includes the purchase price, not just upgrades.
+  s.hero.goldSpent = cost;
   Audio.sfx.buy();
   updateUI();
   if (typeof Tutorial !== 'undefined') Tutorial.notify('hire');
@@ -7598,6 +7659,8 @@ window.imbue = function (idx, elementId) {
   gold -= cost;
   if (hasPrimary) h.element2 = elementId;
   else            h.element  = elementId;
+  // Imbues count toward sell-refund total.
+  h.goldSpent = (h.goldSpent || 0) + cost;
   goldDirty = true;
   updateUI();
 };
@@ -7611,11 +7674,53 @@ window.upgrade = function (idx, type) {
   if (gold < cost) return;
   gold -= cost;
   h[lvKey]++;
-  if (type === 'dmg') h.damage += 1;
+  // Damage upgrade: +2% of the hero's BASE damage per level. Scaling flat
+  // (instead of flat +1) so late-wave heroes actually keep pace with enemy
+  // HP. Migrates legacy heroes that pre-date baseDmg by backfilling from
+  // the current damage value. 2% keeps each upgrade feeling chunky but
+  // bounded — 50 levels = 2x base, 100 levels = 3x base.
+  if (type === 'dmg') {
+    if (!h.baseDmg) h.baseDmg = h.damage;  // legacy migration
+    h.damage += h.baseDmg * 0.02;
+  }
   if (type === 'rng') h.range  += 20;
   if (type === 'spd') h.fireRate = Math.max(0.20, h.fireRate * 0.92);
+  // Track gold spent so Sell Hero can refund 50%.
+  h.goldSpent = (h.goldSpent || 0) + cost;
   updateUI();
   if (typeof Tutorial !== 'undefined') Tutorial.notify('upgrade');
+};
+
+// Sell the hero in this slot for a 50% refund of total gold spent
+// (hire + upgrades + imbues). Confirms first so a misclick doesn't
+// nuke a carry. Legacy heroes (saved before goldSpent tracking) fall
+// back to a rough estimate based on their current hire cost.
+window.sellHero = function (idx) {
+  const s = SLOTS[idx];
+  if (!s || !s.filled || !s.hero) return;
+  const h = s.hero;
+  // Legacy migration: if goldSpent is missing or zero on a filled hero,
+  // use the current hire cost as a floor so the refund isn't 0g.
+  let spent = h.goldSpent || 0;
+  if (spent <= 0 && HERO_TYPES[h.type]) {
+    spent = heroCost(h.type);
+  }
+  const refund = Math.floor(spent * 0.5);
+  const typeName = (HERO_TYPES[h.type] || { name: 'hero' }).name;
+  const msg = 'Sell this ' + typeName + ' for ' + refund + 'g?\n' +
+              '(50% refund of ' + spent + 'g total spent. Cannot be undone.)';
+  if (!confirm(msg)) return;
+  gold += refund;
+  goldDirty = true;
+  s.filled = false;
+  s.hero   = null;
+  Audio.sfx.buy && Audio.sfx.buy();
+  // Re-render the panel in its now-empty state so the player can immediately
+  // re-hire a different class without having to click elsewhere.
+  if (openSlot === s && typeof renderPanel === 'function') {
+    panelEl.innerHTML = renderPanel(s);
+  }
+  updateUI();
 };
 
 window.closePanel = function () {
@@ -8349,8 +8454,35 @@ function renderPanel(s) {
       <span class="stat">KILLS <b>${kills}</b></span>
     </div>
     ${isSupport ? '' : levelLine}
+    ${isSupport ? '' : renderTargetPriorityRow(s, h)}
     ${renderImbueSection(s, h)}
-    <button class="close" onclick="closePanel()">close</button>
+    <div class="row slot-actions">
+      <button class="sell-hero-btn" onclick="sellHero(${s.index})" title="Sell this hero for 50% of gold spent">
+        Sell \u00b7 <span class="cost">+${Math.floor((h.goldSpent || heroCost(h.type)) * 0.5)}g</span>
+      </button>
+      <button class="close" onclick="closePanel()">close</button>
+    </div>
+  `;
+}
+
+// Dropdown row for per-hero target priority. Support heroes (Bard) don't
+// shoot so we don't call this for them (see renderPanel gate).
+function renderTargetPriorityRow(s, h) {
+  const current = h.targetPriority || 'closest';
+  const opts = [
+    ['closest',   'Closest to hero'],
+    ['first',     'Closest to wall'],
+    ['lowHp',     'Lowest HP'],
+    ['highHp',    'Highest HP'],
+    ['strongest', 'Strongest (max HP)']
+  ].map(([val, label]) =>
+    `<option value="${val}"${val === current ? ' selected' : ''}>${label}</option>`
+  ).join('');
+  return `
+    <div class="row target-row">
+      <label for="tp-${s.index}">TARGET</label>
+      <select id="tp-${s.index}" onchange="setTargetPriority(${s.index}, this.value)">${opts}</select>
+    </div>
   `;
 }
 
@@ -8780,14 +8912,42 @@ function updateHeroes(dt) {
     h.cooldown -= dt;
     if (h.cooldown > 0) continue;
 
-    // nearest live enemy in range
+    // Pick a target from enemies in range, according to the hero's
+    // targetPriority setting (default: 'closest', original behavior).
+    // First we gather the list of valid in-range enemies once (cheap for
+    // the small N in this game), then rank by priority criterion.
     const r2 = h.range * h.range;
-    let target = null, bestD = r2;
-    for (const e of enemies) {
-      if (e.hp <= 0) continue;
-      const dx = e.x - s.cx, dy = e.y - s.cy;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < bestD) { bestD = d2; target = e; }
+    const priority = h.targetPriority || 'closest';
+    let target = null;
+    if (priority === 'closest') {
+      // Hot path — preserve original single-pass minimum for zero-cost default.
+      let bestD = r2;
+      for (const e of enemies) {
+        if (e.hp <= 0) continue;
+        const dx = e.x - s.cx, dy = e.y - s.cy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < bestD) { bestD = d2; target = e; }
+      }
+    } else {
+      // Other priorities — find best by the chosen metric within range.
+      // 'first'     : nearest to wall = smallest x (wall is on the left)
+      // 'lowHp'     : smallest current hp
+      // 'highHp'    : largest current hp
+      // 'strongest' : largest maxHp (bosses / elites)
+      let bestScore = -Infinity;
+      for (const e of enemies) {
+        if (e.hp <= 0) continue;
+        const dx = e.x - s.cx, dy = e.y - s.cy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > r2) continue;
+        let score;
+        if      (priority === 'first')     score = -e.x;                        // lower x -> higher score
+        else if (priority === 'lowHp')     score = -e.hp;                       // lower hp -> higher score
+        else if (priority === 'highHp')    score =  e.hp;
+        else if (priority === 'strongest') score =  (e.maxHp || e.hp);
+        else                               score = -d2;                         // fallback -> closest
+        if (score > bestScore) { bestScore = score; target = e; }
+      }
     }
     if (target) {
       fireArrow(s, target);
@@ -8797,6 +8957,16 @@ function updateHeroes(dt) {
     }
   }
 }
+
+// Set a hero's target priority from the UI dropdown. Validates against the
+// allowed set so bad values can't sneak in via devtools or corrupt saves.
+window.setTargetPriority = function (idx, value) {
+  const s = SLOTS[idx];
+  if (!s || !s.filled || !s.hero) return;
+  const allowed = ['closest', 'first', 'lowHp', 'highHp', 'strongest'];
+  if (!allowed.includes(value)) return;
+  s.hero.targetPriority = value;
+};
 
 // ---------- projectiles ----------
 const projectiles = [];
@@ -10053,8 +10223,12 @@ function applyElement(e, elementId, srcDmg) {
     const dps = Math.min(40, e.maxHp * 0.025);
     e.bleedDps = Math.max(e.bleedDps || 0, dps);
   } else if (elementId === 'knockback') {
-    // Push backward away from the wall; lighter on bosses
-    const push = e.isBoss ? 4 : 10;
+    // Bosses are now FULLY immune to knockback (review feedback: cannon
+    // knockback was trivializing boss fights by pushing them back further
+    // than they could advance, soft-locking the encounter). Minions and
+    // normal enemies still get the full 10px shove backward.
+    if (e.isBoss) return;
+    const push = 10;
     e.x = Math.min(W - 4, e.x + push);
     if (e.arrived && e.x > e.tx + 1) {
       // re-engage: leave arrived state and redirect toward the wall
