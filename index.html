@@ -3807,7 +3807,7 @@ let openSlot = null;
 let autoTapTimer = 0;     // Sentry Marksmen research — ticks down every frame
 let gameSpeed = 1;        // 1x / 2x / 3x — multiplies dt in the main loop
 let reducedMotion = false;// Settings toggle — suppresses screen shake / damage flash
-let alwaysShowRanges = false; // Settings toggle — draw every hero's range ring, not just the selected slot's
+let alwaysShowRanges = true; // Settings toggle — draw every hero's range ring, not just the selected slot's. Default ON so new players see hero coverage at a glance, especially on mobile where the slot panel covers heroes.
 
 // ---------- wall ----------
 let wallHP = 100;
@@ -11619,9 +11619,11 @@ window.settingsWipe = function () {
   try {
     if (localStorage.getItem('castleReducedMotion') === '1') reducedMotion = true;
   } catch {}
-  // Always-show-hero-ranges preference
+  // Always-show-hero-ranges preference — default ON. Only flip OFF if the
+  // player has explicitly disabled it (stored as '0'); missing key = keep the
+  // true default so first-time players see the color-coded range rings.
   try {
-    if (localStorage.getItem('castleAlwaysShowRanges') === '1') alwaysShowRanges = true;
+    if (localStorage.getItem('castleAlwaysShowRanges') === '0') alwaysShowRanges = false;
   } catch {}
 })();
 function refreshSpeedBtn() {
