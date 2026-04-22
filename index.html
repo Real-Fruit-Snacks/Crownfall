@@ -153,9 +153,17 @@
   #panel .hero-xp-bar .hero-xp-txt {
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
-    color: #1a0c00; font-family: 'VT323', monospace;
-    font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
-    text-shadow: 0 1px 0 rgba(255,255,255,0.25);
+    color: #fff8e0;
+    font-family: 'VT323', monospace;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+    /* Solid 1px black outline (4 directions) so the number reads clean
+       over BOTH the gold fill and the dark empty portion of the bar. */
+    text-shadow:
+       1px  1px 0 #000,
+      -1px -1px 0 #000,
+       1px -1px 0 #000,
+      -1px  1px 0 #000,
+       0    0   2px rgba(0,0,0,0.6);
   }
   #panel .stat b { color: #f5d889; font-family: 'VT323', monospace; font-size: 18px; font-weight: 400; letter-spacing: 1px; vertical-align: -1px; }
   #panel .cost { color: #f5d889; font-family: 'VT323', monospace; font-size: 18px; font-weight: 400; letter-spacing: 1px; }
@@ -291,6 +299,24 @@
   }
   #gameover button:hover { transform: translate(-1px, -1px); box-shadow: inset 0 0 0 2px #f5d889, 4px 4px 0 0 #1a0c00; }
   #gameover button:active { transform: translate(0, 0); box-shadow: inset 0 0 0 2px #a87a3e, 2px 2px 0 0 #1a0c00; }
+  /* Auto-retry banner — only visible when AFK Auto-Restart is on. Pulses
+     gently so it reads as an active timer, not a passive label. */
+  #gameover .go-auto-retry {
+    display: none;
+    margin: 14px 0 0;
+    padding: 8px 10px;
+    background: #3a2616;
+    color: #ffd060;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    box-shadow: inset 0 0 0 2px #c89030;
+    animation: goAutoPulse 1.4s ease-in-out infinite;
+  }
+  #gameover .go-auto-retry.show { display: block; }
+  @keyframes goAutoPulse {
+    0%, 100% { box-shadow: inset 0 0 0 2px #c89030; }
+    50%      { box-shadow: inset 0 0 0 2px #ffd060, 0 0 6px rgba(255,208,96,0.35); }
+  }
   @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
   #rotate { position: fixed; inset: 0; background: rgba(10,6,2,0.96); display: none; align-items: center; justify-content: center; z-index: 50; color: #e8d9b8; text-align: center; padding: 20px; font: 15px -apple-system, Segoe UI, sans-serif; }
   #rotate.show { display: flex; }
@@ -877,25 +903,43 @@
     flex: 1 1 50%;
     margin-top: 0;
   }
-  /* Priority-targeting dropdown row */
+  /* Priority-targeting chip row — pixel-art styled button group that
+     matches the look of the commander preset chips. Wraps to 2 rows on
+     narrow panels rather than truncating. */
   #panel .target-row {
-    display: flex; align-items: center; gap: 6px;
-    margin: 4px 0 2px;
+    margin: 6px 0 4px;
     font-size: 11px;
   }
-  #panel .target-row label { color: #c0b090; letter-spacing: 0.5px; }
-  #panel .target-row select {
-    flex: 1;
-    background: #1a0c00;
+  #panel .target-row .target-label {
+    color: #c0b090;
+    letter-spacing: 0.8px;
+    font-size: 10px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  #panel .target-chips {
+    display: flex; flex-wrap: wrap; gap: 3px;
+  }
+  #panel .target-chips .target-chip {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 4px 6px;
+    margin: 0;
+    background: #2a1a08;
+    color: #8a7a60;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+    box-shadow: inset 0 0 0 2px #4a352a, 2px 2px 0 0 #1a0c00;
+  }
+  #panel .target-chips .target-chip:hover:not(:disabled) {
     color: #e8d9b8;
-    border: 0;
-    padding: 3px 4px;
-    font-family: inherit;
-    font-size: 11px;
-    box-shadow: inset 0 0 0 2px #6a4528;
-    cursor: pointer;
+    box-shadow: inset 0 0 0 2px #8a6a3a, 3px 3px 0 0 #1a0c00;
   }
-  #panel .target-row select:focus { outline: 0; box-shadow: inset 0 0 0 2px #ffd060; }
+  #panel .target-chips .target-chip.active {
+    background: #4a3a18;
+    color: #ffd060;
+    box-shadow: inset 0 0 0 2px #c89030, 2px 2px 0 0 #1a0c00;
+  }
   /* Broken banner inside the commander overlay — explains why automation
      is paused and how to fix it. */
   #commander-overlay .cmd-broken {
@@ -2717,6 +2761,7 @@
       <div class="row"><span>Goblins slain</span><b id="go-kills">0</b></div>
       <div class="row"><span>Gold earned</span><b id="go-gold">0</b></div>
       <div class="row rp-row"><span>Research Points earned</span><b id="go-rp">0</b></div>
+      <div class="go-auto-retry" id="go-auto-retry"></div>
       <div class="actions">
         <button class="research-btn" onclick="gameoverOpenResearch()">Research</button>
         <button onclick="resetRun()">Try Again</button>
@@ -4004,6 +4049,42 @@ function bankVaultStash() {
   savePrestige();
 }
 
+// Auto-retry countdown bookkeeping — lets the Wall Breached modal
+// self-dismiss into a fresh run when AFK Auto-Restart is on, so the
+// overnight loop keeps rolling after a wall breach. Clicking Research
+// or Try Again cancels immediately via _cancelGameOverAutoRetry.
+let _gameOverRetryTimerId     = null;
+let _gameOverRetryCountdownId = null;
+const GAMEOVER_AUTO_RETRY_SEC = 10;  // fixed short delay; long enough to read stats
+
+function _startGameOverAutoRetry() {
+  _cancelGameOverAutoRetry();
+  const banner = document.getElementById('go-auto-retry');
+  if (!banner) return;
+  banner.classList.add('show');
+  const until = Date.now() + GAMEOVER_AUTO_RETRY_SEC * 1000;
+  const tick = () => {
+    const left = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+    banner.textContent = 'Auto-retry in ' + left + 's \u00b7 click any button to cancel';
+  };
+  tick();
+  _gameOverRetryCountdownId = setInterval(tick, 250);
+  _gameOverRetryTimerId = setTimeout(() => {
+    _cancelGameOverAutoRetry();
+    // Hide the modal and start a fresh run. resetRun() handles all the
+    // cleanup; it also sets gameOver=false and kicks runCommanderAutomation.
+    const goEl = document.getElementById('gameover');
+    if (goEl) goEl.classList.remove('show');
+    if (typeof window.resetRun === 'function') window.resetRun();
+  }, GAMEOVER_AUTO_RETRY_SEC * 1000);
+}
+function _cancelGameOverAutoRetry() {
+  if (_gameOverRetryTimerId != null)     { clearTimeout(_gameOverRetryTimerId);     _gameOverRetryTimerId     = null; }
+  if (_gameOverRetryCountdownId != null) { clearInterval(_gameOverRetryCountdownId); _gameOverRetryCountdownId = null; }
+  const banner = document.getElementById('go-auto-retry');
+  if (banner) { banner.classList.remove('show'); banner.textContent = ''; }
+}
+
 function triggerGameOver() {
   if (gameOver) return;
   gameOver = true;
@@ -4035,6 +4116,10 @@ function triggerGameOver() {
   document.getElementById('go-gold').textContent  = totalGoldEarned;
   document.getElementById('go-rp').textContent    = rpEarned + (crownsEarned ? ` + ${crownsEarned} \u265B` : '');
   document.getElementById('gameover').classList.add('show');
+  // AFK Auto-Restart ON → kick off the gameover auto-retry countdown so
+  // the overnight loop survives a wall breach. Starts a 10s countdown;
+  // expires → hide modal + resetRun. Cancelled by either button click.
+  if (afkAutoRestart) _startGameOverAutoRetry();
   // Nudge the player to export a save backup once they have a few runs of progress
   if (typeof maybePromptSaveBackup === 'function') maybePromptSaveBackup();
 }
@@ -4161,6 +4246,12 @@ function finishDailyRun() {
 }
 
 window.resetRun = function (opts) {
+  // Cancel any in-flight gameover auto-retry countdown + hide the Wall
+  // Breached modal. This guards every entry path: Try Again button, auto-
+  // retry timer expiry, and any other caller that jumps directly to reset.
+  if (typeof _cancelGameOverAutoRetry === 'function') _cancelGameOverAutoRetry();
+  const _goEl = document.getElementById('gameover');
+  if (_goEl) _goEl.classList.remove('show');
   // NOTE: COMMANDERS are intentionally NOT touched here. Their config is
   // persistent metaprogression — the player paid Crowns to set them up and
   // they should keep their auto-hire / auto-imbue / etc. settings across
@@ -6703,6 +6794,9 @@ window.openResearch = function () {
 // to click Try Again separately after spending RP, and complained their
 // commander "doesn't auto-hire" because resetRun never ran.
 window.gameoverOpenResearch = function () {
+  // If the AFK auto-retry countdown was running, the player just opted into
+  // spending RP instead — cancel the auto-retry so it doesn't fire under them.
+  if (typeof _cancelGameOverAutoRetry === 'function') _cancelGameOverAutoRetry();
   const goEl = document.getElementById('gameover');
   if (goEl) goEl.classList.remove('show');
   pendingNewRun = true;
@@ -8694,23 +8788,27 @@ function renderPanel(s) {
   `;
 }
 
-// Dropdown row for per-hero target priority. Support heroes (Bard) don't
-// shoot so we don't call this for them (see renderPanel gate).
+// Chip-button row for per-hero target priority. Support heroes (Bard)
+// don't shoot so we don't call this for them (see renderPanel gate).
+// Matches the commander-preset chip aesthetic rather than a native
+// <select>, which would look glaringly out-of-theme.
 function renderTargetPriorityRow(s, h) {
   const current = h.targetPriority || 'closest';
-  const opts = [
-    ['closest',   'Closest to hero'],
-    ['first',     'Closest to wall'],
-    ['lowHp',     'Lowest HP'],
-    ['highHp',    'Highest HP'],
-    ['strongest', 'Strongest (max HP)']
+  const chips = [
+    ['closest',   'Closest'],
+    ['first',     'To Wall'],
+    ['lowHp',     'Low HP'],
+    ['highHp',    'High HP'],
+    ['strongest', 'Tanks']
   ].map(([val, label]) =>
-    `<option value="${val}"${val === current ? ' selected' : ''}>${label}</option>`
+    `<button class="target-chip${val === current ? ' active' : ''}"
+             onclick="setTargetPriority(${s.index}, '${val}')"
+             title="Prefer ${label.toLowerCase()} targets">${label}</button>`
   ).join('');
   return `
     <div class="row target-row">
-      <label for="tp-${s.index}">TARGET</label>
-      <select id="tp-${s.index}" onchange="setTargetPriority(${s.index}, this.value)">${opts}</select>
+      <div class="target-label">Target priority</div>
+      <div class="target-chips">${chips}</div>
     </div>
   `;
 }
@@ -9187,14 +9285,22 @@ function updateHeroes(dt) {
   }
 }
 
-// Set a hero's target priority from the UI dropdown. Validates against the
-// allowed set so bad values can't sneak in via devtools or corrupt saves.
+// Set a hero's target priority from the chip-button row. Validates against
+// the allowed set so bad values can't sneak in via devtools or corrupt saves.
+// Re-renders the slot panel so the .active highlight moves to the clicked
+// chip without the player having to close and reopen.
 window.setTargetPriority = function (idx, value) {
   const s = SLOTS[idx];
   if (!s || !s.filled || !s.hero) return;
   const allowed = ['closest', 'first', 'lowHp', 'highHp', 'strongest'];
   if (!allowed.includes(value)) return;
   s.hero.targetPriority = value;
+  // Refresh the panel HTML in place so the active chip updates. Guarded
+  // so we only re-render when THIS slot's panel is the one open.
+  if (openSlot === s && typeof renderPanel === 'function' && panelEl) {
+    panelEl.innerHTML = renderPanel(s);
+  }
+  Audio.sfx.click && Audio.sfx.click();
 };
 
 // ---------- projectiles ----------
