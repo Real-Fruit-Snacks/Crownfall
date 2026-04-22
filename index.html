@@ -974,6 +974,15 @@
   }
   #midevent-overlay button.bad  .me-cost { color: #ff8070; }
   #midevent-overlay button.good .me-cost { color: #a0e878; }
+  /* Countdown shown when auto-dismiss is enabled — empty string when disabled */
+  #midevent-overlay .me-auto-skip {
+    color: #a89070;
+    font-size: 11px;
+    margin-top: 12px;
+    min-height: 14px;
+    letter-spacing: 0.3px;
+    font-style: italic;
+  }
   #midevent-overlay button.skip {
     background: transparent; color: #8a7a60;
     box-shadow: inset 0 0 0 2px #4a352a;
@@ -2897,6 +2906,21 @@
         <button id="settings-always-ranges-btn" class="toggle off" onclick="settingsToggleAlwaysRanges()">Ranges: OFF</button>
       </div>
       <div class="item">
+        <div class="name">Auto-Dismiss Events</div>
+        <div class="desc">Automatically close mid-run event popups after a delay if you don't pick an option. Designed for idle or overnight play. Dismissing gives no reward and no penalty &mdash; clicking any option cancels the timer and resolves the event normally.</div>
+        <button id="settings-autoevent-btn" class="toggle off" onclick="settingsToggleMidEventAutoSkip()">Auto-Dismiss: OFF</button>
+        <div class="vol-row" style="margin-top:8px;">
+          <label for="settings-autoevent-sec" style="color:#c0b090;font-size:12px;letter-spacing:0.5px;">Delay:</label>
+          <select id="settings-autoevent-sec" onchange="settingsSetMidEventAutoSkipSec(this.value)"
+                  style="background:#1a0c00;color:#e8d9b8;border:0;padding:4px 6px;font-family:inherit;font-size:12px;box-shadow:inset 0 0 0 2px #6a4528;cursor:pointer;">
+            <option value="5">5 seconds</option>
+            <option value="15">15 seconds</option>
+            <option value="30">30 seconds</option>
+            <option value="60">60 seconds</option>
+          </select>
+        </div>
+      </div>
+      <div class="item">
         <div class="name">Restart Tutorial</div>
         <div class="desc">Replay the onboarding tour from step one.</div>
         <button onclick="settingsRestartTutorial()">Restart Tutorial</button>
@@ -3151,6 +3175,7 @@
       <h3 id="me-title">Wandering Merchant</h3>
       <p id="me-desc">A robed traveller offers wares from the road.</p>
       <div class="me-options" id="me-options"></div>
+      <div class="me-auto-skip" id="me-auto-skip-label"></div>
     </div>
   </div>
 
@@ -3891,6 +3916,13 @@ let autoTapTimer = 0;     // Sentry Marksmen research — ticks down every frame
 let gameSpeed = 1;        // 1x / 2x / 3x — multiplies dt in the main loop
 let reducedMotion = false;// Settings toggle — suppresses screen shake / damage flash
 let alwaysShowRanges = true; // Settings toggle — draw every hero's range ring, not just the selected slot's. Default ON so new players see hero coverage at a glance, especially on mobile where the slot panel covers heroes.
+// Mid-event auto-dismiss: if enabled, mid-run event popups automatically
+// close after N real seconds with NO choice picked (no reward, no penalty)
+// — lets idle / overnight players have events not block their AFK run.
+// Default OFF so active players aren't surprised by disappearing events.
+// 15s default gives enough time to read the flavor text; adjustable.
+let midEventAutoSkip    = false;
+let midEventAutoSkipSec = 15;
 
 // ---------- wall ----------
 let wallHP = 100;
@@ -7124,6 +7156,10 @@ const MID_EVENTS = {
 };
 const midEventEl = document.getElementById('midevent-overlay');
 let _activeMidEvent = null;
+// Auto-dismiss bookkeeping — real-time timer + once-per-second countdown
+// refresh. Both cleared when the modal resolves normally OR expires.
+let _midEventTimerId     = null;
+let _midEventCountdownId = null;
 
 function maybeRollMidEvent() {
   if (gameOver) return;
@@ -7156,9 +7192,42 @@ function showMidEvent(ev) {
     </button>`;
   }).join('');
   document.getElementById('me-options').innerHTML = opts;
+  // Auto-dismiss countdown label — only rendered when auto-skip is enabled.
+  // Sits below the option buttons so players still see their choices.
+  const autoLbl = document.getElementById('me-auto-skip-label');
+  if (autoLbl) autoLbl.textContent = '';
   midEventEl.classList.add('show');
   // pause the loop until resolved (lightweight: gate on _activeMidEvent in loop)
   Audio.sfx.research && Audio.sfx.research();
+  // Kick off the real-time auto-dismiss timer if the player opted in.
+  if (midEventAutoSkip && midEventAutoSkipSec > 0) {
+    _startMidEventAutoSkip();
+  }
+}
+// Start the auto-dismiss timer + visible countdown. Always cancels any
+// prior timer first so rapid back-to-back events can't stack callbacks.
+function _startMidEventAutoSkip() {
+  _cancelMidEventAutoSkip();
+  const total = midEventAutoSkipSec;
+  const until = Date.now() + total * 1000;
+  const label = document.getElementById('me-auto-skip-label');
+  const tick = () => {
+    const left = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+    if (label) label.textContent =
+      'Auto-dismissing in ' + left + 's \u00b7 click any option to keep the event';
+  };
+  tick();
+  _midEventCountdownId = setInterval(tick, 250);
+  _midEventTimerId = setTimeout(() => {
+    _cancelMidEventAutoSkip();
+    // Dismiss WITHOUT picking any option — user gets no reward and no
+    // penalty. Per spec: "just have it skip all options."
+    closeMidEvent();
+  }, total * 1000);
+}
+function _cancelMidEventAutoSkip() {
+  if (_midEventTimerId != null)     { clearTimeout(_midEventTimerId);     _midEventTimerId     = null; }
+  if (_midEventCountdownId != null) { clearInterval(_midEventCountdownId); _midEventCountdownId = null; }
 }
 window.resolveMidEvent = function (idx) {
   if (!_activeMidEvent) return;
@@ -7174,6 +7243,7 @@ window.resolveMidEvent = function (idx) {
   closeMidEvent();
 };
 function closeMidEvent() {
+  _cancelMidEventAutoSkip();
   _activeMidEvent = null;
   if (midEventEl) midEventEl.classList.remove('show');
 }
@@ -11630,6 +11700,16 @@ window.openSettings  = function () {
     arBtn.classList.toggle('on', on);
     arBtn.classList.toggle('off', !on);
   }
+  // Auto-dismiss event toggle + duration selector reflect current state
+  const aeBtn = document.getElementById('settings-autoevent-btn');
+  if (aeBtn) {
+    const on = !!midEventAutoSkip;
+    aeBtn.textContent = on ? 'Auto-Dismiss: ON' : 'Auto-Dismiss: OFF';
+    aeBtn.classList.toggle('on', on);
+    aeBtn.classList.toggle('off', !on);
+  }
+  const aeSec = document.getElementById('settings-autoevent-sec');
+  if (aeSec) aeSec.value = String(midEventAutoSkipSec);
 };
 window.closeSettings = function () {
   settingsOverlayEl.classList.remove('show');
@@ -11693,6 +11773,35 @@ window.settingsToggleAlwaysRanges = function () {
     btn.classList.toggle('off', !alwaysShowRanges);
   }
   Audio.sfx.click && Audio.sfx.click();
+};
+window.settingsToggleMidEventAutoSkip = function () {
+  midEventAutoSkip = !midEventAutoSkip;
+  try { localStorage.setItem('castleMidEventAutoSkip', midEventAutoSkip ? '1' : '0'); } catch {}
+  const btn = document.getElementById('settings-autoevent-btn');
+  if (btn) {
+    btn.textContent = midEventAutoSkip ? 'Auto-Dismiss: ON' : 'Auto-Dismiss: OFF';
+    btn.classList.toggle('on',  midEventAutoSkip);
+    btn.classList.toggle('off', !midEventAutoSkip);
+  }
+  // If an event is already open, apply the new state immediately rather than
+  // waiting for the next event.
+  if (_activeMidEvent) {
+    if (midEventAutoSkip && midEventAutoSkipSec > 0) _startMidEventAutoSkip();
+    else {
+      _cancelMidEventAutoSkip();
+      const lbl = document.getElementById('me-auto-skip-label');
+      if (lbl) lbl.textContent = '';
+    }
+  }
+  Audio.sfx.click && Audio.sfx.click();
+};
+window.settingsSetMidEventAutoSkipSec = function (v) {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n) || n <= 0) return;
+  midEventAutoSkipSec = n;
+  try { localStorage.setItem('castleMidEventAutoSkipSec', String(n)); } catch {}
+  // Restart any in-flight timer so the new duration takes effect immediately.
+  if (_activeMidEvent && midEventAutoSkip) _startMidEventAutoSkip();
 };
 window.settingsRestartTutorial = function () {
   try { localStorage.removeItem('castleTutorialDone'); } catch {}
@@ -11920,6 +12029,14 @@ window.settingsWipe = function () {
   // true default so first-time players see the color-coded range rings.
   try {
     if (localStorage.getItem('castleAlwaysShowRanges') === '0') alwaysShowRanges = false;
+  } catch {}
+  // Load auto-dismiss event preferences. Opt-in so default behavior
+  // (modal pauses + waits for input) matches what every existing player
+  // has been seeing.
+  try {
+    if (localStorage.getItem('castleMidEventAutoSkip') === '1') midEventAutoSkip = true;
+    const s = parseInt(localStorage.getItem('castleMidEventAutoSkipSec'), 10);
+    if (Number.isFinite(s) && s > 0 && s <= 600) midEventAutoSkipSec = s;
   } catch {}
 })();
 function refreshSpeedBtn() {
