@@ -337,6 +337,41 @@
     50%     { box-shadow: inset 0 0 0 2px #ffeab0, inset 0 0 0 4px #1a0c00, 4px 4px 0 0 rgba(0,0,0,0.78), 0 0 16px 4px rgba(255,208,96,0.8); }
   }
 
+  /* SAVE-NOT-BACKED-UP BADGE — small warning chip that appears in the top-left
+     area when a player has meaningful progress (prestiged OR reached wave 20+)
+     and has NOT downloaded/copied a backup yet. Clicking it opens Settings
+     scrolled to the export section. Hidden for freshly-started accounts so
+     it doesn't nag. */
+  #save-backup-badge {
+    position: fixed;
+    top: 56px;
+    left: 8px;
+    z-index: 12;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #2a1a08;
+    color: #ffc850;
+    cursor: pointer;
+    font-family: 'Pixelify Sans', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    box-shadow: inset 0 0 0 2px #c83030, inset 0 0 0 4px #1a0c00, 3px 3px 0 0 rgba(0,0,0,0.7);
+    transition: transform 0.08s;
+    animation: saveBadgePulse 2s ease-in-out infinite;
+  }
+  #save-backup-badge.show { display: flex; }
+  #save-backup-badge:hover { transform: translate(-1px, -1px); color: #fff4b8; }
+  #save-backup-badge .icon { font-size: 14px; color: #ff7060; }
+  @keyframes saveBadgePulse {
+    0%,100% { box-shadow: inset 0 0 0 2px #c83030, inset 0 0 0 4px #1a0c00, 3px 3px 0 0 rgba(0,0,0,0.7), 0 0 0   0 rgba(200,48,48,0); }
+    50%     { box-shadow: inset 0 0 0 2px #ff6060, inset 0 0 0 4px #1a0c00, 3px 3px 0 0 rgba(0,0,0,0.7), 0 0 10px 2px rgba(255,80,80,0.5); }
+  }
+  @media (max-height: 650px), (max-width: 900px) {
+    #save-backup-badge { top: 42px; font-size: 10px; padding: 4px 8px; }
+  }
+
   /* STATS / ACHIEVEMENTS — Hall of Records */
   #stats-overlay {
     position: fixed; inset: 0; display: none;
@@ -2724,6 +2759,11 @@
     </div>
   </div>
 
+  <div id="save-backup-badge" role="button" aria-label="Save not backed up" onclick="openSaveBackup()">
+    <span class="icon">&#9888;</span>
+    <span>BACK UP SAVE</span>
+  </div>
+
   <button id="pause-btn" aria-label="Pause" onclick="togglePause()">
     <svg width="20" height="20" viewBox="0 0 14 14" shape-rendering="crispEdges">
       <g fill="#1a0c00">
@@ -2836,8 +2876,9 @@
       </div>
       <div class="item save-mgmt">
         <div class="name">Export Save</div>
-        <div class="desc">Copy your full save to a code you can paste anywhere &mdash; useful for backups, browser changes, or new devices.</div>
-        <button onclick="settingsExport()">Export Save</button>
+        <div class="desc">Back your progress up &mdash; useful for browser changes, device switches, or accidental data clears. Download saves a .txt file to your device; copy puts the code on your clipboard.</div>
+        <button onclick="settingsDownloadSave()">&#128190; Download Save File</button>
+        <button onclick="settingsExport()">Show Save Code</button>
         <textarea id="export-text" class="save-blob" readonly placeholder="(your encoded save will appear here)"></textarea>
         <button id="export-copy-btn" class="save-blob-btn" onclick="settingsCopyExport()">Copy to Clipboard</button>
       </div>
@@ -6931,6 +6972,9 @@ function endWave() {
   if (wave > (prestige.deepestWave || 0)) {
     prestige.deepestWave = wave;
     savePrestige();
+    // Crossing wave 20 is when the backup-nag badge can start showing —
+    // refresh its state so the first-time trigger appears immediately.
+    if (typeof updateSaveBackupBadge === 'function') updateSaveBackupBadge();
   }
   // Endless Zone milestone — fires once the first time a player clears wave 50.
   // Also flips on the 1.5x late-wave RP multiplier used in endRunForResearch().
@@ -11307,10 +11351,52 @@ function loop(t) {
 
   requestAnimationFrame(loop);
 }
+// ---------- SAVE-BACKUP BADGE ---------------------------------------------
+// Shows a small nag chip in the top-left when the player has meaningful
+// progress (prestiged OR reached wave 20+) and hasn't ever backed up their
+// save. Clears when they download or copy a save code. Re-checked whenever:
+//   - the page loads
+//   - a wave is cleared
+//   - a prestige is performed
+//   - the player opens Settings (good time to notice it's missing)
+function _hasMeaningfulProgress() {
+  try {
+    const p = JSON.parse(localStorage.getItem('castlePrestige') || '{}');
+    if ((p.prestigeCount || 0) > 0) return true;
+    if ((p.deepestWave || 0) >= 20) return true;
+    const s = JSON.parse(localStorage.getItem('castleStats') || '{}');
+    if ((s.totalRuns || 0) >= 5) return true;
+    return false;
+  } catch { return false; }
+}
+function updateSaveBackupBadge() {
+  const el = document.getElementById('save-backup-badge');
+  if (!el) return;
+  let backedUp = false;
+  try { backedUp = !!localStorage.getItem('castleLastBackupAt'); } catch {}
+  const needsBackup = _hasMeaningfulProgress() && !backedUp;
+  el.classList.toggle('show', needsBackup);
+}
+// Scroll Settings to the export section when they click the badge.
+window.openSaveBackup = function () {
+  if (typeof window.openSettings === 'function') window.openSettings();
+  setTimeout(() => {
+    const overlay = document.getElementById('settings-overlay');
+    if (!overlay) return;
+    const exportItem = overlay.querySelector('.save-mgmt');
+    if (exportItem && exportItem.scrollIntoView) {
+      exportItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 80);
+};
+
 // ---------- settings ----------
 const settingsOverlayEl = document.getElementById('settings-overlay');
 window.openSettings  = function () {
   settingsOverlayEl.classList.add('show');
+  // Refresh the backup-nag badge — opening Settings is a natural moment to
+  // catch the state (e.g. the player just finished a big run).
+  if (typeof updateSaveBackupBadge === 'function') updateSaveBackupBadge();
   const btn = document.getElementById('settings-mute-btn');
   if (btn) btn.textContent = Audio.isMuted() ? 'Sound: OFF' : 'Sound: ON';
   // Sync volume slider widgets to current values
@@ -11906,6 +11992,24 @@ function _runPrestigeConfirm(gain, keptNodes) {
           desc: 'All ' + heroName + 's gain +10% damage forever (total +' + (newStacks * 10) + '%).'
         });
       }
+      // Refresh the not-backed-up badge — prestige is a big milestone and a
+      // non-exporter is especially exposed here. If they haven't already
+      // backed up (badge will turn on) AND this is the first prestige,
+      // also fire the friendly confirm prompt offering a one-click download.
+      if (typeof updateSaveBackupBadge === 'function') updateSaveBackupBadge();
+      let backedUp = false;
+      try { backedUp = !!localStorage.getItem('castleLastBackupAt'); } catch {}
+      if (!backedUp && prestige.prestigeCount === 1 && typeof window.showConfirm === 'function') {
+        setTimeout(() => {
+          window.showConfirm({
+            title:    'Back Up Your Progress?',
+            message:  'You just prestiged \u2014 this save is getting valuable. Download a backup file (one click, no typing) so a browser clear can\'t wipe it.',
+            yesLabel: 'Download Backup',
+            noLabel:  'Later',
+            onYes: () => { if (typeof window.settingsDownloadSave === 'function') window.settingsDownloadSave(); }
+          });
+        }, 1200);
+      }
     }
   });
 }
@@ -11948,6 +12052,45 @@ window.settingsExport = function () {
   try { ta.focus(); ta.select(); } catch {}
 };
 
+// Mark that the player has performed a backup; the "not backed up" nag badge
+// reads this flag. Called from both the download and copy-clipboard paths.
+function _markSaveBackedUp() {
+  try {
+    localStorage.setItem('castleLastBackupAt', Date.now().toString());
+    localStorage.setItem('castleSaveBackupReminded', '1');
+  } catch {}
+  if (typeof updateSaveBackupBadge === 'function') updateSaveBackupBadge();
+}
+
+// One-click save: builds the blob, wraps it in a .txt file, and triggers a
+// browser download. Filename includes the date so multiple backups sort
+// chronologically. This is the frictionless export path — way more likely
+// to actually happen than copy-paste-into-a-note.
+window.settingsDownloadSave = function () {
+  const blob = _buildSaveBlob();
+  const today = new Date().toISOString().slice(0, 10);    // YYYY-MM-DD
+  const filename = 'crownfall-save-' + today + '.txt';
+  try {
+    // Wrap the base64 in a tiny human-readable header so a player opening the
+    // file in Notepad sees what it is. Importer ignores anything before the
+    // first newline-separated blob line.
+    const content = '# Crownfall save — paste the line below into Settings \u2192 Import Save\n' + blob;
+    const fileBlob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(fileBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    _markSaveBackedUp();
+  } catch (e) {
+    // Fallback: reveal the textarea so the player can copy manually
+    window.settingsExport();
+  }
+};
+
 window.settingsCopyExport = function () {
   const ta  = document.getElementById('export-text');
   const btn = document.getElementById('export-copy-btn');
@@ -11957,6 +12100,7 @@ window.settingsCopyExport = function () {
     navigator.clipboard.writeText(ta.value).then(() => {
       btn.textContent = 'Copied!';
       setTimeout(() => btn.textContent = 'Copy to Clipboard', 1500);
+      _markSaveBackedUp();
     }).catch(() => {/* fall through to execCommand */});
     copied = true;
   }
@@ -11966,6 +12110,7 @@ window.settingsCopyExport = function () {
       document.execCommand && document.execCommand('copy');
       btn.textContent = 'Copied!';
       setTimeout(() => btn.textContent = 'Copy to Clipboard', 1500);
+      _markSaveBackedUp();
     } catch {}
   }
 };
@@ -12048,6 +12193,26 @@ loadStats();
 loadCommanders();
 loadPrestige();
 applyResearch();
+// Check the "save not backed up" badge after load so returning players with
+// meaningful progress see the nag immediately.
+if (typeof updateSaveBackupBadge === 'function') updateSaveBackupBadge();
+// Request persistent storage — asks the browser to treat our localStorage as
+// "don't evict under storage pressure." Most modern browsers auto-grant this
+// after the player bookmarks or installs the page. Protects against iOS
+// Safari's 7-day eviction and low-disk-space purges. Non-blocking; no-op on
+// older browsers. Zero UX cost — no prompts.
+(async () => {
+  try {
+    if (navigator.storage && typeof navigator.storage.persist === 'function') {
+      // Check current status first so we don't spam the request.
+      const already = (typeof navigator.storage.persisted === 'function')
+                    ? await navigator.storage.persisted() : false;
+      if (!already) {
+        await navigator.storage.persist();
+      }
+    }
+  } catch {}
+})();
 // Bank Vault — if a prior run stashed gold, fold it into the starting purse
 // and clear the stash. Zero effect if bonus not owned or stash is 0.
 gold   = effects.startGold + (effects.bankVaultEnabled ? (prestige.bankedGold || 0) : 0);
