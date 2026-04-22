@@ -5386,8 +5386,19 @@ window.setCmdField = function (field, value) {
 };
 
 // ---------- AUTOMATION ----------
+// Auto-upgrade uses a TWO-PHASE pass:
+//   Phase 1: Hire + imbue. Walks each commander once; these are "initial
+//            setup" actions that ignore the gold reserve (per original
+//            design — one-off per-run costs).
+//   Phase 2: Round-robin auto-upgrade across commanders. Each outer cycle
+//            gives every eligible commander ONE stat upgrade (respecting
+//            its preset's priority order), then repeats. Previously a
+//            single commander could drain the entire treasury before the
+//            next got a turn. Review feedback: "it dumps all my gold into
+//            the top hero and mostly ignores the other ones."
 function runCommanderAutomation() {
   if (gameOver) return;
+  // --- Phase 1: hire + imbue ---
   for (const s of SLOTS) {
     const c = COMMANDERS[s.index];
     if (!c.owned) continue;
@@ -5438,26 +5449,47 @@ function runCommanderAutomation() {
       const ic = imbueCost(c.autoImbue);
       if (gold >= ic) imbue(s.index, c.autoImbue);
     }
-    // 3. Auto-upgrade — only runs if the player explicitly picked a preset.
-    //    Null preset = no auto-upgrade (the player just wants auto-hire or
-    //    auto-imbue without burning all their gold on stat upgrades).
+  }
+  // --- Phase 2: auto-upgrade round-robin ---
+  // Build the list of eligible commanders ONCE (owned, slot unlocked, slot
+  // filled with the right hero, has a preset). Then cycle: each iteration
+  // tries to buy ONE upgrade per commander in its preset-priority order.
+  // Stops when a full cycle lands no buys (treasury drained below every
+  // reserve).
+  const upgradeQueue = [];
+  for (const s of SLOTS) {
+    const c = COMMANDERS[s.index];
+    if (!c || !c.owned) continue;
+    if (s.index >= effects.slotsUnlocked) continue;
+    if (!s.filled || !s.hero) continue;
+    if (c.broken) continue;
     if (!c.upgradePreset) continue;
     const preset = UPGRADE_PRESETS[c.upgradePreset] || UPGRADE_PRESETS['dmg-first'];
-    const order  = preset.order;
-    let safety = 200;
-    while (safety-- > 0) {
-      let bought = false;
-      for (const stat of order) {
+    upgradeQueue.push({ commander: c, slot: s, preset });
+  }
+  let safety = 400;
+  while (safety-- > 0) {
+    let anyBought = false;
+    for (const q of upgradeQueue) {
+      const { commander, slot, preset } = q;
+      const h = slot.hero;
+      if (!h) continue;
+      const reserve = commander.minGoldReserve || 0;
+      // Try each stat in the preset's priority order; buy the first affordable
+      // one and move on to the next commander. This preserves within-hero
+      // priority (spd-first STILL prefers speed) while spreading gold across
+      // every active commander instead of draining into slot 0.
+      for (const stat of preset.order) {
         const lvKey = 'lv' + stat[0].toUpperCase() + stat.slice(1);
         const cost  = upgradeCost(stat, h[lvKey] || 0);
         if (gold - cost >= reserve) {
-          upgrade(s.index, stat);
-          bought = true;
-          if (!preset.roundRobin) break;   // priority mode: restart from top after each buy
+          upgrade(slot.index, stat);
+          anyBought = true;
+          break;
         }
       }
-      if (!bought) break;
     }
+    if (!anyBought) break;
   }
 }
 
@@ -11786,7 +11818,11 @@ window.settingsWipe = function () {
       }
       if (typeof unlockedAchievements !== 'undefined' && unlockedAchievements.clear) unlockedAchievements.clear();
       if (typeof COMMANDERS !== 'undefined') {
-        for (const c of COMMANDERS) { c.owned = false; c.autoHire = null; c.upgradePreset = 'roundRobin'; c.imbuePreset = null; c.skinPreset = null; }
+        // NOTE: upgradePreset must be null (matches defaultCommander) — the
+        // old value 'roundRobin' was a typo that didn't exist in UPGRADE_PRESETS
+        // and silently fell through to the dmg-first default, making every
+        // post-reset commander dump all gold into damage.
+        for (const c of COMMANDERS) { c.owned = false; c.autoHire = null; c.upgradePreset = null; c.imbuePreset = null; c.skinPreset = null; }
       }
       // Clear daily-mode flags + body class so the chip disappears
       if (typeof dailyMode !== 'undefined') {
