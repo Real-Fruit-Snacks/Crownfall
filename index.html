@@ -2921,6 +2921,21 @@
         </div>
       </div>
       <div class="item">
+        <div class="name">AFK Auto-Restart</div>
+        <div class="desc">If a wave takes longer than the delay to clear, end the current run (banking any earned RP) and start a new one. Combined with commanders and Auto-Dismiss Events, lets you leave the game running overnight to farm RP. No cap on restart frequency.</div>
+        <button id="settings-afk-btn" class="toggle off" onclick="settingsToggleAfkAutoRestart()">AFK Auto-Restart: OFF</button>
+        <div class="vol-row" style="margin-top:8px;">
+          <label for="settings-afk-sec" style="color:#c0b090;font-size:12px;letter-spacing:0.5px;">Delay:</label>
+          <select id="settings-afk-sec" onchange="settingsSetAfkAutoRestartSec(this.value)"
+                  style="background:#1a0c00;color:#e8d9b8;border:0;padding:4px 6px;font-family:inherit;font-size:12px;box-shadow:inset 0 0 0 2px #6a4528;cursor:pointer;">
+            <option value="60">1 minute</option>
+            <option value="120">2 minutes</option>
+            <option value="300">5 minutes</option>
+            <option value="600">10 minutes</option>
+          </select>
+        </div>
+      </div>
+      <div class="item">
         <div class="name">Restart Tutorial</div>
         <div class="desc">Replay the onboarding tour from step one.</div>
         <button onclick="settingsRestartTutorial()">Restart Tutorial</button>
@@ -3923,6 +3938,20 @@ let alwaysShowRanges = true; // Settings toggle — draw every hero's range ring
 // 15s default gives enough time to read the flavor text; adjustable.
 let midEventAutoSkip    = false;
 let midEventAutoSkipSec = 15;
+// AFK auto-restart: if enabled, a wave that stays in "active" phase for
+// longer than `afkAutoRestartSec` real seconds auto-ends the run, banks
+// whatever RP was earned, and immediately starts a fresh run. Commanders
+// with autoHire will re-fill slots on the next run; combined with
+// auto-dismiss events this forms a full unattended AFK loop for players
+// who want to leave the game running overnight to farm RP. No cap on
+// restart frequency or RP earned — per spec, "let players ruin it if
+// they want." Default OFF so active players don't get surprised resets.
+let afkAutoRestart    = false;
+let afkAutoRestartSec = 120;
+// Tracks REAL-time wall clock since the current wave entered 'active'.
+// Uses baseDt (pre-gameSpeed) so 2x/3x speed doesn't skew the threshold.
+// Reset whenever wavePhase changes away from 'active'.
+let _waveActiveElapsed = 0;
 
 // ---------- wall ----------
 let wallHP = 100;
@@ -4005,6 +4034,31 @@ function triggerGameOver() {
   document.getElementById('gameover').classList.add('show');
   // Nudge the player to export a save backup once they have a few runs of progress
   if (typeof maybePromptSaveBackup === 'function') maybePromptSaveBackup();
+}
+
+// AFK: bank whatever RP the current run has earned so far, then immediately
+// reset into a fresh run. Deliberately bypasses the research / wall-breach
+// UI — this runs unattended, so any modal would stall the AFK loop. Called
+// from the game loop's stall detector. Skips daily-mode runs entirely (daily
+// has its own finish-card flow and isn't RP-generating).
+function _afkAutoRestartRun() {
+  if (gameOver) return;
+  if (dailyMode) return;
+  // Bank earned RP + crowns (same math as endRunForResearch, just no UI).
+  bankVaultStash();
+  const rpEarned     = currentRpEarned();
+  const crownsEarned = runState.crownsThisRun || 0;
+  research.rp          += rpEarned;
+  research.totalRp     += rpEarned;
+  research.crowns      += crownsEarned;
+  research.totalCrowns += crownsEarned;
+  saveResearch();
+  bumpStat('totalRuns', 1);
+  bumpStat('totalGoldEarned', totalGoldEarned);
+  // Jump straight into a new run. resetRun() calls startWave(1) which in
+  // turn triggers runCommanderAutomation() so any commanders with autoHire
+  // configured will auto-fill their slots on the fresh run.
+  if (typeof window.resetRun === 'function') window.resetRun();
 }
 
 // Voluntary end: bank RP, skip the wall-breach screen, and open research.
@@ -11539,6 +11593,20 @@ function loop(t) {
       updateWaveHud();
       if (waveRestTimer <= 0) startWave(wave + 1);
     }
+    // AFK auto-restart — track real-time elapsed while a wave is active.
+    // Uses baseDt (pre-gameSpeed) so 2x/3x game speed doesn't skew the
+    // stall threshold. If the wave holds in 'active' phase longer than
+    // the player-configured threshold, we bank current RP and kick off
+    // a fresh run. Reset to 0 whenever the wave leaves 'active'.
+    if (wavePhase === 'active') {
+      _waveActiveElapsed += baseDt;
+      if (afkAutoRestart && afkAutoRestartSec > 0 && _waveActiveElapsed > afkAutoRestartSec) {
+        _waveActiveElapsed = 0;
+        _afkAutoRestartRun();
+      }
+    } else {
+      _waveActiveElapsed = 0;
+    }
 
     updateHeroes(dt);
     // Bard wall-regen — Healing Chorus research adds `bardWallRegen` HP/sec
@@ -11710,6 +11778,16 @@ window.openSettings  = function () {
   }
   const aeSec = document.getElementById('settings-autoevent-sec');
   if (aeSec) aeSec.value = String(midEventAutoSkipSec);
+  // AFK auto-restart toggle + duration selector reflect current state
+  const afkBtn = document.getElementById('settings-afk-btn');
+  if (afkBtn) {
+    const on = !!afkAutoRestart;
+    afkBtn.textContent = on ? 'AFK Auto-Restart: ON' : 'AFK Auto-Restart: OFF';
+    afkBtn.classList.toggle('on', on);
+    afkBtn.classList.toggle('off', !on);
+  }
+  const afkSec = document.getElementById('settings-afk-sec');
+  if (afkSec) afkSec.value = String(afkAutoRestartSec);
 };
 window.closeSettings = function () {
   settingsOverlayEl.classList.remove('show');
@@ -11802,6 +11880,25 @@ window.settingsSetMidEventAutoSkipSec = function (v) {
   try { localStorage.setItem('castleMidEventAutoSkipSec', String(n)); } catch {}
   // Restart any in-flight timer so the new duration takes effect immediately.
   if (_activeMidEvent && midEventAutoSkip) _startMidEventAutoSkip();
+};
+window.settingsToggleAfkAutoRestart = function () {
+  afkAutoRestart = !afkAutoRestart;
+  try { localStorage.setItem('castleAfkAutoRestart', afkAutoRestart ? '1' : '0'); } catch {}
+  const btn = document.getElementById('settings-afk-btn');
+  if (btn) {
+    btn.textContent = afkAutoRestart ? 'AFK Auto-Restart: ON' : 'AFK Auto-Restart: OFF';
+    btn.classList.toggle('on',  afkAutoRestart);
+    btn.classList.toggle('off', !afkAutoRestart);
+  }
+  // Reset the stall counter so toggling mid-wave doesn't immediately fire.
+  _waveActiveElapsed = 0;
+  Audio.sfx.click && Audio.sfx.click();
+};
+window.settingsSetAfkAutoRestartSec = function (v) {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n) || n <= 0) return;
+  afkAutoRestartSec = n;
+  try { localStorage.setItem('castleAfkAutoRestartSec', String(n)); } catch {}
 };
 window.settingsRestartTutorial = function () {
   try { localStorage.removeItem('castleTutorialDone'); } catch {}
@@ -12037,6 +12134,13 @@ window.settingsWipe = function () {
     if (localStorage.getItem('castleMidEventAutoSkip') === '1') midEventAutoSkip = true;
     const s = parseInt(localStorage.getItem('castleMidEventAutoSkipSec'), 10);
     if (Number.isFinite(s) && s > 0 && s <= 600) midEventAutoSkipSec = s;
+  } catch {}
+  // Load AFK auto-restart preferences. No max clamp on duration — if the
+  // player wants 1h stalls before restart, that's fine.
+  try {
+    if (localStorage.getItem('castleAfkAutoRestart') === '1') afkAutoRestart = true;
+    const s = parseInt(localStorage.getItem('castleAfkAutoRestartSec'), 10);
+    if (Number.isFinite(s) && s > 0) afkAutoRestartSec = s;
   } catch {}
 })();
 function refreshSpeedBtn() {
