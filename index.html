@@ -8003,14 +8003,16 @@ window.upgrade = function (idx, type) {
   if (gold < cost) return;
   gold -= cost;
   h[lvKey]++;
-  // Damage upgrade: +2% of the hero's BASE damage per level. Scaling flat
-  // (instead of flat +1) so late-wave heroes actually keep pace with enemy
-  // HP. Migrates legacy heroes that pre-date baseDmg by backfilling from
-  // the current damage value. 2% keeps each upgrade feeling chunky but
-  // bounded — 50 levels = 2x base, 100 levels = 3x base.
+  // Damage upgrade: +1 flat OR +10% of the hero's BASE damage, whichever
+  // is larger. The flat +1 floor keeps early-game upgrades feeling chunky
+  // (archer base 4 still goes 4 -> 5 -> 6 like before), while the 10%-of-
+  // base multiplier kicks in for heroes with an inflated base (prestige
+  // dmgMul, class-specific bonuses, late-game stacks) so upgrades keep
+  // pace at scale. Previous 2%-of-base-only was a per-level nerf vs the
+  // old flat +1 for every base-damage hero — this fixes that.
   if (type === 'dmg') {
     if (!h.baseDmg) h.baseDmg = h.damage;  // legacy migration
-    h.damage += h.baseDmg * 0.02;
+    h.damage += Math.max(1, h.baseDmg * 0.10);
   }
   if (type === 'rng') h.range  += 20;
   if (type === 'spd') h.fireRate = Math.max(0.20, h.fireRate * 0.92);
