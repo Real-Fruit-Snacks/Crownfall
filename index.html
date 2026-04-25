@@ -7143,8 +7143,18 @@ function waveSpawnInterval(w) {
 
 function enemyStats(w, asBoss) {
   if (asBoss) {
+    // Boss HP curve: same growth exponent as minions (1.14) but a higher
+    // base, so bosses end up ~10x as tanky as same-wave minions while
+    // staying approachable at every wave. Old curve (150 * 1.18^w) put
+    // the wave-10 intro boss at 785 HP, which a fresh-prestige player
+    // with ~25 DPS literally cannot out-damage before their 50-HP wall
+    // breaches. Reference points:
+    //   wave 10  -> 296 HP   (was 785,  -62%)
+    //   wave 20  -> 1099 HP  (was 4109, -73%)
+    //   wave 30  -> 4076 HP  (was 21506, -81%)
+    //   wave 50  -> 56k HP   (was 589k, -90%)
     return {
-      hp:      Math.floor(150 * Math.pow(1.18, w)),    // way more HP — wave 10 ≈ 785
+      hp:      Math.floor(80 * Math.pow(1.14, w)),
       dmg:     5 + Math.floor(w / 5),
       speed:   5 + runRng.next() * 2,                  // slower than minions
       sizeMul: 1.7,
