@@ -2968,7 +2968,7 @@
       <div class="item">
         <div class="name">Auto-Dismiss Events</div>
         <div class="desc">Automatically close mid-run event popups after a delay if you don't pick an option. Designed for idle or overnight play. Dismissing gives no reward and no penalty &mdash; clicking any option cancels the timer and resolves the event normally.</div>
-        <button id="settings-autoevent-btn" class="toggle off" onclick="settingsToggleMidEventAutoSkip()">Auto-Dismiss: OFF</button>
+        <button id="settings-autoevent-btn" class="toggle on" onclick="settingsToggleMidEventAutoSkip()">Auto-Dismiss: ON</button>
         <div class="vol-row" style="margin-top:8px;">
           <label for="settings-autoevent-sec" style="color:#c0b090;font-size:12px;letter-spacing:0.5px;">Delay:</label>
           <select id="settings-autoevent-sec" onchange="settingsSetMidEventAutoSkipSec(this.value)"
@@ -2983,7 +2983,7 @@
       <div class="item">
         <div class="name">AFK Auto-Restart</div>
         <div class="desc">If a wave takes longer than the delay to clear, end the current run (banking any earned RP) and start a new one. Combined with commanders and Auto-Dismiss Events, lets you leave the game running overnight to farm RP. No cap on restart frequency.</div>
-        <button id="settings-afk-btn" class="toggle off" onclick="settingsToggleAfkAutoRestart()">AFK Auto-Restart: OFF</button>
+        <button id="settings-afk-btn" class="toggle on" onclick="settingsToggleAfkAutoRestart()">AFK Auto-Restart: ON</button>
         <div class="vol-row" style="margin-top:8px;">
           <label for="settings-afk-sec" style="color:#c0b090;font-size:12px;letter-spacing:0.5px;">Delay:</label>
           <select id="settings-afk-sec" onchange="settingsSetAfkAutoRestartSec(this.value)"
@@ -4432,13 +4432,13 @@ const RESEARCH_NODES = [
 
 
   // OFFENSE (upper-left)
-  { id:'o1',   x:40, y:40, name:'Keen Arrows',       desc:'+5% archer damage',         cost:2, req:['root'],       effect:{ dmgMul:0.05 } },
-  { id:'o2',   x:31, y:32, name:'Razor Tips',        desc:'+8% archer damage',         cost:4, req:['o1'],         effect:{ dmgMul:0.08 } },
-  { id:'o3',   x:22, y:24, name:'Master Fletcher',   desc:'+12% archer damage',        cost:6, req:['o2'],         effect:{ dmgMul:0.12 } },
+  { id:'o1',   x:40, y:40, name:'Keen Arrows',       desc:'+5% damage to all heroes',  cost:2, req:['root'],       effect:{ dmgMul:0.05 } },
+  { id:'o2',   x:31, y:32, name:'Razor Tips',        desc:'+8% damage to all heroes',  cost:4, req:['o1'],         effect:{ dmgMul:0.08 } },
+  { id:'o3',   x:22, y:24, name:'Master Fletcher',   desc:'+12% damage to all heroes', cost:6, req:['o2'],         effect:{ dmgMul:0.12 } },
   { id:'o4',   x:40, y:28, name:'Quickdraw',         desc:'-5% fire cooldown',         cost:4, req:['o1'],         effect:{ fireRateMul:-0.05 } },
   { id:'o5',   x:28, y:16, name:'Rapid Shot',        desc:'-10% fire cooldown',        cost:6, req:['o3','o4'],    effect:{ fireRateMul:-0.10 } },
-  { id:'o6',   x:16, y:34, name:'Longbows',          desc:'+30 archer range',          cost:4, req:['o2'],         effect:{ rngAdd:30 } },
-  { id:'o7',   x:10, y:26, name:'Eagle Eye',         desc:'+50 archer range',          cost:6, req:['o6'],         effect:{ rngAdd:50 } },
+  { id:'o6',   x:16, y:34, name:'Longbows',          desc:'+30 range to all heroes',   cost:4, req:['o2'],         effect:{ rngAdd:30 } },
+  { id:'o7',   x:10, y:26, name:'Eagle Eye',         desc:'+50 range to all heroes',   cost:6, req:['o6'],         effect:{ rngAdd:50 } },
   { id:'okey', x:6,  y:12, name:'Pierce',            desc:'Arrows hit one extra enemy',cost:14, req:['o5','o7'],   keystone:true, effect:{ pierce:1 } },
 
   // DEFENSE (upper-right)
@@ -4449,7 +4449,7 @@ const RESEARCH_NODES = [
   { id:'d3',   x:78, y:24, name:'Reinforced Gates',  desc:'+50 max wall HP',           cost:6, req:['d2'],         effect:{ wallHp:50 } },
   { id:'d4',   x:60, y:28, name:'Battlements',       desc:'-5% fire cooldown',         cost:4, req:['d1'],         effect:{ fireRateMul:-0.05 } },
   { id:'d5',   x:72, y:16, name:'Mountain Fortress', desc:'+80 max wall HP',           cost:6, req:['d3','d4'],    effect:{ wallHp:80 } },
-  { id:'d6',   x:84, y:26, name:'Watchtowers',       desc:'+40 archer range',          cost:6, req:['d3'],         effect:{ rngAdd:40 } },
+  { id:'d6',   x:84, y:26, name:'Watchtowers',       desc:'+40 range to all heroes',   cost:6, req:['d3'],         effect:{ rngAdd:40 } },
   { id:'d8',   x:82, y:18, name:'Citadel',           desc:'+60 max wall HP',           cost:7, req:['d3','d6'],    effect:{ wallHp:60 } },
   { id:'d9',   x:78, y:8,  name:'Grand Keep',        desc:'+100 max wall HP',          cost:9, req:['d5','d8'],    effect:{ wallHp:100 } },
   { id:'dkey', x:90, y:12, name:'Stronghold',        desc:'+150 max wall HP',          cost:14, req:['d5','d6'],   keystone:true, effect:{ wallHp:150 } },
@@ -4517,7 +4517,7 @@ const RESEARCH_NODES = [
   { id:'frostbite', x:54, y:54, name:'Frostbite',          desc:'Ice slows targets harder (movement penalty +20%).',                  cost:7, req:['arcIce'],                                  effect:{ slowStrengthAdd:0.20 } },
   { id:'virulence', x:50, y:60, name:'Virulence',          desc:'Poison can stack up to 8 (was 5) and ticks +25% faster.',           cost:7, req:['arcPois'],                                  effect:{ poisonStacksAdd:3, poisonPotencyMul:0.25 } },
   { id:'imbDisc',   x:48, y:62, name:'Sigil of Thrift',    desc:'Imbue gold cost reduced by 40%.',                                    cost:12, req:['arcImb','cnImb','mgImb'],                 effect:{ imbueCostMul:-0.40 } },
-  { id:'imbKey',    x:50, y:64, name:'Mastery of Elements',desc:'+30% potency to all elemental damage and slows.',                    cost:18, req:['imbDisc'],                 keystone:true, effect:{ burnPotencyMul:0.30, poisonPotencyMul:0.30, slowStrengthAdd:0.10 } },
+  { id:'imbKey',    x:50, y:64, name:'Mastery of Elements',desc:'+30% Fire and Poison damage. +10% slow strength.',                    cost:18, req:['imbDisc'],                 keystone:true, effect:{ burnPotencyMul:0.30, poisonPotencyMul:0.30, slowStrengthAdd:0.10 } },
 
   // COFFERS — bounty + RP scaling
   { id:'bossBounty', x:74, y:84, name:'Royal Bounty',  desc:'Bosses drop 100% more gold.',                        cost:7, req:['e6'],                  effect:{ bossBountyMul:1.0 } },
@@ -4550,7 +4550,7 @@ const RESEARCH_NODES = [
   //  CROWN NODES — paid in Crowns (\u265B) dropped by bosses
   // ===========================================================
   { id:'crown6th',     x:14, y:42, name:'Crown of Conquest',     desc:'Unlock the SIXTH hero slot.',                                                  cost:0, crownCost:5, req:['slot5'],            effect:{ slotsUnlocked:6 } },
-  { id:'crownReagent', x:50, y:66, name:'Greater Reagents',      desc:'+50% potency to ALL elemental damage and slows.',                              cost:0, crownCost:5, req:['imbKey'],           effect:{ burnPotencyMul:0.50, poisonPotencyMul:0.50, slowStrengthAdd:0.15 } },
+  { id:'crownReagent', x:50, y:66, name:'Greater Reagents',      desc:'+50% Fire and Poison damage. +15% slow strength.',                              cost:0, crownCost:5, req:['imbKey'],           effect:{ burnPotencyMul:0.50, poisonPotencyMul:0.50, slowStrengthAdd:0.15 } },
   { id:'crownPhoenix', x:84, y:6,  name:'Phoenix Will',          desc:'Once per run, when the wall would fall it restores to 50% HP and clears the field.', cost:0, crownCost:8, req:['dkey'],         keystone:true, effect:{ phoenixWill:true } },
   { id:'crownSyn',     x:18, y:38, name:'Berserker\u2019s Edge', desc:'All heroes deal +5% damage per filled slot on the field.',                     cost:0, crownCost:3, req:['slot4'],            effect:{ synergyDmgPerHero:0.05 } },
   { id:'crownMint',    x:74, y:96, name:'Royal Mint',            desc:'Bosses also drop 100 gold instantly to your purse.',                            cost:0, crownCost:2, req:['bossBounty'],       effect:{ bossGoldDrop:100 } },
@@ -4595,7 +4595,7 @@ const RESEARCH_NODES = [
   { id:'hzBrazier',     name:'Hazard: Watchfire Brazier', desc:'Two watchfires in the field. Each pulses fire damage in a 22px radius every 4 seconds.',          cost:10, req:['d3'],          effect:{ unlockHazard:'brazier' } },
   { id:'hzBrazCount',   name:'More Braziers',        desc:'Adds another brazier. Buy multiple times.',                                                            cost:9,  req:['hzBrazier'],   repeatable:true, maxStacks:3, effect:{ hazardUpgrade:'brazier:count' } },
   { id:'hzBrazDmg',     name:'Hotter Coals',         desc:'+4 brazier damage per pulse. Buy multiple times.',                                                     cost:8,  req:['hzBrazier'],   repeatable:true, maxStacks:3, effect:{ hazardUpgrade:'brazier:dmg' } },
-  { id:'hzBrazRate',    name:'Bellows',              desc:'Brazier pulses 0.6s faster (min 2s).',                                                                  cost:11, req:['hzBrazier'],   repeatable:true, maxStacks:3, effect:{ hazardUpgrade:'brazier:rate' } },
+  { id:'hzBrazRate',    name:'Bellows',              desc:'Brazier pulses 0.6s faster (min 2s). Buy multiple times \u2014 cost rises 50% per level.', cost:11, req:['hzBrazier'],   repeatable:true, maxStacks:3, effect:{ hazardUpgrade:'brazier:rate' } },
 
   // BEAR TRAP
   { id:'hzBearTrap',    name:'Hazard: Bear Trap',    desc:'Three traps placed in the field. First enemy to step on one is rooted for 1s and takes 12 damage; resets after 5s.', cost:10, req:['d3'],     effect:{ unlockHazard:'beartrap' } },
