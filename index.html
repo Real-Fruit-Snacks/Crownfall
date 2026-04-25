@@ -5711,7 +5711,13 @@ const stats = {
   eventsWitnessed:    0,
   midEventsResolved:  0,
   wallHealedTotal:    0,
-  championsBeaten:    0
+  championsBeaten:    0,
+  // bumpStat early-exits if the key is missing — these were called from
+  // doPrestige + finishDailyRun but silently dropped because the keys
+  // weren't declared, leaving lifetime prestige / daily counts at 0.
+  prestiges:          0,
+  dailiesPlayed:      0,
+  dailiesBested:      0
 };
 const ACHIEVEMENTS = [
   { id: 'firstBlood',  name: 'First Blood',     desc: 'Slay your first enemy.',                   target: 1,    metric: () => stats.totalKills },
@@ -5784,7 +5790,9 @@ function flushAllSaves() {
   try { saveResearch(); } catch {}
   try { if (typeof savePrestige    === 'function') savePrestige();    } catch {}
   try { if (typeof saveCommanders  === 'function') saveCommanders();  } catch {}
-  try { if (typeof saveDailyScores === 'function') saveDailyScores(); } catch {}
+  // Daily scores save on every recordDailyResult mutation; no need to flush
+  // here. (Calling saveDailyScores() with no arg used to write the literal
+  // string "undefined" to castleDailyScores and corrupt the daily history.)
   // Stamp the close timestamp so the next boot can compute how long the
   // player was away and award offline RP.
   try { localStorage.setItem('castleLastCloseAt', String(Date.now())); } catch {}
@@ -6866,6 +6874,11 @@ function buyResearchNode(id) {
     research.purchased.add(id);
   }
   saveResearch();
+  // Re-derive effects from the updated research set so newly-bought
+  // unlocks (skill slots, hero classes, hazards, etc.) actually take
+  // effect mid-run instead of waiting for the next book open / reset.
+  applyResearch();
+  if (typeof renderSkillBar === 'function') renderSkillBar();
   renderResearch();
   Audio.sfx.research();
   if (typeof Tutorial !== 'undefined') Tutorial.notify('research');
@@ -6878,6 +6891,9 @@ window.toggleNode = function (id) {
   if (research.disabled.has(id)) research.disabled.delete(id);
   else                            research.disabled.add(id);
   saveResearch();
+  // Toggling a node changes which effects are active — re-derive.
+  applyResearch();
+  if (typeof renderSkillBar === 'function') renderSkillBar();
   renderResearch();
   Audio.sfx.click && Audio.sfx.click();
 };
@@ -7310,7 +7326,9 @@ function startWave(n) {
   // The Hound — respawn fresh at each wave start if prestige bonus is owned.
   // Null means "downed last wave" OR "never spawned"; either way we re-spawn.
   if (effects.houndUnlocked && typeof houndSpawn === 'function') houndSpawn();
-  setBestWave(n);
+  // setBestWave moved to endWave — recording at wave START let players
+  // jump to wave 25 via Imperator and instantly die yet "achieve" wave 25.
+  // Credit goes to actually clearing the wave.
 }
 
 function endWave() {
@@ -7334,6 +7352,11 @@ function endWave() {
     // refresh its state so the first-time trigger appears immediately.
     if (typeof updateSaveBackupBadge === 'function') updateSaveBackupBadge();
   }
+  // Lifetime best-wave stat (drives wave-N achievements). Recorded on
+  // wave CLEAR, not wave START — otherwise jumping to wave 25 via
+  // Imperator and dying instantly would unlock wave-25 achievements
+  // without ever surviving the wave.
+  setBestWave(wave);
   // Endless Zone milestone — fires once the first time a player clears wave 50.
   // Also flips on the 1.5x late-wave RP multiplier used in endRunForResearch().
   if (wave >= 50 && !research.reachedEndless) {
@@ -9545,8 +9568,8 @@ function updateProjectiles(dt) {
           if (sdx * sdx + sdy * sdy <= r2) {
             other.lastDmgFromSlotIdx = p.sourceSlotIdx;
             applyDamage(other, Math.max(p.damage, p.splashDmg) * detonateCritMul);
-            if (p.element)  applyElement(other, p.element,  p.elementDmg * 0.6 * skinElementMul(p.sourceSkin, p.element));
-            if (p.element2) applyElement(other, p.element2, p.elementDmg * 0.6 * skinElementMul(p.sourceSkin, p.element2));
+            if (p.element)  applyElement(other, p.element,  p.elementDmg * 0.6, skinElementMul(p.sourceSkin, p.element));
+            if (p.element2) applyElement(other, p.element2, p.elementDmg * 0.6, skinElementMul(p.sourceSkin, p.element2));
           }
         }
         if (p.isCrit && typeof spawnFloatingText === 'function') {
@@ -9604,15 +9627,11 @@ function updateProjectiles(dt) {
           // Stamp the source so the death handler can credit the kill to
           // the right hero — used for the per-hero KILLS badge on the panel.
           e.lastDmgFromSlotIdx = p.sourceSlotIdx;
-          // Crossbow ignores armor entirely
-          let landedDmg;
-          if (p.type === 'crossbow') {
-            landedDmg = Math.floor(p.damage * dmgScale * (e.hexT > 0 ? 1.25 : 1));
-            e.hp -= landedDmg;
-            e.hitFlash = 0.08;
-          } else {
-            landedDmg = applyDamage(e, p.damage * dmgScale);
-          }
+          // Crossbow ignores armor (its identity), but still respects
+          // Hunter's Mark, witch aura, and Hex via applyDamage's
+          // ignoreArmor flag. Used to bypass applyDamage entirely and
+          // silently dropped those bonuses.
+          const landedDmg = applyDamage(e, p.damage * dmgScale, p.type === 'crossbow');
           // Damage feedback. Crits read in red as "CRIT XX"; regular hits
           // float a small cream-colored "-N" so the player can SEE every
           // hero hit landing. Splash / chain hits intentionally skip the
@@ -9629,8 +9648,8 @@ function updateProjectiles(dt) {
                                 '#fff8c0');
             }
           }
-          if (p.element)  applyElement(e, p.element,  p.elementDmg * skinElementMul(p.sourceSkin, p.element));
-          if (p.element2) applyElement(e, p.element2, p.elementDmg * skinElementMul(p.sourceSkin, p.element2));
+          if (p.element)  applyElement(e, p.element,  p.elementDmg, skinElementMul(p.sourceSkin, p.element));
+          if (p.element2) applyElement(e, p.element2, p.elementDmg, skinElementMul(p.sourceSkin, p.element2));
           // Cleric — each holy bolt heals the wall (1 HP base + research bonus)
           if (p.type === 'cleric' && wallHP < effects.wallMaxHp) {
             let heal = 1 + (effects.clericHealAdd || 0);
@@ -9668,8 +9687,8 @@ function updateProjectiles(dt) {
               if (sdx * sdx + sdy * sdy <= r2) {
                 other.lastDmgFromSlotIdx = p.sourceSlotIdx;
                 applyDamage(other, p.splashDmg * critMul);
-                if (p.element)  applyElement(other, p.element,  p.elementDmg * 0.6);
-            if (p.element2) applyElement(other, p.element2, p.elementDmg * 0.6);
+                if (p.element)  applyElement(other, p.element,  p.elementDmg * 0.6, skinElementMul(p.sourceSkin, p.element));
+                if (p.element2) applyElement(other, p.element2, p.elementDmg * 0.6, skinElementMul(p.sourceSkin, p.element2));
               }
             }
             spawnExplosion(e.x, e.y - 3, p.splash);
@@ -9696,8 +9715,8 @@ function updateProjectiles(dt) {
               spawnBeam(lastX, lastY, next.x, next.y - 3, p.element);
               next.lastDmgFromSlotIdx = p.sourceSlotIdx;
               applyDamage(next, chainDmg);
-              if (p.element)  applyElement(next, p.element,  chainDmg * skinElementMul(p.sourceSkin, p.element));
-              if (p.element2) applyElement(next, p.element2, chainDmg * skinElementMul(p.sourceSkin, p.element2));
+              if (p.element)  applyElement(next, p.element,  chainDmg, skinElementMul(p.sourceSkin, p.element));
+              if (p.element2) applyElement(next, p.element2, chainDmg, skinElementMul(p.sourceSkin, p.element2));
               p.hitTargets.add(next);
               lastX = next.x; lastY = next.y - 3;
               chainDmg *= 0.75;
@@ -10640,10 +10659,13 @@ function skinElementMul(skinId, elementId) {
 }
 
 // Apply an elemental on-hit effect to an enemy (DoT, slow, stun, knockback, etc.)
-function applyElement(e, elementId, srcDmg) {
+// skinMul defaults to 1; applied uniformly to fire/poison/bleed/holy DoT
+// values so a +25%-Fire skin actually scales every fire imbue equally.
+function applyElement(e, elementId, srcDmg, skinMul) {
+  const km = skinMul || 1;
   if (elementId === 'fire') {
     e.burnT = 3.0 + (effects.burnDurationAdd || 0);
-    const dps = Math.max(1, srcDmg * 0.45 * (effects.burnPotencyMul || 1));
+    const dps = Math.max(1, srcDmg * 0.45 * km * (effects.burnPotencyMul || 1));
     e.burnDps = Math.max(e.burnDps || 0, dps);
   } else if (elementId === 'ice') {
     e.slowT = 2.0;
@@ -10652,12 +10674,14 @@ function applyElement(e, elementId, srcDmg) {
     const maxStacks = 5 + (effects.poisonStacksAdd || 0);
     e.poisonStacks = Math.min(maxStacks, (e.poisonStacks || 0) + 1);
     e.poisonT = 4.0;
-    const per = Math.max(0.5, srcDmg * 0.18 * (effects.poisonPotencyMul || 1));
+    const per = Math.max(0.5, srcDmg * 0.18 * km * (effects.poisonPotencyMul || 1));
     e.poisonDpsPer = Math.max(e.poisonDpsPer || 0, per);
   } else if (elementId === 'bleed') {
-    // Scales with the enemy's max HP — strong vs tanks, weak vs swarms
+    // Scales with the enemy's max HP — strong vs tanks, weak vs swarms.
+    // The skin multiplier (Duskblade +25%) is captured separately because
+    // bleed ignores raw srcDmg; without this it'd be a silent no-op.
     e.bleedT = 4.0;
-    const dps = Math.min(40, e.maxHp * 0.025);
+    const dps = Math.min(40, e.maxHp * 0.025 * km);
     e.bleedDps = Math.max(e.bleedDps || 0, dps);
   } else if (elementId === 'knockback') {
     // Bosses are now FULLY immune to knockback (review feedback: cannon
@@ -10686,7 +10710,11 @@ function applyElement(e, elementId, srcDmg) {
 }
 
 // Final damage after armor, witch aura, and Hex vulnerability — heroes still see at least 1 dmg per hit
-function applyDamage(e, raw) {
+// ignoreArmor=true is used by crossbow projectiles, which pierce armor
+// entirely. Even with ignoreArmor, all the OTHER multipliers (Hunter's
+// Mark, witch aura, Hex) still apply — previously crossbow short-circuited
+// past applyDamage entirely and silently skipped those.
+function applyDamage(e, raw, ignoreArmor) {
   // Prestige: Hunter's Mark — first hit on each enemy marks it; all SUBSEQUENT
   // hits deal +15% damage. First hit is unmodified but flips the flag. Applied
   // pre-armor so chunky-armored targets don't eat the bonus.
@@ -10695,7 +10723,7 @@ function applyDamage(e, raw) {
     if (e.marked) base *= 1.15;
     else          e.marked = true;
   }
-  let d = base - (e.armor || 0);
+  let d = ignoreArmor ? base : (base - (e.armor || 0));
   if (e.auraShield) d *= 0.5;
   if (e.hexT > 0)   d *= 1.25;
   d = Math.max(1, Math.floor(d));
@@ -12313,11 +12341,11 @@ window.settingsWipe = function () {
       }
       if (typeof unlockedAchievements !== 'undefined' && unlockedAchievements.clear) unlockedAchievements.clear();
       if (typeof COMMANDERS !== 'undefined') {
-        // NOTE: upgradePreset must be null (matches defaultCommander) — the
-        // old value 'roundRobin' was a typo that didn't exist in UPGRADE_PRESETS
-        // and silently fell through to the dmg-first default, making every
-        // post-reset commander dump all gold into damage.
-        for (const c of COMMANDERS) { c.owned = false; c.autoHire = null; c.upgradePreset = null; c.imbuePreset = null; c.skinPreset = null; }
+        // Reset every commander to its factory default. The previous code
+        // cleared `imbuePreset` / `skinPreset` (which don't exist) and
+        // missed `autoImbue` / `autoSkin` (which do), leaving stale auto-
+        // configurations on every wiped commander.
+        for (const c of COMMANDERS) Object.assign(c, defaultCommander(c.idx));
       }
       // Clear daily-mode flags + body class so the chip disappears
       if (typeof dailyMode !== 'undefined') {
