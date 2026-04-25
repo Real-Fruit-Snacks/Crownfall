@@ -10528,7 +10528,7 @@ const ENEMY_KINDS = {
   goblin:   { hpMul: 1.0,  spdMul: 1.0,  dmgMul: 1.0,  sizeMul: 1.0,  armor: 0, coinMul: 1.0 },
   charger:  { hpMul: 0.55, spdMul: 1.9,  dmgMul: 0.7,  sizeMul: 0.95, armor: 0, coinMul: 1.0 },
   shielded: { hpMul: 1.6,  spdMul: 0.55, dmgMul: 1.2,  sizeMul: 1.05, armor: 2, coinMul: 1.4 },
-  archer:   { hpMul: 0.7,  spdMul: 0.9,  dmgMul: 0,    sizeMul: 1.0,  armor: 0, coinMul: 1.3, ranged: true,  rangedDmgMul: 1.2, fireEvery: 2.2, stopDist: 90 },
+  archer:   { hpMul: 0.7,  spdMul: 0.9,  dmgMul: 0,    sizeMul: 1.0,  armor: 0, coinMul: 1.3, ranged: true,  rangedDmgMul: 1.0, fireEvery: 2.2, stopDist: 90 },
   healer:   { hpMul: 0.9,  spdMul: 0.7,  dmgMul: 0.4,  sizeMul: 1.0,  armor: 0, coinMul: 1.6, healEvery: 1.4, healPctOfTargetMax: 0.05, healRadius: 32 },
   witch:    { hpMul: 0.85, spdMul: 0.75, dmgMul: 0.8,  sizeMul: 1.05, armor: 1, coinMul: 1.7, auraRadius: 30, auraReduce: 0.5 },
   // Battering ram — siege engine. Slow, very tanky, devastating wall damage.
@@ -10844,7 +10844,15 @@ function spawnEnemy(w, asBoss) {
     // ranged
     stopDist:    km.ranged ? km.stopDist + (asBoss ? 30 : 0) : 0,
     rangedTimer: km.ranged ? 0.6 + Math.random() * 0.6 : 0,
-    rangedRate:  km.ranged ? km.fireEvery * (asBoss ? 0.7 : 1) : 0,
+    // Boss ranged units USED to get a 30%-faster fire rate (* 0.7).
+    // Stacked with their boosted base damage and the fact that ranged
+    // bosses park outside most starter-hero ranges, that turned the
+    // wave-10 archer boss into an ~24-DPS-required wall-breach wall.
+    // Bosses now fire at the SAME rate as their minion counterparts;
+    // ranged bosses still feel scary because their HP and per-shot
+    // damage scale with the wave, just no longer compounded by a
+    // hidden fire-rate buff.
+    rangedRate:  km.ranged ? km.fireEvery : 0,
     rangedDmg:   km.ranged ? Math.max(1, Math.floor(s.dmg * km.rangedDmgMul + w * 0.15)) : 0,
     // healer
     healTimer:   km.healEvery || 0,
