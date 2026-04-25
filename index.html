@@ -4920,7 +4920,22 @@ const effects = {
   wallSpikes: 0, wallDamageMul: 1, lastStandMul: 0,
   // crown-tier effects
   phoenixWill: false, synergyDmgPerHero: 0, bossGoldDrop: 0,
-  mageChainsAdd: 0, archerVolleyEvery: 0, bossCrownAdd: 0
+  mageChainsAdd: 0, archerVolleyEvery: 0, bossCrownAdd: 0,
+  // prestige-batch fields. Reset to defaults in applyResearch (which also
+  // re-derives them from the live prestige.purchased map). Declared here
+  // too so reads before the first applyResearch don't return undefined.
+  autoHireSlot0:        false,
+  rpFlatBonus:          0,
+  empiresReachStacks:   0,
+  endlessMarchShards:   0,
+  huntersMark:          false,
+  bankVaultEnabled:     false,
+  promotionEnabled:     false,
+  skillCdMul:           1,
+  phoenixDown:          false,
+  dualImbueEnabled:     false,
+  houndUnlocked:        false,
+  ancestrySlots:        0
 };
 
 function applyResearch() {
@@ -5705,6 +5720,12 @@ function runCommanderAutomation() {
     }
     if (!anyBought) break;
   }
+  // Defensive: if we hit the 400-cycle ceiling there's likely a runaway
+  // (e.g. an upgrade that doesn't increase its lvKey). Log so it's
+  // visible in dev console rather than silently dropping further upgrades.
+  if (safety <= 0) {
+    console.warn('runCommanderAutomation: hit 400-cycle safety ceiling. Possible runaway preset.');
+  }
 }
 
 // =====================================================================
@@ -5835,7 +5856,10 @@ function _recordOfflineRpRate(rpEarned) {
     if (!runState || !runState.startT) return;
     const elapsedMin = (performance.now() - runState.startT) / 60000;
     if (elapsedMin < 0.5) return;   // too short to measure
-    const newRate = rpEarned / elapsedMin;
+    // Per-sample cap: a 30-second lucky run can spike the rate to absurd
+    // numbers and drag the EMA up forever. Clamp each sample to a sane
+    // ceiling before folding into the average.
+    const newRate = Math.min(50, rpEarned / elapsedMin);
     const prevRaw = parseFloat(localStorage.getItem('castleOfflineRpRate'));
     const prev    = Number.isFinite(prevRaw) && prevRaw > 0 ? prevRaw : 0;
     // 70/30 EMA toward the new rate — smooth but reactive.
