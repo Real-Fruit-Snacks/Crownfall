@@ -5763,12 +5763,24 @@ function loadStats() {
     unlockedAchievements = new Set(d.unlocked || []);
   } catch {}
 }
+// localStorage write throttle for stat bumps. saveStats() used to fire
+// on every kill — high-volume in late waves (50+ enemies dying per wave).
+// Coalesce to once per ~1s wall clock; flushAllSaves on page hide / unload
+// catches anything pending in the throttle window.
+let _statsSaveDirty = false;
+let _statsSaveT     = 0;
 function bumpStat(key, n = 1) {
   if (!(key in stats)) return;
   stats[key] = (stats[key] || 0) + n;
   if (key === 'bestWave') stats[key] = Math.max(stats[key], n);
   checkAchievements();
-  saveStats();
+  _statsSaveDirty = true;
+  const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+  if (now - _statsSaveT > 1000) {
+    saveStats();
+    _statsSaveDirty = false;
+    _statsSaveT = now;
+  }
 }
 function setBestWave(w) {
   if (w > stats.bestWave) {
@@ -5794,7 +5806,8 @@ function checkAchievements() {
 // the next save trigger, we want one more flush. These handlers do nothing
 // expensive — just re-persist the already-in-memory state.
 function flushAllSaves() {
-  try { saveStats(); } catch {}
+  // Force a stats flush regardless of the bumpStat throttle.
+  try { saveStats(); _statsSaveDirty = false; } catch {}
   try { saveResearch(); } catch {}
   try { if (typeof savePrestige    === 'function') savePrestige();    } catch {}
   try { if (typeof saveCommanders  === 'function') saveCommanders();  } catch {}
@@ -8307,14 +8320,23 @@ function flashScreen(color, duration) {
 // 24-30 visual-px wall of text. Rendering as a DOM <div> instead lets the
 // font size live in CSS pixels — a fixed 12px stays 12px regardless of
 // canvas scale. CSS handles the rise + fade; JS just spawns and times out.
+// Cached canvas rect — refreshed once per frame from the loop and on
+// resize. Used by spawnFloatingText so a crit-storm spawning 20+ texts
+// in one frame doesn't trigger 20 layout reflows via getBoundingClientRect.
+let _cachedCanvasRect = null;
+function _refreshCanvasRect() {
+  if (typeof canvas !== 'undefined') _cachedCanvasRect = canvas.getBoundingClientRect();
+}
 function spawnFloatingText(x, y, text, color, opts) {
   if (typeof document === 'undefined') return;
   const el = document.createElement('div');
   el.className = 'floating-text' + (opts && opts.big ? ' big' : '');
   el.textContent = text;
   if (color) el.style.color = color;
-  // Convert canvas coords (x,y) to viewport coords using the canvas's CSS rect
-  const rect = canvas.getBoundingClientRect();
+  // Convert canvas coords (x,y) to viewport coords using the cached CSS
+  // rect (refreshed once per frame). Fall back to a fresh measurement on
+  // the very first call before the loop has had a chance to refresh.
+  const rect = _cachedCanvasRect || canvas.getBoundingClientRect();
   const sx = rect.left + (x / W) * rect.width;
   const sy = rect.top  + (y / H) * rect.height;
   el.style.left = sx + 'px';
@@ -9303,13 +9325,29 @@ function drawHeroRangeIndicator() {
   ctx.restore();
 }
 
-// Bards apply a fire-rate boost to nearby allied heroes (and an optional damage aura)
+// Bards apply a fire-rate boost to nearby allied heroes (and an optional damage aura).
+// Per-frame cache of the SLOTS scan: the bard list rarely changes across
+// the 5 heroes that might fire in a given tick, so caching once per
+// updateHeroes call avoids 5x re-iterating SLOTS for the same answer.
+let _bardCacheT = -1;
+let _bardCache  = null;
+function _refreshBardCache(t) {
+  if (t === _bardCacheT) return _bardCache;
+  const bards = [];
+  for (const s of SLOTS) {
+    if (!s.filled || !s.hero) continue;
+    const ht = HERO_TYPES[s.hero.type];
+    if (ht && ht.isSupport) bards.push(s);
+  }
+  _bardCache  = bards;
+  _bardCacheT = t;
+  return bards;
+}
 function bardFireRateMul(slot) {
   let mul = 1;
-  for (const s of SLOTS) {
-    if (!s.filled || s === slot) continue;
-    const t = HERO_TYPES[s.hero.type];
-    if (!t || !t.isSupport) continue;
+  const bards = _refreshBardCache(lastT);
+  for (const s of bards) {
+    if (s === slot) continue;
     if (Math.abs(s.cy - slot.cy) <= s.hero.range) {
       const buff = (s.hero.auraFireRate || 0) + (effects.bardAuraAdd || 0);
       mul *= 1 - buff;
@@ -9321,10 +9359,9 @@ function bardFireRateMul(slot) {
 function bardDamageMul(slot) {
   if ((effects.bardDmgAuraAdd || 0) <= 0) return 1;
   let mul = 1;
-  for (const s of SLOTS) {
-    if (!s.filled || s === slot) continue;
-    const t = HERO_TYPES[s.hero.type];
-    if (!t || !t.isSupport) continue;
+  const bards = _refreshBardCache(lastT);
+  for (const s of bards) {
+    if (s === slot) continue;
     if (Math.abs(s.cy - slot.cy) <= s.hero.range) {
       mul *= 1 + (effects.bardDmgAuraAdd || 0);
     }
@@ -11907,6 +11944,10 @@ function drawTargetingPreview() {
 // ---------- game loop ----------
 let lastT = 0;
 function loop(t) {
+  // Refresh the cached canvas rect once per frame so spawnFloatingText
+  // doesn't trigger a layout reflow per spawn during crit storms (where
+  // 20+ texts can spawn in a single tick).
+  _refreshCanvasRect();
   // Real elapsed dt (capped at 100ms so a tab-blur stutter doesn't teleport
   // simulation by a full frame). Then multiplied by gameSpeed and re-capped
   // to keep physics stable even at 3x — at 60fps with 3x speed that's 48ms,
@@ -12045,10 +12086,18 @@ function loop(t) {
   if (goldDirty) updateUI();
   tickSkillBarVisual(t);
 
-  runRpEl.textContent = currentRpEarned();
+  // Gate per-frame textContent assignment behind a value change. RP only
+  // moves on kills / wave clears, so writing every frame churned the DOM
+  // for no reason.
+  const _rpNow = currentRpEarned();
+  if (_rpNow !== _lastRpShown) {
+    runRpEl.textContent = _rpNow;
+    _lastRpShown = _rpNow;
+  }
 
   requestAnimationFrame(loop);
 }
+let _lastRpShown = -1;
 // ---------- SAVE-BACKUP BADGE ---------------------------------------------
 // Shows a small nag chip in the top-left when the player has meaningful
 // progress (prestiged OR reached wave 20+) and hasn't ever backed up their
