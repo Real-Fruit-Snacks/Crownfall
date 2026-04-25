@@ -3979,7 +3979,9 @@ for (let i = 0; i < SLOT_COUNT; i++) {
 }
 
 // ---------- economy ----------
-const HIRE_COSTS = [10, 25, 60, 140, 300];
+// HIRE_COSTS used to be the canonical hire-cost table here. Real costs
+// now live on HERO_TYPES[*].cost (so adding a new class doesn't require
+// editing two arrays). Constant removed.
 const TAP_DAMAGE = 3;
 
 let gold = 25;
@@ -4318,7 +4320,6 @@ window.resetRun = function (opts) {
   autoTapTimer = 0;
   skillFx.length       = 0;
   firePatches.length   = 0;
-  floatingTexts.length = 0;     // legacy array (DOM-based now), kept tidy
   // Sweep any in-flight DOM floating text from the previous run
   document.querySelectorAll('.floating-text').forEach(el => el.remove());
   PLAGUE_CLOUDS.length = 0;
@@ -5374,7 +5375,11 @@ const UPGRADE_PRESETS = {
   'dmg-first':  { label: 'DMG → SPD → RNG', order: ['dmg','spd','rng'] },
   'spd-first':  { label: 'SPD → DMG → RNG', order: ['spd','dmg','rng'] },
   'rng-first':  { label: 'RNG → DMG → SPD', order: ['rng','dmg','spd'] },
-  'balanced':   { label: 'Balanced (round-robin)', order: ['dmg','rng','spd'], roundRobin: true }
+  // 'Balanced' just means "try dmg first, then rng, then spd, buy the
+  // first affordable one" — same shape as the others, no dedicated
+  // round-robin code path. (The roundRobin: true flag previously here
+  // was never read anywhere.)
+  'balanced':   { label: 'Balanced (round-robin)', order: ['dmg','rng','spd'] }
 };
 function defaultCommander(idx) {
   // Every setting starts OFF — commander does nothing until the player
@@ -7270,8 +7275,7 @@ waveHudEl.addEventListener('dblclick', () => {
     // in endWave via `Math.max(totalWavesCleared, wave)` so you only get
     // RP for waves whose enemies actually die on the field.
     if (effects.wallRegenPerWave > 0 && wallHP < effects.wallMaxHp) {
-      wallHP = Math.min(effects.wallMaxHp, wallHP + effects.wallRegenPerWave);
-      if (typeof updateWallHp === 'function') updateWallHp();
+      if (typeof healWall === 'function') healWall(effects.wallRegenPerWave);
     }
     if (runState.dmgBuffWaves  > 0) runState.dmgBuffWaves--;
     if (runState.coinBuffWaves > 0) runState.coinBuffWaves--;
@@ -7369,8 +7373,7 @@ function endWave() {
   }
   // Wall regen from research
   if (effects.wallRegenPerWave > 0 && wallHP < effects.wallMaxHp) {
-    wallHP = Math.min(effects.wallMaxHp, wallHP + effects.wallRegenPerWave);
-    updateWallHp();
+    healWall(effects.wallRegenPerWave);
   }
   // Tick down temporary mid-run-event buffs
   if (runState.dmgBuffWaves  > 0) runState.dmgBuffWaves--;
@@ -7398,7 +7401,7 @@ const MID_EVENTS = {
       // commanders drain the purse on auto-upgrade, so by the time the event
       // fires the player can't afford anything. Reducing costs makes the
       // merchant a viable pick even on a freshly-drained treasury.
-      { label: 'Healing Tonic',     subnote: 'Restore 30 wall HP',                   cost: 25,  apply() { wallHP = Math.min(effects.wallMaxHp, wallHP + 30); updateWallHp(); spawnFloatingText(WALL_W + 6, H/2 - 12, '+30', '#a8ffb0'); } },
+      { label: 'Healing Tonic',     subnote: 'Restore 30 wall HP',                   cost: 25,  apply() { healWall(30); spawnFloatingText(WALL_W + 6, H/2 - 12, '+30', '#a8ffb0'); } },
       { label: 'Sharpening Stone',  subnote: '+20% hero damage \u00b7 3 waves',      cost: 45,  apply() { runState.dmgBuffWaves = 3; runState.dmgBuffValue = 0.20; } },
       { label: 'Lucky Charm',       subnote: 'Coins worth +50% \u00b7 3 waves',      cost: 40,  apply() { runState.coinBuffWaves = 3; runState.coinBuffValue = 0.50; } },
       { label: 'Send him on his way', skip: true }
@@ -7428,7 +7431,7 @@ const MID_EVENTS = {
     title: 'Hermit\u2019s Blessing',
     blurb: 'A kindly hermit lays hands on your battered wall.',
     options: [
-      { label: 'Accept the blessing', subnote: '+40 wall HP', costType: 'good', cost: '+40', apply() { wallHP = Math.min(effects.wallMaxHp, wallHP + 40); updateWallHp(); spawnFloatingText(WALL_W + 6, H/2 - 12, '+40', '#a8ffb0'); } },
+      { label: 'Accept the blessing', subnote: '+40 wall HP', costType: 'good', cost: '+40', apply() { healWall(40); spawnFloatingText(WALL_W + 6, H/2 - 12, '+40', '#a8ffb0'); } },
       // Skip is here so Auto-Dismiss Events doesn't silently steal a
       // free heal — every other mid-event has a skip path.
       { label: 'Decline politely', skip: true }
@@ -8290,7 +8293,6 @@ window.buySkill = function (idx, skillId) {
 // ---------- skill juice systems ----------
 const skillFx       = [];           // { update(dt), draw(), done }
 const firePatches   = [];           // { x, y, radius, life, maxLife, dps }
-const floatingTexts = [];           // { x, y, vy, text, color, life, maxLife }
 let   mouseX = 0, mouseY = 0;       // canvas-space mouse for preview reticle
 let   screenFlashT = 0, screenFlashMaxT = 0, screenFlashColor = 'rgba(0,0,0,0)';
 
@@ -8321,12 +8323,6 @@ function spawnFloatingText(x, y, text, color, opts) {
   // CSS keyframe runs 950ms; remove a hair after to avoid flicker
   setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 1000);
 }
-
-// Legacy stubs — the canvas-side update/draw used to maintain the floating
-// text array. Now everything lives in the DOM, so these are no-ops kept
-// around so the existing call sites in render() / loop() don't NPE.
-function updateFloatingTexts(_dt) { /* DOM-side now */ }
-function drawFloatingTexts()      { /* DOM-side now */ }
 
 function updateSkillFx(dt) {
   for (let i = skillFx.length - 1; i >= 0; i--) {
@@ -8646,10 +8642,8 @@ function castSkill(idx, sk, x, y, enemy) {
   } else if (sk.id === 'heal') {
     Audio.sfx.heal();
     if (wallHP < effects.wallMaxHp) {
-      const heal = Math.min(35, effects.wallMaxHp - wallHP);
-      wallHP += heal;
-      updateWallHp();
-      spawnFloatingText(WALL_W + 6, H / 2 - 14, '+' + heal, '#a8ffb0');
+      const healed = healWall(35);
+      if (healed > 0) spawnFloatingText(WALL_W + 6, H / 2 - 14, '+' + healed, '#a8ffb0');
     }
     fxWallHeal();
     flashScreen('rgba(80,255,120,0.18)', 0.22);
@@ -8739,6 +8733,18 @@ const wallHpNumEl  = document.getElementById('wallhp-num');
 const wallHpFillEl = document.getElementById('wallhp-fill');
 
 const wallHpMaxEl = document.getElementById('wallhp-max');
+// Centralised wall-heal helper. Bumps wallHealedTotal lifetime stat by
+// the actual delta (so capping at wallMaxHp doesn't inflate the count).
+// Returns the amount actually healed.
+function healWall(raw) {
+  if (!Number.isFinite(raw) || raw <= 0) return 0;
+  const before = wallHP;
+  wallHP = Math.min(effects.wallMaxHp, wallHP + raw);
+  const delta = wallHP - before;
+  if (delta > 0 && typeof bumpStat === 'function') bumpStat('wallHealedTotal', delta);
+  if (delta > 0) updateWallHp();
+  return delta;
+}
 function updateWallHp() {
   wallHpNumEl.textContent = Math.max(0, wallHP);
   wallHpMaxEl.textContent = effects.wallMaxHp;
@@ -9670,8 +9676,7 @@ function updateProjectiles(dt) {
             let heal = 1 + (effects.clericHealAdd || 0);
             // Mending element — extra wall heal per hit (either imbue slot works).
             if (p.element === 'mending' || p.element2 === 'mending') heal += 2;
-            wallHP = Math.min(effects.wallMaxHp, wallHP + heal);
-            updateWallHp();
+            healWall(heal);
           }
           p.hitTargets.add(e);
 
@@ -11773,7 +11778,6 @@ function render() {
   drawParticles();
   drawCoins();
   drawTargetingPreview();
-  drawFloatingTexts();
   drawEventBanner();
   ctx.restore();
 
@@ -11966,8 +11970,7 @@ function loop(t) {
         if (s.filled && s.hero && s.hero.type === 'bard') bards++;
       }
       if (bards > 0) {
-        wallHP = Math.min(effects.wallMaxHp, wallHP + effects.bardWallRegen * bards * dt);
-        updateWallHp();
+        healWall(effects.bardWallRegen * bards * dt);
       }
     }
     updateProjectiles(dt);
@@ -12031,7 +12034,6 @@ function loop(t) {
     updatePlagueClouds(dt);
     updateWallSmoke(dt);
     updateHazards(dt);
-    updateFloatingTexts(dt);
     if (eventBannerT > 0) eventBannerT -= dt;
     if (screenFlashT > 0) screenFlashT -= dt;
     if (shakeT > 0) shakeT -= dt;
