@@ -203,6 +203,21 @@
     transform: translate(-1px, -1px);
     box-shadow: inset 0 0 0 1px rgba(0,0,0,0.5), inset 0 0 0 2px #ffd060, 3px 3px 0 0 #1a0c00;
   }
+  /* Two-line skin button: name on top, specialty bonus tag below */
+  #panel .hero-skins .skin-btn .skin-name {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 1px;
+  }
+  #panel .hero-skins .skin-btn .skin-bonus {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.2px;
+    color: #ffe080;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.7);
+    font-weight: 400;
+    line-height: 1.1;
+  }
   #panel .imbue-head { margin-top: 12px; padding-top: 8px; border-top: 2px solid #6a4528; color: #f5d889; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; text-align: center; }
   #panel .imbue-option { background: #3a2616; padding: 8px 10px; margin: 7px 0; box-shadow: inset 0 0 0 2px #6a4528, 2px 2px 0 0 #1a0c00; }
   #panel .imbue-head-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; gap: 8px; }
@@ -4593,18 +4608,18 @@ const RESEARCH_NODES = [
   // ===========================================================
   //  HERO SKINS — palette swaps unlocked with Crowns
   // ===========================================================
-  { id:'skinArcCrim',  name:'Skin: Crimson Archer',   desc:'Unlock the Crimson Archer palette swap.',     cost:0, crownCost:3, req:['o1'],      effect:{ unlockSkin:'archerCrimson' } },
-  { id:'skinArcFor',   name:'Skin: Forest Scout',     desc:'Unlock the Forest Scout palette swap.',       cost:0, crownCost:3, req:['o1'],      effect:{ unlockSkin:'archerForest' } },
-  { id:'skinCnNavy',   name:'Skin: Naval Gunner',     desc:'Unlock the Naval Gunner palette swap.',       cost:0, crownCost:3, req:['hCannon'], effect:{ unlockSkin:'cannoneerNavy' } },
-  { id:'skinCnBronze', name:'Skin: Bronze Cannoneer', desc:'Unlock the Bronze Cannoneer palette swap.',   cost:0, crownCost:3, req:['hCannon'], effect:{ unlockSkin:'cannoneerBronze' } },
-  { id:'skinMgEm',     name:'Skin: Emerald Sage',     desc:'Unlock the Emerald Sage palette swap.',       cost:0, crownCost:3, req:['hMage'],   effect:{ unlockSkin:'mageEmerald' } },
-  { id:'skinMgRb',     name:'Skin: Ruby Sorceress',   desc:'Unlock the Ruby Sorceress palette swap.',     cost:0, crownCost:3, req:['hMage'],   effect:{ unlockSkin:'mageRuby' } },
-  { id:'skinXbDusk',   name:'Skin: Duskblade',        desc:'Unlock the Duskblade palette swap.',          cost:0, crownCost:3, req:['hXbow'],   effect:{ unlockSkin:'crossbowDuskblade' } },
-  { id:'skinXbGold',   name:'Skin: Goldsteel',        desc:'Unlock the Goldsteel palette swap.',          cost:0, crownCost:3, req:['hXbow'],   effect:{ unlockSkin:'crossbowGoldsteel' } },
-  { id:'skinClNight',  name:'Skin: Midnight Cleric',  desc:'Unlock the Midnight Cleric palette swap.',    cost:0, crownCost:3, req:['hCleric'], effect:{ unlockSkin:'clericMidnight' } },
-  { id:'skinClPlague', name:'Skin: Plague Doctor',    desc:'Unlock the Plague Doctor palette swap.',      cost:0, crownCost:3, req:['hCleric'], effect:{ unlockSkin:'clericPlague' } },
-  { id:'skinBdJest',   name:'Skin: Jester',           desc:'Unlock the Jester palette swap.',             cost:0, crownCost:3, req:['hBard'],   effect:{ unlockSkin:'bardJester' } },
-  { id:'skinBdWand',   name:'Skin: Wanderer',         desc:'Unlock the Wanderer palette swap.',           cost:0, crownCost:3, req:['hBard'],   effect:{ unlockSkin:'bardWanderer' } }
+  { id:'skinArcCrim',  name:'Skin: Crimson Archer',   desc:'Crimson Archer palette \u2014 +25% Fire imbue damage.',          cost:0, crownCost:3, req:['o1'],      effect:{ unlockSkin:'archerCrimson' } },
+  { id:'skinArcFor',   name:'Skin: Forest Scout',     desc:'Forest Scout palette \u2014 arrows pierce +1 extra enemy.',       cost:0, crownCost:3, req:['o1'],      effect:{ unlockSkin:'archerForest' } },
+  { id:'skinCnNavy',   name:'Skin: Naval Gunner',     desc:'Naval Gunner palette \u2014 +25% cannon splash radius.',          cost:0, crownCost:3, req:['hCannon'], effect:{ unlockSkin:'cannoneerNavy' } },
+  { id:'skinCnBronze', name:'Skin: Bronze Cannoneer', desc:'Bronze Cannoneer palette \u2014 +25% cannon splash damage.',      cost:0, crownCost:3, req:['hCannon'], effect:{ unlockSkin:'cannoneerBronze' } },
+  { id:'skinMgEm',     name:'Skin: Emerald Sage',     desc:'Emerald Sage palette \u2014 +25% Poison imbue damage.',           cost:0, crownCost:3, req:['hMage'],   effect:{ unlockSkin:'mageEmerald' } },
+  { id:'skinMgRb',     name:'Skin: Ruby Sorceress',   desc:'Ruby Sorceress palette \u2014 +25% Fire imbue damage.',           cost:0, crownCost:3, req:['hMage'],   effect:{ unlockSkin:'mageRuby' } },
+  { id:'skinXbDusk',   name:'Skin: Duskblade',        desc:'Duskblade palette \u2014 +25% Bleed imbue damage.',               cost:0, crownCost:3, req:['hXbow'],   effect:{ unlockSkin:'crossbowDuskblade' } },
+  { id:'skinXbGold',   name:'Skin: Goldsteel',        desc:'Goldsteel palette \u2014 bolts pierce +1 extra enemy.',           cost:0, crownCost:3, req:['hXbow'],   effect:{ unlockSkin:'crossbowGoldsteel' } },
+  { id:'skinClNight',  name:'Skin: Midnight Cleric',  desc:'Midnight Cleric palette \u2014 +25% Holy damage vs bosses.',      cost:0, crownCost:3, req:['hCleric'], effect:{ unlockSkin:'clericMidnight' } },
+  { id:'skinClPlague', name:'Skin: Plague Doctor',    desc:'Plague Doctor palette \u2014 +25% Poison imbue damage.',          cost:0, crownCost:3, req:['hCleric'], effect:{ unlockSkin:'clericPlague' } },
+  { id:'skinBdJest',   name:'Skin: Jester',           desc:'Jester palette \u2014 +5% additional bard fire-rate aura.',       cost:0, crownCost:3, req:['hBard'],   effect:{ unlockSkin:'bardJester' } },
+  { id:'skinBdWand',   name:'Skin: Wanderer',         desc:'Wanderer palette \u2014 +20 additional bard aura range.',         cost:0, crownCost:3, req:['hBard'],   effect:{ unlockSkin:'bardWanderer' } }
 ];
 
 let research = {
@@ -7815,25 +7830,43 @@ function heroCost(typeId) {
 // =====================================================================
 //  HERO SKINS — palette swaps unlocked via Crowns
 // =====================================================================
+// Each skin grants a small thematic specialty bonus on top of the cosmetic
+// palette swap. The `bonus` object describes the modifier (interpreted in
+// makeHero / projectile-creation / applyElement); `bonusDesc` is the short
+// player-facing string surfaced on the slot-panel button and the unlock
+// research node. Magnitudes deliberately small (~10-25%) so picking a skin
+// is a build choice, not a power spike.
 const HERO_SKINS = {
   // ARCHER alts
-  archerCrimson: { hero:'archer',    name:'Crimson Archer',  bodyColor:'#a8281a', bodyHi:'#d04030', hat:'#c89030', hatHi:'#f5d889', accentTag:'#a8281a' },
-  archerForest:  { hero:'archer',    name:'Forest Scout',    bodyColor:'#2c5028', bodyHi:'#4a7838', hat:'#5a3a1a', hatHi:'#7a5a30', accentTag:'#4a7838' },
+  archerCrimson: { hero:'archer',    name:'Crimson Archer',  bodyColor:'#a8281a', bodyHi:'#d04030', hat:'#c89030', hatHi:'#f5d889', accentTag:'#a8281a',
+                   bonus:{ fireDmgMul: 1.25 },     bonusDesc:'+25% Fire damage' },
+  archerForest:  { hero:'archer',    name:'Forest Scout',    bodyColor:'#2c5028', bodyHi:'#4a7838', hat:'#5a3a1a', hatHi:'#7a5a30', accentTag:'#4a7838',
+                   bonus:{ pierceAdd: 1 },         bonusDesc:'+1 Pierce' },
   // CANNONEER alts
-  cannoneerNavy: { hero:'cannoneer', name:'Naval Gunner',    bodyColor:'#1a3a5a', bodyHi:'#3a5a8a', hat:'#3a3a44', hatHi:'#5a5a64', accentTag:'#3a5a8a' },
-  cannoneerBronze:{ hero:'cannoneer',name:'Bronze Cannoneer',bodyColor:'#7a4818', bodyHi:'#a87030', hat:'#c89030', hatHi:'#f5d889', accentTag:'#a87030' },
+  cannoneerNavy: { hero:'cannoneer', name:'Naval Gunner',    bodyColor:'#1a3a5a', bodyHi:'#3a5a8a', hat:'#3a3a44', hatHi:'#5a5a64', accentTag:'#3a5a8a',
+                   bonus:{ splashMul: 1.25 },      bonusDesc:'+25% splash radius' },
+  cannoneerBronze:{ hero:'cannoneer',name:'Bronze Cannoneer',bodyColor:'#7a4818', bodyHi:'#a87030', hat:'#c89030', hatHi:'#f5d889', accentTag:'#a87030',
+                   bonus:{ splashDmgMul: 1.25 },   bonusDesc:'+25% splash damage' },
   // MAGE alts
-  mageEmerald:   { hero:'mage',      name:'Emerald Sage',    bodyColor:'#1a4a3a', bodyHi:'#3a7a5a', hat:'#0a2a18', hatHi:'#2a5a3a', accentTag:'#3a7a5a' },
-  mageRuby:      { hero:'mage',      name:'Ruby Sorceress',  bodyColor:'#7a1838', bodyHi:'#a83a5a', hat:'#3a0a18', hatHi:'#5a2a38', accentTag:'#a83a5a' },
+  mageEmerald:   { hero:'mage',      name:'Emerald Sage',    bodyColor:'#1a4a3a', bodyHi:'#3a7a5a', hat:'#0a2a18', hatHi:'#2a5a3a', accentTag:'#3a7a5a',
+                   bonus:{ poisonDmgMul: 1.25 },   bonusDesc:'+25% Poison damage' },
+  mageRuby:      { hero:'mage',      name:'Ruby Sorceress',  bodyColor:'#7a1838', bodyHi:'#a83a5a', hat:'#3a0a18', hatHi:'#5a2a38', accentTag:'#a83a5a',
+                   bonus:{ fireDmgMul: 1.25 },     bonusDesc:'+25% Fire damage' },
   // CROSSBOW alts
-  crossbowDuskblade:{ hero:'crossbow',name:'Duskblade',      bodyColor:'#3a1a44', bodyHi:'#5a3a64', hat:'#1a0a22', hatHi:'#3a1a44', accentTag:'#5a3a64' },
-  crossbowGoldsteel:{ hero:'crossbow',name:'Goldsteel',      bodyColor:'#5a4a18', bodyHi:'#a87a30', hat:'#3a2a08', hatHi:'#7a5a18', accentTag:'#a87a30' },
+  crossbowDuskblade:{ hero:'crossbow',name:'Duskblade',      bodyColor:'#3a1a44', bodyHi:'#5a3a64', hat:'#1a0a22', hatHi:'#3a1a44', accentTag:'#5a3a64',
+                   bonus:{ bleedDmgMul: 1.25 },    bonusDesc:'+25% Bleed damage' },
+  crossbowGoldsteel:{ hero:'crossbow',name:'Goldsteel',      bodyColor:'#5a4a18', bodyHi:'#a87a30', hat:'#3a2a08', hatHi:'#7a5a18', accentTag:'#a87a30',
+                   bonus:{ pierceAdd: 1 },         bonusDesc:'+1 Pierce' },
   // CLERIC alts
-  clericMidnight:{ hero:'cleric',    name:'Midnight Cleric', bodyColor:'#3a3a78', bodyHi:'#5a5aa8', hat:'#1a1a4a', hatHi:'#3a3a7a', accentTag:'#5a5aa8' },
-  clericPlague:  { hero:'cleric',    name:'Plague Doctor',   bodyColor:'#5a8a3a', bodyHi:'#7aa858', hat:'#3a5818', hatHi:'#5a7838', accentTag:'#7aa858' },
+  clericMidnight:{ hero:'cleric',    name:'Midnight Cleric', bodyColor:'#3a3a78', bodyHi:'#5a5aa8', hat:'#1a1a4a', hatHi:'#3a3a7a', accentTag:'#5a5aa8',
+                   bonus:{ holyDmgMul: 1.25 },     bonusDesc:'+25% Holy damage' },
+  clericPlague:  { hero:'cleric',    name:'Plague Doctor',   bodyColor:'#5a8a3a', bodyHi:'#7aa858', hat:'#3a5818', hatHi:'#5a7838', accentTag:'#7aa858',
+                   bonus:{ poisonDmgMul: 1.25 },   bonusDesc:'+25% Poison damage' },
   // BARD alts
-  bardJester:    { hero:'bard',      name:'Jester',          bodyColor:'#3a8a3a', bodyHi:'#5aa858', hat:'#a83a6a', hatHi:'#d05888', accentTag:'#5aa858' },
-  bardWanderer:  { hero:'bard',      name:'Wanderer',        bodyColor:'#5a3818', bodyHi:'#7a5a38', hat:'#a87a3e', hatHi:'#c89a5e', accentTag:'#7a5a38' }
+  bardJester:    { hero:'bard',      name:'Jester',          bodyColor:'#3a8a3a', bodyHi:'#5aa858', hat:'#a83a6a', hatHi:'#d05888', accentTag:'#5aa858',
+                   bonus:{ bardFireRateAdd: 0.05 }, bonusDesc:'+5% additional fire-rate aura' },
+  bardWanderer:  { hero:'bard',      name:'Wanderer',        bodyColor:'#5a3818', bodyHi:'#7a5a38', hat:'#a87a3e', hatHi:'#c89a5e', accentTag:'#7a5a38',
+                   bonus:{ bardRangeAdd: 20 },     bonusDesc:'+20 aura range' }
 };
 
 function makeHero(typeId, skinId) {
@@ -7867,6 +7900,23 @@ function makeHero(typeId, skinId) {
       effects.unlockedSkins && effects.unlockedSkins.has(skinId)) {
     resolvedSkin = skinId;
   }
+  // Per-skin specialty bonuses applied AFTER the base/class stat math so
+  // the bonus stacks on top. Pierce/element bonuses are stored on h and
+  // read at projectile-creation / element-application time. Bard bonuses
+  // (fire-rate aura, aura range) are baked in here.
+  const skinBonus = (resolvedSkin && HERO_SKINS[resolvedSkin].bonus) || {};
+  let pierceAdd  = skinBonus.pierceAdd  || 0;
+  if (skinBonus.splashMul)    splash     *= skinBonus.splashMul;
+  let splashDmgFinal = splashDmg;
+  if (skinBonus.splashDmgMul) splashDmgFinal *= skinBonus.splashDmgMul;
+  // Bards: their aura strength comes from h.auraFireRate (read by
+  // bardFireRateMul) + the global research stack. Without the type-copy
+  // below, hired bards had a 0% base aura — only research stacks counted.
+  let auraFireRate = (typeId === 'bard') ? (t.auraFireRate || 0) : 0;
+  if (typeId === 'bard') {
+    if (skinBonus.bardFireRateAdd) auraFireRate += skinBonus.bardFireRateAdd;
+    if (skinBonus.bardRangeAdd)    rng          += skinBonus.bardRangeAdd;
+  }
   return {
     type: typeId,
     name: t.name,
@@ -7880,7 +7930,12 @@ function makeHero(typeId, skinId) {
     fireRate: rate,
     cooldown: 0.4,
     projSpeed: t.projSpeed,
-    splash, splashDmg,
+    splash, splashDmg: splashDmgFinal,
+    // pierceAdd is added to whatever pierce the projectile would otherwise
+    // get (currently archers via effects.pierce, soon Goldsteel crossbows).
+    pierceAdd,
+    // auraFireRate is read by bardFireRateMul. 0 for non-bards.
+    auraFireRate,
     fireFlash: 0,
     lvDmg: 0, lvRng: 0, lvSpd: 0,
     // goldSpent tracks total gold sunk into this hero (purchase + upgrades +
@@ -8712,9 +8767,13 @@ function renderPanel(s) {
           sk.hero === t.id && effects.unlockedSkins && effects.unlockedSkins.has(sid)
         );
         const skinButtons = altSkins.length ? `
-          <div class="hero-skins">${altSkins.map(([sid, sk]) =>
-            `<button class="skin-btn" style="background:${sk.accentTag};" onclick="buyHero(${s.index},'${t.id}','${sid}')" ${ok ? '' : 'disabled'} title="Hire ${sk.name}">${sk.name}</button>`
-          ).join('')}</div>` : '';
+          <div class="hero-skins">${altSkins.map(([sid, sk]) => {
+            const tag = sk.bonusDesc ? `<span class="skin-bonus">${sk.bonusDesc}</span>` : '';
+            const tip = sk.bonusDesc ? `Hire ${sk.name} \u2014 ${sk.bonusDesc}` : `Hire ${sk.name}`;
+            return `<button class="skin-btn" style="background:${sk.accentTag};" onclick="buyHero(${s.index},'${t.id}','${sid}')" ${ok ? '' : 'disabled'} title="${tip}">
+              <span class="skin-name">${sk.name}</span>${tag}
+            </button>`;
+          }).join('')}</div>` : '';
         return `
           <div class="hero-option">
             <div class="hero-head">
@@ -9425,11 +9484,18 @@ function spawnProjectileFromHero(from, target, dmg, angleOffset) {
     isCrit: (Math.random() < heroCritChance(h)),
     splash:    h.splash    || 0,
     splashDmg: h.splashDmg || 0,
-    pierce: h.type === 'archer' ? effects.pierce : 0,
+    // Pierce comes from class default (archers via effects.pierce) PLUS
+    // any per-hero skin add (Forest Scout, Goldsteel). Skin bonus applies
+    // even to non-archers — Goldsteel crossbows will get +1 pierce here.
+    pierce: (h.type === 'archer' ? effects.pierce : 0) + (h.pierceAdd || 0),
     chains: h.type === 'mage' ? (2 + (effects.mageChainsAdd || 0)) : 0,
     element:  h.element  || null,
     element2: h.element2 || null,   // Dual Imbue prestige — applied alongside primary
     elementDmg: dmg,
+    // Snapshot the source hero's skin so per-element multipliers (Crimson
+    // Archer fire boost etc.) can be looked up at hit time even if the
+    // hero gets sold or reskinned mid-flight.
+    sourceSkin: h.skin || null,
     hitTargets: new Set(),
     // Cannon shells explode on a timer — even if the target dodged / was killed
     // by another hero before we arrived. Review feedback flagged cannoneers as
@@ -9479,8 +9545,8 @@ function updateProjectiles(dt) {
           if (sdx * sdx + sdy * sdy <= r2) {
             other.lastDmgFromSlotIdx = p.sourceSlotIdx;
             applyDamage(other, Math.max(p.damage, p.splashDmg) * detonateCritMul);
-            if (p.element)  applyElement(other, p.element,  p.elementDmg * 0.6);
-            if (p.element2) applyElement(other, p.element2, p.elementDmg * 0.6);
+            if (p.element)  applyElement(other, p.element,  p.elementDmg * 0.6 * skinElementMul(p.sourceSkin, p.element));
+            if (p.element2) applyElement(other, p.element2, p.elementDmg * 0.6 * skinElementMul(p.sourceSkin, p.element2));
           }
         }
         if (p.isCrit && typeof spawnFloatingText === 'function') {
@@ -9525,7 +9591,11 @@ function updateProjectiles(dt) {
           // Holy element — bonus damage vs bosses applied BEFORE armor reduction
           let dmgScale = 1;
           // Holy-vs-boss damage bonus — honours whichever imbue slot carries Holy.
-          if (e.isBoss && (p.element === 'holy' || p.element2 === 'holy')) dmgScale = 2;
+          // Midnight Cleric skin further boosts the holy multiplier (skin bonus
+          // stacks on top of the baseline 2x): 2.0 -> 2.5 against bosses.
+          if (e.isBoss && (p.element === 'holy' || p.element2 === 'holy')) {
+            dmgScale = 2 * skinElementMul(p.sourceSkin, 'holy');
+          }
           // Crit multiplier — rolled at projectile launch so the whole hit
           // (and any splash / chain that follows) shares the same outcome.
           const critMul = p.isCrit ? HERO_CRIT_MUL : 1;
@@ -9559,8 +9629,8 @@ function updateProjectiles(dt) {
                                 '#fff8c0');
             }
           }
-          if (p.element)  applyElement(e, p.element,  p.elementDmg);
-          if (p.element2) applyElement(e, p.element2, p.elementDmg);
+          if (p.element)  applyElement(e, p.element,  p.elementDmg * skinElementMul(p.sourceSkin, p.element));
+          if (p.element2) applyElement(e, p.element2, p.elementDmg * skinElementMul(p.sourceSkin, p.element2));
           // Cleric — each holy bolt heals the wall (1 HP base + research bonus)
           if (p.type === 'cleric' && wallHP < effects.wallMaxHp) {
             let heal = 1 + (effects.clericHealAdd || 0);
@@ -9626,8 +9696,8 @@ function updateProjectiles(dt) {
               spawnBeam(lastX, lastY, next.x, next.y - 3, p.element);
               next.lastDmgFromSlotIdx = p.sourceSlotIdx;
               applyDamage(next, chainDmg);
-              if (p.element)  applyElement(next, p.element,  chainDmg);
-              if (p.element2) applyElement(next, p.element2, chainDmg);
+              if (p.element)  applyElement(next, p.element,  chainDmg * skinElementMul(p.sourceSkin, p.element));
+              if (p.element2) applyElement(next, p.element2, chainDmg * skinElementMul(p.sourceSkin, p.element2));
               p.hitTargets.add(next);
               lastX = next.x; lastY = next.y - 3;
               chainDmg *= 0.75;
@@ -10553,6 +10623,20 @@ function pickEnemyKind(w) {
   let r = runRng.next() * total;
   for (const p of pool) { r -= p.wt; if (r <= 0) return p.k; }
   return 'goblin';
+}
+
+// Per-skin element-damage multiplier. Returns 1.0 if the skin doesn't
+// boost this element (or if the projectile had no skin). Lets a Crimson
+// Archer's fire imbue actually feel different from a default-skin one.
+function skinElementMul(skinId, elementId) {
+  if (!skinId) return 1;
+  const sk = HERO_SKINS[skinId];
+  if (!sk || !sk.bonus) return 1;
+  if (elementId === 'fire'   && sk.bonus.fireDmgMul)   return sk.bonus.fireDmgMul;
+  if (elementId === 'poison' && sk.bonus.poisonDmgMul) return sk.bonus.poisonDmgMul;
+  if (elementId === 'bleed'  && sk.bonus.bleedDmgMul)  return sk.bonus.bleedDmgMul;
+  if (elementId === 'holy'   && sk.bonus.holyDmgMul)   return sk.bonus.holyDmgMul;
+  return 1;
 }
 
 // Apply an elemental on-hit effect to an enemy (DoT, slow, stun, knockback, etc.)
