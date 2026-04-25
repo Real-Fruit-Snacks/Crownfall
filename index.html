@@ -4162,9 +4162,9 @@ function _afkAutoRestartRun() {
   research.crowns      += crownsEarned;
   research.totalCrowns += crownsEarned;
   saveResearch();
-  // Auto-restart runs are typically shorter than voluntary end-runs (stall
-  // means the player couldn't progress), so record at half weight to avoid
-  // inflating the offline rate with degenerate runs.
+  // Auto-restart runs feed into the same offline-RP rate as voluntary
+  // end-runs. (An earlier comment claimed "half weight" but the code
+  // never actually halved — straightening the lie.)
   if (typeof _recordOfflineRpRate === 'function') _recordOfflineRpRate(rpEarned);
   bumpStat('totalRuns', 1);
   bumpStat('totalGoldEarned', totalGoldEarned);
@@ -4861,11 +4861,14 @@ function recordDailyResult(result) {
   // result: { date, wave, kills, gold, time }
   const all = loadDailyScores();
   const prev = all[result.date];
-  // Tie-break: highest wave, then highest kills, then highest gold
+  // Tie-break: highest wave, then highest kills, then highest gold.
+  // Perfect ties count as "matched the record" so the latest attempt is
+  // shown — keeps the modal honest instead of silently pretending the
+  // run didn't happen.
   const isBetter = !prev
     || result.wave  > prev.wave
     || (result.wave  === prev.wave  && result.kills > prev.kills)
-    || (result.wave  === prev.wave  && result.kills === prev.kills && result.gold > prev.gold);
+    || (result.wave  === prev.wave  && result.kills === prev.kills && result.gold >= prev.gold);
   if (isBetter) {
     all[result.date] = result;
     saveDailyScores(all);
@@ -7425,7 +7428,10 @@ const MID_EVENTS = {
     title: 'Hermit\u2019s Blessing',
     blurb: 'A kindly hermit lays hands on your battered wall.',
     options: [
-      { label: 'Accept the blessing', subnote: '+40 wall HP', costType: 'good', cost: '+40', apply() { wallHP = Math.min(effects.wallMaxHp, wallHP + 40); updateWallHp(); spawnFloatingText(WALL_W + 6, H/2 - 12, '+40', '#a8ffb0'); } }
+      { label: 'Accept the blessing', subnote: '+40 wall HP', costType: 'good', cost: '+40', apply() { wallHP = Math.min(effects.wallMaxHp, wallHP + 40); updateWallHp(); spawnFloatingText(WALL_W + 6, H/2 - 12, '+40', '#a8ffb0'); } },
+      // Skip is here so Auto-Dismiss Events doesn't silently steal a
+      // free heal — every other mid-event has a skip path.
+      { label: 'Decline politely', skip: true }
     ]
   }
 };
@@ -8593,6 +8599,9 @@ function fxWallHeal() {
 function castSkill(idx, sk, x, y, enemy) {
   const slot = SKILL_SLOTS[idx];
   if (sk.id === 'smite' && enemy) {
+    // Smite is "holy" themed — passes through applyDamage (with armor
+    // ignored, like crossbow) so Hunter's Mark / witch aura / Hex still
+    // factor in. Used to bypass applyDamage entirely.
     const dmg = enemy.isBoss ? 120 : 60;
     Audio.sfx.smite();
     fxHolyBeam(enemy.x, enemy.y);
@@ -8600,12 +8609,13 @@ function castSkill(idx, sk, x, y, enemy) {
     const tx = enemy.x, ty = enemy.y - 3;
     setTimeout(() => {
       if (!enemy || enemy.hp == null) return;
+      let landed = 0;
       if (enemy.hp > 0) {
-        enemy.hp -= dmg;
+        landed = applyDamage(enemy, dmg, /*ignoreArmor*/ true);
         enemy.hitFlash = 0.30;
       }
       fxHolyBurst(tx, ty);
-      spawnFloatingText(tx, ty - 10, '-' + dmg, '#fff8c0');
+      spawnFloatingText(tx, ty - 10, '-' + (landed || dmg), '#fff8c0');
       shakeT = 0.18;
       flashScreen('rgba(255,248,192,0.18)', 0.18);
     }, 110);
@@ -8619,7 +8629,10 @@ function castSkill(idx, sk, x, y, enemy) {
         if (e.hp <= 0) continue;
         const dx = e.x - x, dy = (e.y - 3) - y;
         if (dx * dx + dy * dy <= r2) {
-          e.hp -= 100; e.hitFlash = 0.20;
+          // Meteor pierces armor (siege-class impact) but still respects
+          // Hunter's Mark / witch aura / Hex. Was bypassing applyDamage.
+          applyDamage(e, 100, /*ignoreArmor*/ true);
+          e.hitFlash = 0.20;
         }
       }
       spawnExplosion(x, y, radius * 1.2);
@@ -8662,7 +8675,9 @@ function castSkill(idx, sk, x, y, enemy) {
     const r2 = radius * radius;
     for (const e of enemies) {
       if (e.hp <= 0) continue;
-      const dx = e.x - x, dy = e.y - y;
+      // Measure to enemy CENTER (e.y - 3) like Meteor does, not to the
+      // foot — was an off-by-3 versus other AoE skills.
+      const dx = e.x - x, dy = (e.y - 3) - y;
       if (dx * dx + dy * dy <= r2) {
         e.stunT = Math.max(e.stunT || 0, e.isBoss ? 1.0 : 2.0);
         spawnBeam(x, y, e.x, e.y - 3, 'stun');
@@ -11769,8 +11784,17 @@ function render() {
   }
   if (screenFlashT > 0) {
     const a = screenFlashT / screenFlashMaxT;
-    ctx.fillStyle = screenFlashColor.replace(/[\d.]+\)$/, m => (parseFloat(m) * a).toFixed(3) + ')');
+    // Defensive: only the rgba() form has a trailing alpha to scale.
+    // If a future caller passes a hex like '#ff8030', fall back to a
+    // baseline alpha rather than silently rendering the color full-opacity.
+    if (/[\d.]+\)$/.test(screenFlashColor)) {
+      ctx.fillStyle = screenFlashColor.replace(/[\d.]+\)$/, m => (parseFloat(m) * a).toFixed(3) + ')');
+    } else {
+      ctx.fillStyle = screenFlashColor;
+      ctx.globalAlpha = Math.min(1, a * 0.4);
+    }
     ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -11920,6 +11944,13 @@ function loop(t) {
       if (afkAutoRestart && afkAutoRestartSec > 0 && _waveActiveElapsed > afkAutoRestartSec) {
         _waveActiveElapsed = 0;
         _afkAutoRestartRun();
+        // Bail out of the rest of this tick — _afkAutoRestartRun calls
+        // resetRun which zeroes enemies/projectiles/etc. and starts a
+        // fresh wave. Continuing to run updateProjectiles/updateEnemies
+        // on those now-empty arrays is harmless but conceptually a
+        // "code keeps running after a state-reset" smell.
+        requestAnimationFrame(loop);
+        return;
       }
     } else {
       _waveActiveElapsed = 0;
@@ -11946,8 +11977,10 @@ function loop(t) {
     // tap-damage tick every effects.holdTapInterval seconds to whichever
     // enemy is currently under the cursor. Re-targets if the cursor moves
     // to a new enemy or an enemy walks under the held cursor.
+    // Uses baseDt (real seconds) so 3x-speed runs don't get 3x faster
+    // taps — the player's hold rate shouldn't depend on game speed.
     if (_pointerHeld && !armedSkill && !gameOver) {
-      _holdTapTimer -= dt;
+      _holdTapTimer -= baseDt;
       if (_holdTapTimer <= 0) {
         _holdTapTimer = effects.holdTapInterval || 0.7;
         const en = enemyAt(_holdCanvasX, _holdCanvasY);
@@ -11966,8 +11999,10 @@ function loop(t) {
     // seems to be no way to automate around that. That clicking gets tiresome
     // soon." Locked behind a cheap Command research node so it's a progression
     // milestone, not a starting gimmick.
+    // baseDt for the same reason as hold-tap — the auto-tap cadence is a
+    // real-time rhythm, not a simulation tick.
     if (effects.autoTap > 0 && !gameOver && enemies.length > 0) {
-      autoTapTimer -= dt;
+      autoTapTimer -= baseDt;
       if (autoTapTimer <= 0) {
         autoTapTimer = effects.autoTap;
         // Prefer the enemy closest to the wall — most dangerous one to thin out
