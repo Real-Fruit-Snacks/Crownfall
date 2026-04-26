@@ -6070,18 +6070,32 @@ function _recordOfflineRpRate(rpEarned) {
   } catch {}
 }
 
-// Called once on boot (after research has loaded) — grants any pending
-// offline RP based on time away * stored rate, then shows a welcome-back
-// toast. Returns the awarded amount (0 if nothing or no prior rate).
-function _awardOfflineRp() {
+// Called on boot AND on tab-visibility return. Grants pending offline RP
+// based on time away × stored rate. Boot caller uses defaults (1-minute
+// floor, always-toast). Visibility-return caller uses a shorter floor
+// (30s) and a higher toast threshold (5 min) so quick alt-tabs silently
+// credit small amounts without spamming the popup queue.
+//
+// Background-tab note: browsers throttle requestAnimationFrame to ~1Hz
+// when a tab is hidden, and the game-loop caps dt at 100ms per frame,
+// so a backgrounded run effectively progresses ~10x slower than wall-
+// clock. We can't fix that without a Web Worker (massive code reshuffle),
+// but crediting offline RP for the visibility gap means progression
+// isn't lost — the player just won't see live wave advancement while
+// hidden.
+//
+// Returns the awarded amount (0 if nothing, no rate, or under floor).
+function _awardOfflineRp(opts) {
+  opts = opts || {};
+  const minMinutes  = (typeof opts.minMinutes  === 'number') ? opts.minMinutes  : 1;
+  const toastMinMin = (typeof opts.toastMinMin === 'number') ? opts.toastMinMin : 0;
   try {
     const lastCloseAt = parseInt(localStorage.getItem('castleLastCloseAt'), 10);
     const rate        = parseFloat(localStorage.getItem('castleOfflineRpRate'));
     if (!Number.isFinite(lastCloseAt) || !Number.isFinite(rate) || rate <= 0) return 0;
     const now         = Date.now();
     const minutesAway = (now - lastCloseAt) / 60000;
-    // Anything under 1 minute is "I just refreshed the tab" — no reward.
-    if (minutesAway < 1) return 0;
+    if (minutesAway < minMinutes) return 0;
     const rp = Math.floor(minutesAway * rate);
     if (rp <= 0) return 0;
     // Credit to research pool (both current + lifetime totals) and persist.
@@ -6092,9 +6106,10 @@ function _awardOfflineRp() {
     // — a second reload would otherwise double-dip (it'd see the ORIGINAL
     // close time, not the boot time).
     try { localStorage.setItem('castleLastCloseAt', String(now)); } catch {}
-    // Friendly toast. Uses the achievement-popup path so it queues behind
-    // any other startup toasts (e.g. prestige-unlock, endless-zone).
-    if (typeof showAchievementToast === 'function') {
+    // Friendly toast — gated by toastMinMin so brief alt-tabs silently
+    // credit RP without popping a popup every time the player checks
+    // another tab.
+    if (minutesAway >= toastMinMin && typeof showAchievementToast === 'function') {
       const hours = Math.floor(minutesAway / 60);
       const mins  = Math.floor(minutesAway % 60);
       const timeStr = hours > 0 ? (hours + 'h ' + mins + 'm') : (mins + 'm');
@@ -6109,8 +6124,21 @@ function _awardOfflineRp() {
 // visibilitychange fires before the tab is backgrounded / closed on mobile —
 // the most reliable save-on-exit hook. pagehide covers iOS Safari which skips
 // beforeunload. beforeunload is the desktop-browser safety net.
+//
+// On HIDDEN: flush saves + stamp castleLastCloseAt (inside flushAllSaves) so
+//   the visibility-return handler (and a true page reload) can compute the gap.
+// On VISIBLE: credit any banked offline RP for the time the tab was hidden.
+//   30s floor (so a quick check of another tab isn't rewarded for nothing),
+//   5-min toast threshold (so brief absences silently grant RP without
+//   popping a toast every time the player checks email).
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') flushAllSaves();
+  if (document.visibilityState === 'hidden') {
+    flushAllSaves();
+  } else if (document.visibilityState === 'visible') {
+    if (typeof _awardOfflineRp === 'function') {
+      _awardOfflineRp({ minMinutes: 0.5, toastMinMin: 5 });
+    }
+  }
 });
 window.addEventListener('pagehide',     flushAllSaves);
 window.addEventListener('beforeunload', flushAllSaves);
