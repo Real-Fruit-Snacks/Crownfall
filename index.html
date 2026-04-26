@@ -10179,12 +10179,30 @@ function updateProjectiles(dt) {
         const hitR  = 6 * (e.sizeMul || 1);
         const hitR2 = hitR * hitR;
         if (dx * dx + dy * dy <= hitR2) {
-          // SHIELDED: archer arrows ricochet off the shield — no damage, no stick, no pierce
-          // Crossbow bolts pierce shields; everything else (cannons / mage chains) bypasses too
-          if (e.kind === 'shielded' && p.type === 'archer') {
-            p.hitTargets.add(e);
+          // SHIELDED: archer arrows hit the SHIELD instead of the body until
+          // the shield breaks. Used to be a hard ricochet (zero damage forever)
+          // which soft-locked any pure-archer auto-play setup against a single
+          // shielded enemy. Now arrows chip the shield each hit and pass
+          // through normally once it's broken. Crossbows/cannons/mages still
+          // bypass the shield entirely (their unique value vs shielded).
+          if (e.kind === 'shielded' && p.type === 'archer' && (e.shieldHp || 0) > 0) {
+            // Arrow damage applied to the shield (no crit/holy multipliers —
+            // shield absorbs raw arrow damage, simpler and more readable).
+            const arrowDmg = Math.max(1, Math.floor(p.dmg || 1));
+            const before = e.shieldHp;
+            e.shieldHp = Math.max(0, e.shieldHp - arrowDmg);
+            e.shieldFlashT = 0.18;
+            // Block FX + sfx every hit. On the breaking hit, fire a louder
+            // "shield broken" cue so the moment reads clearly.
             spawnShieldBlock(e.x - 3, e.y - 3, p.vx, p.vy);
             Audio.sfx.shieldBlock();
+            if (before > 0 && e.shieldHp <= 0) {
+              e.shieldBrokeFx = true;
+              if (typeof spawnFloatingText === 'function') {
+                spawnFloatingText(e.x, e.y - 12, 'SHIELD!', '#ffd060');
+              }
+            }
+            p.hitTargets.add(e);
             destroyed = true;
             break;
           }
@@ -10669,7 +10687,7 @@ function enemyAt(mx, my) {
 const ENEMY_INFO = {
   goblin:   { name: 'Goblin',          trait: 'Standard melee infantry. Walks straight at the wall and swings on arrival.', threat: 'Low' },
   charger:  { name: 'Charger',         trait: 'Fast (1.9\u00d7 speed). Reaches the wall in seconds \u2014 prioritize early kills.', threat: 'Medium' },
-  shielded: { name: 'Shielded Goblin', trait: 'Shield blocks archer arrows entirely. Crossbow bolts pierce; cannons / mage chains bypass.', threat: 'Medium' },
+  shielded: { name: 'Shielded Goblin', trait: 'Shield absorbs archer arrows and breaks after enough damage (~40% of max HP). Crossbow bolts pierce; cannons / mage chains bypass entirely.', threat: 'Medium' },
   archer:   { name: 'Goblin Archer',   trait: 'Stops short of the wall and pelts it with arrows from range. Cannot melee. Tap to silence them.', threat: 'Medium' },
   healer:   { name: 'Healer',          trait: 'Heals nearby allies every 1.4s. Always kill them before the bruisers behind them.', threat: 'High' },
   witch:    { name: 'Witch',           trait: 'Aura grants 50% damage reduction to allies nearby. Pull her out of the pack with Smite or burst.', threat: 'High' },
@@ -10681,7 +10699,7 @@ const ENEMY_INFO = {
 const BOSS_INFO = {
   goblin:   { name: 'Goblin King',       trait: 'Crowned brute. Big HP, big swings, drops a fistful of gold and Crowns.',                                              threat: 'Severe' },
   charger:  { name: 'Bull Champion',     trait: 'Boss-form charger. Still 1.9\u00d7 speed \u2014 will close the gap before you can react. Stun him or burst him fast.', threat: 'Severe' },
-  shielded: { name: 'Iron Vanguard',     trait: 'Massive tower shield blocks every archer shot. Crossbows pierce; cannons / mage chains ignore the shield entirely.',  threat: 'Severe' },
+  shielded: { name: 'Iron Vanguard',     trait: 'Massive tower shield absorbs archer arrows until broken (~30% of max HP). Crossbows pierce; cannons / mage chains ignore the shield entirely.',  threat: 'Severe' },
   archer:   { name: 'Master Archer',     trait: 'Boss archer fires faster and harder, parking off-screen if you let him. Smite or focus-fire on sight.',                threat: 'Severe' },
   healer:   { name: 'High Priest',       trait: 'Boss healer keeps the rest of the wave on their feet. Always priority #1 \u2014 kill before anything else around him.', threat: 'Severe' },
   witch:    { name: 'Coven Matron',      trait: 'Bigger 50% damage-reduction aura. Pull her out of formation with Smite or Meteor before chewing the swarm.',          threat: 'Severe' },
@@ -11511,6 +11529,15 @@ function spawnEnemy(w, asBoss) {
   const bossArmorBonus = asBoss && km.armor ? 2 : 0;
   const bossAuraBonus  = asBoss && km.auraRadius ? 25 : 0;
 
+  // Shielded enemies have a separate shield-HP pool that absorbs archer
+  // arrows until broken. Crossbows/cannons/mages still bypass entirely.
+  // Sized as a fraction of max HP so it scales with the wave naturally.
+  // Bosses use a slightly lower fraction so a wave-50 Iron Vanguard is
+  // still breakable by a pure-archer team in a reasonable timeframe.
+  const shieldHp = (kind === 'shielded')
+    ? Math.max(8, Math.floor(hp * (s.isBoss ? 0.30 : 0.40)))
+    : 0;
+
   enemies.push({
     x, y,
     vx: (dx / d) * speed,
@@ -11531,6 +11558,11 @@ function spawnEnemy(w, asBoss) {
     coinVal: Math.max(1, Math.floor(s.coinVal * km.coinMul)),
     stuckArrows: [],
     auraShield: false,
+    // Shield HP — only used by kind === 'shielded'. Decremented by archer
+    // arrows. When it hits 0, subsequent arrows pass through normally.
+    shieldHp, shieldMaxHp: shieldHp,
+    shieldFlashT: 0,                 // brief visual on each arrow absorbed
+    shieldBrokeFx: false,            // set true on the breaking hit; consumed by draw
     // ranged
     stopDist:    km.ranged ? km.stopDist + (asBoss ? 30 : 0) : 0,
     rangedTimer: km.ranged ? 0.6 + Math.random() * 0.6 : 0,
@@ -11643,6 +11675,7 @@ function updateEnemies(dt) {
     }
     if (e.hitFlash > 0) e.hitFlash -= dt;
     if (e.lungeT > 0)   e.lungeT   -= dt;
+    if (e.shieldFlashT > 0) e.shieldFlashT -= dt;
     // Night of the Restless — slow regen
     if (e.regenDps && e.hp < e.maxHp) {
       e.hp = Math.min(e.maxHp, e.hp + e.regenDps * dt);
@@ -11947,19 +11980,25 @@ function drawGoblin(e) {
         break;
       }
       case 'shielded': {
-        // gigantic tower shield on the wall side
-        ctx.fillStyle = '#3a2410';
-        ctx.fillRect(px - 5, py - 11, 2, 13);
-        ctx.fillStyle = '#7a5236';
-        ctx.fillRect(px - 4, py - 10, 1, 11);
-        ctx.fillStyle = '#a87a3e';
-        ctx.fillRect(px - 4, py - 8, 1, 7);
-        ctx.fillStyle = '#c8c8d0';
-        ctx.fillRect(px - 5, py - 9, 1, 1);
-        ctx.fillRect(px - 5, py - 6, 1, 1);
-        ctx.fillRect(px - 5, py - 3, 1, 1);
-        ctx.fillRect(px - 5, py,     1, 1);
-        // iron helm in lieu of a crown
+        // Tower shield only drawn while shield-HP intact. Once broken, the
+        // boss reveals its body and is fully vulnerable to archer damage.
+        if ((e.shieldHp || 0) > 0) {
+          const sFrac = e.shieldHp / Math.max(1, e.shieldMaxHp || 1);
+          const flash = (e.shieldFlashT || 0) > 0;
+          ctx.fillStyle = flash ? '#fff8c0' : '#3a2410';
+          ctx.fillRect(px - 5, py - 11, 2, 13);
+          ctx.fillStyle = sFrac > 0.66 ? '#7a5236' : (sFrac > 0.33 ? '#5a3a20' : '#4a2818');
+          ctx.fillRect(px - 4, py - 10, 1, 11);
+          ctx.fillStyle = sFrac > 0.33 ? '#a87a3e' : '#8a4a30';
+          ctx.fillRect(px - 4, py - 8, 1, 7);
+          ctx.fillStyle = '#c8c8d0';
+          ctx.fillRect(px - 5, py - 9, 1, 1);
+          ctx.fillRect(px - 5, py - 6, 1, 1);
+          ctx.fillRect(px - 5, py - 3, 1, 1);
+          ctx.fillRect(px - 5, py,     1, 1);
+        }
+        // iron helm in lieu of a crown — always shown (it's part of the boss
+        // identity, not the shield)
         ctx.fillStyle = '#7a7a82';
         ctx.fillRect(px - 3, py - 11, 7, 1);
         break;
@@ -12154,16 +12193,26 @@ function drawGoblin(e) {
     ctx.fillStyle = '#888890';
     ctx.fillRect(px - 3, py - 3, 1, 1);
   } else if (e.kind === 'shielded') {
-    // big wooden+iron shield on wall-facing side
-    ctx.fillStyle = '#3a2410';
-    ctx.fillRect(px - 3, py - 6, 1, 7);
-    ctx.fillStyle = '#7a5236';
-    ctx.fillRect(px - 2, py - 5, 1, 5);
-    ctx.fillStyle = '#a87a3e';
-    ctx.fillRect(px - 2, py - 4, 1, 2);
-    ctx.fillStyle = '#c8c8d0';
-    ctx.fillRect(px - 3, py - 4, 1, 1);
-    ctx.fillRect(px - 3, py - 2, 1, 1);
+    // Shield is only drawn while the shield-HP pool is intact. Once arrows
+    // chip it down to 0 the shield is gone visually too — clear feedback
+    // that the enemy is now vulnerable to archer damage.
+    if ((e.shieldHp || 0) > 0) {
+      // Tint shifts toward red as the shield gets damaged so partial damage
+      // is visible at a glance: full = brown/iron, half = darker, low = ruddy.
+      const sFrac = e.shieldHp / Math.max(1, e.shieldMaxHp || 1);
+      const flash = (e.shieldFlashT || 0) > 0;
+      // big wooden+iron shield on wall-facing side
+      ctx.fillStyle = flash ? '#fff8c0' : '#3a2410';
+      ctx.fillRect(px - 3, py - 6, 1, 7);
+      // body planks darken as shield erodes
+      ctx.fillStyle = sFrac > 0.66 ? '#7a5236' : (sFrac > 0.33 ? '#5a3a20' : '#4a2818');
+      ctx.fillRect(px - 2, py - 5, 1, 5);
+      ctx.fillStyle = sFrac > 0.33 ? '#a87a3e' : '#8a4a30';
+      ctx.fillRect(px - 2, py - 4, 1, 2);
+      ctx.fillStyle = '#c8c8d0';
+      ctx.fillRect(px - 3, py - 4, 1, 1);
+      ctx.fillRect(px - 3, py - 2, 1, 1);
+    }
   } else if (e.kind === 'archer') {
     // bow on the wall side
     ctx.fillStyle = '#6a3a18';
