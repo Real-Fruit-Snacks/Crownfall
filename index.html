@@ -4567,12 +4567,14 @@ const RESEARCH_NODES = [
   { id:'sklSlot3', x:50, y:50, name:'Archmage Reflex',   desc:'Unlock the FOURTH skill slot.',                            cost:20, req:['sklSlot2'], effect:{ skillSlotsUnlocked:4 } },
   { id:'sklSlot4', x:50, y:50, name:'Grand Magus',       desc:'Unlock the FIFTH skill slot.',                             cost:0, crownCost:5, req:['sklSlot3'], effect:{ skillSlotsUnlocked:5 } },
 
-  { id:'sklSmite',     x:50, y:50, name:'Skill: Smite',      desc:'Click to arm, then click an enemy for 60 holy damage (2x vs bosses). Costs 15g per round.',          cost:3, req:['sklSlot1'], effect:{ unlockSkill:'smite' } },
-  { id:'sklHeal',      x:50, y:50, name:'Skill: Heal Wall',  desc:'Restore 35 wall HP instantly. Costs 50g per round.',                                                cost:9, req:['sklSlot1'], effect:{ unlockSkill:'heal' } },
+  { id:'sklSmite',     x:50, y:50, name:'Skill: Smite',      desc:'Click to arm, then click an enemy for 60 holy damage (2x vs bosses). Damage scales with wave. Costs 15g per round.',          cost:3, req:['sklSlot1'], effect:{ unlockSkill:'smite' } },
+  { id:'sklHeal',      x:50, y:50, name:'Skill: Heal Wall',  desc:'Restore 35 wall HP instantly. Heal amount scales with wave. Costs 50g per round.',                                              cost:9, req:['sklSlot1'], effect:{ unlockSkill:'heal' } },
   { id:'sklRally',     x:50, y:50, name:'Skill: Rally',      desc:'All heroes fire 60% faster for 6 seconds. Costs 60g per round.',                                    cost:11, req:['sklSlot1'], effect:{ unlockSkill:'rally' } },
   { id:'sklFrost',     x:50, y:50, name:'Skill: Frost Nova', desc:'Chill every enemy on the field for 4 seconds. Costs 70g per round.',                                cost:11, req:['sklSlot2'], effect:{ unlockSkill:'frostNova' } },
-  { id:'sklMeteor',    x:50, y:50, name:'Skill: Meteor',     desc:'Click to arm, then click anywhere for 100 area damage. Costs 70g per round.',                       cost:13, req:['sklSlot2'], effect:{ unlockSkill:'meteor' } },
+  { id:'sklMeteor',    x:50, y:50, name:'Skill: Meteor',     desc:'Click to arm, then click anywhere for 100 area damage. Damage scales with wave. Costs 70g per round.',                         cost:13, req:['sklSlot2'], effect:{ unlockSkill:'meteor' } },
   { id:'sklStun',      x:50, y:50, name:'Skill: Stun Bomb',  desc:'Click to arm, then click anywhere to stun nearby enemies for 2s. Costs 90g per round.',             cost:15, req:['sklSlot2'], effect:{ unlockSkill:'stunBomb' } },
+
+  { id:'sklArcaneMastery', x:50, y:50, name:'Arcane Mastery', desc:'+20% Smite, Meteor, and Heal Wall potency per rank. Stacks with wave scaling. Buy multiple times.', cost:8, req:['sklSlot1'], repeatable:true, maxStacks:5, effect:{ skillDmgMul:0.20 } },
 
   // ===========================================================
   //  DEFENSES — field hazards placed on the grass
@@ -4921,6 +4923,8 @@ const effects = {
   // crown-tier effects
   phoenixWill: false, synergyDmgPerHero: 0, bossGoldDrop: 0,
   mageChainsAdd: 0, archerVolleyEvery: 0, bossCrownAdd: 0,
+  // active-skill scaling (research, repeatable)
+  skillDmgMul: 1,
   // prestige-batch fields. Reset to defaults in applyResearch (which also
   // re-derives them from the live prestige.purchased map). Declared here
   // too so reads before the first applyResearch don't return undefined.
@@ -4967,6 +4971,7 @@ function applyResearch() {
   effects.wallSpikes = 0; effects.wallDamageMul = 1; effects.lastStandMul = 0;
   effects.phoenixWill = false; effects.synergyDmgPerHero = 0; effects.bossGoldDrop = 0;
   effects.mageChainsAdd = 0; effects.archerVolleyEvery = 0; effects.bossCrownAdd = 0;
+  effects.skillDmgMul = 1;
   for (const id of research.purchased) {
     if (research.disabled.has(id)) continue;       // toggled off by the player
     const n = RESEARCH_NODES.find(x => x.id === id);
@@ -5016,6 +5021,7 @@ function applyResearch() {
     if (e.mageChainsAdd)        effects.mageChainsAdd       += e.mageChainsAdd       * m;
     if (e.archerVolleyEvery)    effects.archerVolleyEvery    = e.archerVolleyEvery;
     if (e.bossCrownAdd)         effects.bossCrownAdd        += e.bossCrownAdd        * m;
+    if (e.skillDmgMul)          effects.skillDmgMul         += e.skillDmgMul         * m;
     if (e.crossbowDmgMul)       effects.crossbowDmgMul      += e.crossbowDmgMul      * m;
     if (e.crossbowRngAdd)       effects.crossbowRngAdd      += e.crossbowRngAdd      * m;
     if (e.crossbowFireRateMul)  effects.crossbowFireRateMul += e.crossbowFireRateMul * m;
@@ -7761,19 +7767,19 @@ const SKILLS = {
     id: 'smite', name: 'Smite', short: 'SMITE',
     cost: 15, cd: 6, target: 'enemy',
     art: 'smite', palette: { b: '#fff8c0' }, tag: '#c83020',
-    desc: 'Strike one enemy for 60 holy damage. Doubles vs bosses.'
+    desc: 'Strike one enemy for 60 holy damage (2x vs bosses). Damage scales with wave and Arcane Mastery.'
   },
   meteor: {
     id: 'meteor', name: 'Meteor', short: 'METEOR',
     cost: 70, cd: 22, target: 'point',
     art: 'meteor', palette: { r: '#ff5020', o: '#ff8030', y: '#ffd060' }, tag: '#a83820',
-    desc: 'Call down fire \u2014 100 damage in a 36px radius at the target spot.'
+    desc: 'Call down fire \u2014 100 damage in a 36px radius. Damage scales with wave and Arcane Mastery.'
   },
   heal: {
     id: 'heal', name: 'Heal Wall', short: 'HEAL',
     cost: 50, cd: 18, target: 'instant',
     art: 'heal', palette: { g: '#a8ffb0' }, tag: '#3a8a4a',
-    desc: 'Restore 35 wall HP instantly.'
+    desc: 'Restore 35 wall HP instantly. Heal amount scales with wave and Arcane Mastery.'
   },
   rally: {
     id: 'rally', name: 'Rally', short: 'RALLY',
@@ -8640,11 +8646,15 @@ function fxWallHeal() {
 
 function castSkill(idx, sk, x, y, enemy) {
   const slot = SKILL_SLOTS[idx];
+  // Active-skill scaling: wave-based passive scale × research multiplier.
+  // Keeps damage/heal skills relevant from wave 1 through endless. Without
+  // this, Smite's flat 60 was 0.2% of a wave-50 boss.
+  const skillScale = (1 + Math.max(0, wave) * 0.10) * (effects.skillDmgMul || 1);
   if (sk.id === 'smite' && enemy) {
     // Smite is "holy" themed — passes through applyDamage (with armor
     // ignored, like crossbow) so Hunter's Mark / witch aura / Hex still
     // factor in. Used to bypass applyDamage entirely.
-    const dmg = enemy.isBoss ? 120 : 60;
+    const dmg = Math.round((enemy.isBoss ? 120 : 60) * skillScale);
     Audio.sfx.smite();
     fxHolyBeam(enemy.x, enemy.y);
     // brief impact delay (~110ms) so the beam reads first
@@ -8663,6 +8673,9 @@ function castSkill(idx, sk, x, y, enemy) {
     }, 110);
   } else if (sk.id === 'meteor' && x != null) {
     Audio.sfx.meteorCast();
+    // Snapshot the scale at cast-time so the meteor's damage matches the
+    // floating text and isn't affected if the wave rolls over mid-flight.
+    const meteorDmg = Math.round(100 * skillScale);
     fxFallingMeteor(x, y, () => {
       Audio.sfx.meteorBoom();
       const radius = 40;
@@ -8673,7 +8686,7 @@ function castSkill(idx, sk, x, y, enemy) {
         if (dx * dx + dy * dy <= r2) {
           // Meteor pierces armor (siege-class impact) but still respects
           // Hunter's Mark / witch aura / Hex. Was bypassing applyDamage.
-          applyDamage(e, 100, /*ignoreArmor*/ true);
+          applyDamage(e, meteorDmg, /*ignoreArmor*/ true);
           e.hitFlash = 0.20;
         }
       }
@@ -8681,14 +8694,15 @@ function castSkill(idx, sk, x, y, enemy) {
       spawnExplosion(x, y, radius * 0.5);
       fxRing(x, y, radius + 22, '#ffd060', 0.45);
       spawnFirePatch(x, y, radius, 4.0, 8);
-      spawnFloatingText(x, y - 10, '-100', '#ffd060');
+      spawnFloatingText(x, y - 10, '-' + meteorDmg, '#ffd060');
       shakeT = 0.55;
       flashScreen('rgba(255,80,30,0.28)', 0.30);
     });
   } else if (sk.id === 'heal') {
     Audio.sfx.heal();
     if (wallHP < effects.wallMaxHp) {
-      const healed = healWall(35);
+      const healAmt = Math.max(1, Math.round(35 * skillScale));
+      const healed  = healWall(healAmt);
       if (healed > 0) spawnFloatingText(WALL_W + 6, H / 2 - 14, '+' + healed, '#a8ffb0');
     }
     fxWallHeal();
