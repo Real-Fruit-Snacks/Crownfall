@@ -2462,6 +2462,30 @@
     box-shadow: inset 0 0 0 1px #6a4528;
     pointer-events: none;
   }
+  /* × clear button on filled skill slots — sits in the top-right corner so
+     it doesn't overlap the keybadge (top-left) or the cooldown overlay. Low
+     contrast at rest, brightens on hover so it doesn't fight the skill icon
+     for attention. Click clears the slot AND its saved loadout entry. */
+  #skillbar .sk .sk-clear {
+    position: absolute; top: 1px; right: 1px;
+    width: 12px; height: 12px;
+    padding: 0; margin: 0; border: 0;
+    background: rgba(10,6,2,0.55);
+    color: #c0a070;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    line-height: 12px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px #5a4030;
+    z-index: 3;
+    user-select: none;
+    image-rendering: pixelated;
+  }
+  #skillbar .sk .sk-clear:hover {
+    background: #c83020; color: #fff8c0;
+    box-shadow: inset 0 0 0 1px #ffe080;
+  }
   #skillbar .sk.empty .label { color: #8a7048; }
   #skillbar .sk .cd-overlay {
     position: absolute; left: 0; right: 0; bottom: 0; top: 0;
@@ -4313,8 +4337,25 @@ window.resetRun = function (opts) {
   runState.waveRewardBonus = 0;
   runState.rpBonus       = 0;
   closeMidEvent();
-  // clear all skill slot purchases at the start of every run
-  for (const sk of SKILL_SLOTS) { sk.skillId = null; sk.cooldown = 0; }
+  // Restore each slot from the saved loadout instead of clearing. Skips any
+  // slot whose remembered skill is no longer unlocked (e.g. after a wipe) or
+  // whose index is past the currently-unlocked slot count. Cooldowns always
+  // reset to 0 so a fresh run starts ready-to-cast.
+  for (let i = 0; i < SKILL_SLOTS.length; i++) {
+    const sk = SKILL_SLOTS[i];
+    sk.cooldown = 0;
+    const wantId = (research.skillLoadout && research.skillLoadout[i]) || null;
+    if (
+      wantId &&
+      i < (effects.skillSlotsUnlocked || 0) &&
+      effects.unlockedSkills.has(wantId) &&
+      SKILLS[wantId]
+    ) {
+      sk.skillId = wantId;
+    } else {
+      sk.skillId = null;
+    }
+  }
   armedSkill = null;
   rallyT = 0;
   autoTapTimer = 0;
@@ -4634,7 +4675,11 @@ let research = {
   // is crossed. Review feedback: JohnSmith88 missed the prestige menu entirely.
   sawPrestigeUnlock:   false,  // true after the big "PRESTIGE UNLOCKED" toast has fired
   openedPrestigeOnce:  false,  // clears the pause-btn pulse badge; persists across reloads
-  reachedEndless:      false   // true after wave 50 milestone popup has fired
+  reachedEndless:      false,  // true after wave 50 milestone popup has fired
+  // Per-slot equipped skill memory. Auto-restored on every resetRun() so AFK
+  // farmers don't have to re-equip after every Auto-Restart. null = empty slot.
+  // Updated whenever buySkill() / clearSkillSlot() runs.
+  skillLoadout:        []
 };
 
 // ---------- PRESTIGE ----------
@@ -5108,7 +5153,8 @@ function saveResearch() {
       repeatCounts: research.repeatCounts,
       sawPrestigeUnlock:  !!research.sawPrestigeUnlock,
       openedPrestigeOnce: !!research.openedPrestigeOnce,
-      reachedEndless:     !!research.reachedEndless
+      reachedEndless:     !!research.reachedEndless,
+      skillLoadout:       Array.isArray(research.skillLoadout) ? research.skillLoadout.slice() : []
     }));
   } catch {}
 }
@@ -6099,6 +6145,17 @@ function loadResearch() {
     research.sawPrestigeUnlock  = !!d.sawPrestigeUnlock;
     research.openedPrestigeOnce = !!d.openedPrestigeOnce;
     research.reachedEndless     = !!d.reachedEndless;
+    // Skill-slot loadout. Old saves will have undefined here -> empty array,
+    // which means the first run after the update behaves identically to before.
+    // Defensive: each entry must be either null or a known SKILLS id, anything
+    // else is dropped to null so a corrupted import can't equip phantoms.
+    if (Array.isArray(d.skillLoadout)) {
+      research.skillLoadout = d.skillLoadout.map(id =>
+        (typeof id === 'string' && SKILLS && SKILLS[id]) ? id : null
+      );
+    } else {
+      research.skillLoadout = [];
+    }
   } catch {}
 }
 
@@ -8240,6 +8297,7 @@ function renderSkillBar() {
     const armedClass = (armedSkill && armedSkill.slotIdx === i) ? ' armed' : '';
     html += `<div class="sk${armedClass}" data-idx="${i}" title="${sk.name} \u2014 ${sk.desc} (key ${i + 1})" style="background:${sk.tag};">
       ${keyBadge}
+      <button class="sk-clear" data-clear-idx="${i}" title="Clear this slot (also clears the saved loadout)" aria-label="Clear skill">\u00d7</button>
       <span class="glyph">${skillIconHtml(sk)}</span>
       <span class="label">${sk.short}</span>
     </div>`;
@@ -8249,10 +8307,22 @@ function renderSkillBar() {
   for (const el of skillBarEl.querySelectorAll('.sk')) {
     if (el.classList.contains('locked')) continue;
     el.addEventListener('pointerdown', (ev) => {
+      // The \u00d7 clear-button bubbles a pointerdown too \u2014 let its own handler
+      // run instead of arming/casting the skill.
+      if (ev.target && ev.target.classList && ev.target.classList.contains('sk-clear')) return;
       ev.stopPropagation();
       ev.preventDefault();
       const idx = +el.dataset.idx;
       onSkillSlotClick(idx);
+    });
+  }
+  // wire the \u00d7 clear buttons separately so they don't trigger cast/arm
+  for (const btn of skillBarEl.querySelectorAll('.sk-clear')) {
+    btn.addEventListener('pointerdown', (ev) => {
+      ev.stopPropagation();
+      ev.preventDefault();
+      const idx = +btn.dataset.clearIdx;
+      window.clearSkillSlot(idx);
     });
   }
 }
@@ -8340,7 +8410,32 @@ window.buySkill = function (idx, skillId) {
   // (Kept the `buy` name for API-compat; it's really "equip this slot".)
   slot.skillId = skillId;
   slot.cooldown = 0;
+  // Persist to the loadout so future runs auto-restore this slot.
+  if (!Array.isArray(research.skillLoadout)) research.skillLoadout = [];
+  research.skillLoadout[idx] = skillId;
+  saveResearch();
   closeSkillPanel();
+  renderSkillBar();
+  updateUI();
+};
+
+// Clear an equipped skill slot AND its loadout memory. Triggered by the small
+// × button in the slot's top-right corner. Without this the player would have
+// no way to swap a slot that auto-restored from loadout — buySkill bails if a
+// slot is already filled.
+window.clearSkillSlot = function (idx) {
+  const slot = SKILL_SLOTS[idx];
+  if (!slot) return;
+  if (gameOver) return;
+  // If the slot is currently armed for a targeted cast, cancel that first.
+  if (armedSkill && armedSkill.slotIdx === idx) {
+    armedSkill = null;
+    document.body.classList.remove('skill-armed');
+  }
+  slot.skillId  = null;
+  slot.cooldown = 0;
+  if (Array.isArray(research.skillLoadout)) research.skillLoadout[idx] = null;
+  saveResearch();
   renderSkillBar();
   updateUI();
 };
@@ -12472,7 +12567,8 @@ window.settingsWipe = function () {
       // Reset in-memory state to fresh defaults
       research  = { rp: 0, totalRp: 0, crowns: 0, totalCrowns: 0,
                     purchased: new Set(['root']), disabled: new Set(), repeatCounts: {},
-                    sawPrestigeUnlock: false, openedPrestigeOnce: false, reachedEndless: false };
+                    sawPrestigeUnlock: false, openedPrestigeOnce: false, reachedEndless: false,
+                    skillLoadout: [] };
       prestige  = { shards: 0, totalShardsEarned: 0, prestigeCount: 0, purchased: {},
                     bankedGold: 0, deepestWave: 0, promotions: {} };
       if (typeof stats !== 'undefined') {
