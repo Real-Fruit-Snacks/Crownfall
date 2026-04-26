@@ -3056,6 +3056,32 @@
         </div>
       </div>
       <div class="item">
+        <div class="name">Auto-Buy Research (RP)</div>
+        <div class="desc">Once per second, spend RP on the cheapest affordable repeatable research node (Sharper Stakes, Hotter Coals, Keen Arrows, etc.). One-shot nodes always require a manual click. Crown-cost nodes never spend Crowns &mdash; that's a separate toggle. Designed for overnight farmers who bank RP across many AFK runs.</div>
+        <button id="settings-autobuy-btn" class="toggle off" onclick="settingsToggleAutoBuyRepeatable()">Auto-Buy Research: OFF</button>
+      </div>
+      <div class="item">
+        <div class="name">Auto-Spend Crowns</div>
+        <div class="desc">Once per second, spend Crowns on the cheapest affordable repeatable crown-cost node. Crowns are slow to accumulate, so this rarely fires &mdash; but it closes the loop for unattended progression. Off by default since most crown-cost nodes are skin unlocks (one-shot, never auto-bought) or keystones (one-shot).</div>
+        <button id="settings-autocrown-btn" class="toggle off" onclick="settingsToggleAutoSpendCrowns()">Auto-Spend Crowns: OFF</button>
+      </div>
+      <div class="item">
+        <div class="name">Auto-Prestige</div>
+        <div class="desc">After your first manual prestige, automatically prestige on every gameover where banked RP meets the threshold below. Re-uses the most-recent ancestry choice and shard preset. The first prestige always requires manual confirmation so you can pick your starting ancestry.</div>
+        <button id="settings-autoprestige-btn" class="toggle off" onclick="settingsToggleAutoPrestige()">Auto-Prestige: OFF</button>
+        <div class="vol-row" style="margin-top:8px;">
+          <label for="settings-autoprestige-rp" style="color:#c0b090;font-size:12px;letter-spacing:0.5px;">Min RP:</label>
+          <select id="settings-autoprestige-rp" onchange="settingsSetAutoPrestigeMinRp(this.value)"
+                  style="background:#1a0c00;color:#e8d9b8;border:0;padding:4px 6px;font-family:inherit;font-size:12px;box-shadow:inset 0 0 0 2px #6a4528;cursor:pointer;">
+            <option value="100">100 RP</option>
+            <option value="500">500 RP</option>
+            <option value="1000">1000 RP</option>
+            <option value="2500">2500 RP</option>
+            <option value="5000">5000 RP</option>
+          </select>
+        </div>
+      </div>
+      <div class="item">
         <div class="name">Restart Tutorial</div>
         <div class="desc">Replay the onboarding tour from step one.</div>
         <button onclick="settingsRestartTutorial()">Restart Tutorial</button>
@@ -4080,6 +4106,22 @@ let afkAutoRestartSec = 600;
 // Uses baseDt (pre-gameSpeed) so 2x/3x speed doesn't skew the threshold.
 // Reset whenever wavePhase changes away from 'active'.
 let _waveActiveElapsed = 0;
+
+// Auto-buy any affordable repeatable research node (RP only — never spends
+// Crowns; that's a separate toggle for #4). Default OFF — opt-in. Triggered
+// once per second of wall clock so a spike of RP doesn't drain the bank in
+// a single frame. Only buys repeatable nodes whose ONLY cost is RP, so the
+// player can't accidentally lose Crowns on this toggle.
+let autoBuyRepeatable     = false;
+let _autoBuyRepeatableT   = 0;     // seconds elapsed since last buy attempt
+// Auto-spend Crowns (Item 4) — same scan but for crown-cost repeatable nodes.
+let autoSpendCrowns       = false;
+// Auto-prestige (Item 5) — on gameover, if prestige is unlocked AND total
+// banked RP at end of run >= autoPrestigeMinRp, kick the prestige flow. Hard
+// gated to second-prestige-and-onward so first-prestige ancestry choice is
+// never automated.
+let autoPrestige          = false;
+let autoPrestigeMinRp     = 1000;
 
 // ---------- wall ----------
 let wallHP = 100;
@@ -9058,6 +9100,57 @@ function _livingEnemyCount() {
   return n;
 }
 
+// =====================================================================
+//  RESEARCH AUTO-BUY (Item 3 + 4)
+//  Throttled to ~1s wall clock so a player who unlocks 5 affordable nodes
+//  at once doesn't drain their entire bank in a single frame. Only buys
+//  REPEATABLE nodes — one-shot nodes always require a manual click so the
+//  player explicitly opts into their effect.
+//
+//  Two independent toggles:
+//    autoBuyRepeatable -> spends RP on cheapest-affordable RP-only node
+//    autoSpendCrowns   -> spends Crowns on cheapest-affordable crown-only
+//
+//  A node with BOTH costs (rare in this codebase, but possible) is skipped
+//  by both auto-buys so the player never accidentally loses one currency
+//  to gain stacks of the other.
+// =====================================================================
+function _findCheapestAutoBuyableNode(currency) {
+  let best = null, bestCost = Infinity;
+  for (const n of RESEARCH_NODES) {
+    if (!n.repeatable) continue;
+    if (n.id === 'root') continue;
+    // Reject nodes with mixed currency — auto-buy only handles single-currency.
+    const hasRp     = (n.cost      || 0) > 0;
+    const hasCrowns = (n.crownCost || 0) > 0;
+    if (currency === 'rp'     && (!hasRp     || hasCrowns)) continue;
+    if (currency === 'crowns' && (!hasCrowns || hasRp))     continue;
+    // nodeState handles req checks, max-stacks, and affordability for us.
+    if (nodeState(n) !== 'buy') continue;
+    const cost = (currency === 'rp') ? nodeNextRpCost(n) : nodeNextCrownCost(n);
+    if (cost < bestCost) { bestCost = cost; best = n; }
+  }
+  return best;
+}
+
+function tickResearchAutoBuy(baseDt) {
+  // Real-time throttle so game-speed changes don't affect buy cadence.
+  _autoBuyRepeatableT += baseDt;
+  if (_autoBuyRepeatableT < 1.0) return;
+  _autoBuyRepeatableT = 0;
+  // RP path
+  if (autoBuyRepeatable) {
+    const n = _findCheapestAutoBuyableNode('rp');
+    if (n) buyResearchNode(n.id);
+  }
+  // Crown path (shares the throttle so a single node can't double-buy on
+  // the same tick if both flags are on and the node only has one cost).
+  if (autoSpendCrowns) {
+    const n = _findCheapestAutoBuyableNode('crowns');
+    if (n) buyResearchNode(n.id);
+  }
+}
+
 // Per-frame auto-cast dispatch. Runs after updateSkillCooldowns so freshly-
 // recovered slots can fire on the same tick they come off cooldown.
 function tickSkillAutoCast() {
@@ -12445,6 +12538,7 @@ function loop(t) {
     updateBeams(dt);
     updateSkillCooldowns(dt);
     tickSkillAutoCast();
+    tickResearchAutoBuy(baseDt);
     updateSkillFx(dt);
     updateFirePatches(dt);
     updatePlagueClouds(dt);
@@ -12566,6 +12660,32 @@ window.openSettings  = function () {
   }
   const afkSec = document.getElementById('settings-afk-sec');
   if (afkSec) afkSec.value = String(afkAutoRestartSec);
+  // Auto-Buy Research toggle (Item 3)
+  const abBtn = document.getElementById('settings-autobuy-btn');
+  if (abBtn) {
+    const on = !!autoBuyRepeatable;
+    abBtn.textContent = on ? 'Auto-Buy Research: ON' : 'Auto-Buy Research: OFF';
+    abBtn.classList.toggle('on',  on);
+    abBtn.classList.toggle('off', !on);
+  }
+  // Auto-Spend Crowns toggle (Item 4)
+  const acBtn = document.getElementById('settings-autocrown-btn');
+  if (acBtn) {
+    const on = !!autoSpendCrowns;
+    acBtn.textContent = on ? 'Auto-Spend Crowns: ON' : 'Auto-Spend Crowns: OFF';
+    acBtn.classList.toggle('on',  on);
+    acBtn.classList.toggle('off', !on);
+  }
+  // Auto-Prestige toggle + threshold (Item 5)
+  const apBtn = document.getElementById('settings-autoprestige-btn');
+  if (apBtn) {
+    const on = !!autoPrestige;
+    apBtn.textContent = on ? 'Auto-Prestige: ON' : 'Auto-Prestige: OFF';
+    apBtn.classList.toggle('on',  on);
+    apBtn.classList.toggle('off', !on);
+  }
+  const apSec = document.getElementById('settings-autoprestige-rp');
+  if (apSec) apSec.value = String(autoPrestigeMinRp);
 };
 window.closeSettings = function () {
   settingsOverlayEl.classList.remove('show');
@@ -12658,6 +12778,45 @@ window.settingsSetMidEventAutoSkipSec = function (v) {
   try { localStorage.setItem('castleMidEventAutoSkipSec', String(n)); } catch {}
   // Restart any in-flight timer so the new duration takes effect immediately.
   if (_activeMidEvent && midEventAutoSkip) _startMidEventAutoSkip();
+};
+window.settingsToggleAutoBuyRepeatable = function () {
+  autoBuyRepeatable = !autoBuyRepeatable;
+  try { localStorage.setItem('castleAutoBuyRepeatable', autoBuyRepeatable ? '1' : '0'); } catch {}
+  const btn = document.getElementById('settings-autobuy-btn');
+  if (btn) {
+    btn.textContent = autoBuyRepeatable ? 'Auto-Buy Research: ON' : 'Auto-Buy Research: OFF';
+    btn.classList.toggle('on',  autoBuyRepeatable);
+    btn.classList.toggle('off', !autoBuyRepeatable);
+  }
+  Audio.sfx.click && Audio.sfx.click();
+};
+window.settingsToggleAutoSpendCrowns = function () {
+  autoSpendCrowns = !autoSpendCrowns;
+  try { localStorage.setItem('castleAutoSpendCrowns', autoSpendCrowns ? '1' : '0'); } catch {}
+  const btn = document.getElementById('settings-autocrown-btn');
+  if (btn) {
+    btn.textContent = autoSpendCrowns ? 'Auto-Spend Crowns: ON' : 'Auto-Spend Crowns: OFF';
+    btn.classList.toggle('on',  autoSpendCrowns);
+    btn.classList.toggle('off', !autoSpendCrowns);
+  }
+  Audio.sfx.click && Audio.sfx.click();
+};
+window.settingsToggleAutoPrestige = function () {
+  autoPrestige = !autoPrestige;
+  try { localStorage.setItem('castleAutoPrestige', autoPrestige ? '1' : '0'); } catch {}
+  const btn = document.getElementById('settings-autoprestige-btn');
+  if (btn) {
+    btn.textContent = autoPrestige ? 'Auto-Prestige: ON' : 'Auto-Prestige: OFF';
+    btn.classList.toggle('on',  autoPrestige);
+    btn.classList.toggle('off', !autoPrestige);
+  }
+  Audio.sfx.click && Audio.sfx.click();
+};
+window.settingsSetAutoPrestigeMinRp = function (v) {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n) || n <= 0) return;
+  autoPrestigeMinRp = n;
+  try { localStorage.setItem('castleAutoPrestigeMinRp', String(n)); } catch {}
 };
 window.settingsToggleAfkAutoRestart = function () {
   afkAutoRestart = !afkAutoRestart;
@@ -12923,6 +13082,23 @@ window.settingsWipe = function () {
     if (localStorage.getItem('castleAfkAutoRestart') === '0') afkAutoRestart = false;
     const s = parseInt(localStorage.getItem('castleAfkAutoRestartSec'), 10);
     if (Number.isFinite(s) && s > 0) afkAutoRestartSec = s;
+  } catch {}
+  // Auto-buy repeatable research. Default OFF — explicit opt-IN. The toggle
+  // exists primarily for overnight farmers who bank RP across many runs and
+  // want it spent automatically on stat-stick repeatable nodes (Sharper
+  // Stakes, Hotter Coals, Keen Arrows, etc.). One-shot nodes never auto-buy.
+  try {
+    if (localStorage.getItem('castleAutoBuyRepeatable') === '1') autoBuyRepeatable = true;
+  } catch {}
+  // Auto-spend Crowns (Item 4 — same scan, but for crown-cost repeatables).
+  try {
+    if (localStorage.getItem('castleAutoSpendCrowns') === '1') autoSpendCrowns = true;
+  } catch {}
+  // Auto-prestige (Item 5 — fires on gameover when threshold met).
+  try {
+    if (localStorage.getItem('castleAutoPrestige') === '1') autoPrestige = true;
+    const t = parseInt(localStorage.getItem('castleAutoPrestigeMinRp'), 10);
+    if (Number.isFinite(t) && t > 0) autoPrestigeMinRp = t;
   } catch {}
 })();
 function refreshSpeedBtn() {
