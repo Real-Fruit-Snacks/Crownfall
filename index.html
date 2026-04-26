@@ -5134,7 +5134,7 @@ const HAZARDS = {
     },
     apply(h, e) {
       if (!e._spikeHitT || performance.now() - e._spikeHitT > 350) {
-        applyDamage(e, h.dmg);
+        applyDamage(e, h.dmg * hazardScale());
         e._spikeHitT = performance.now();
       }
     }
@@ -5189,7 +5189,7 @@ const HAZARDS = {
     apply(h, e, dt) {
       e.slowT = Math.max(e.slowT || 0, 0.25);
       if ((e.slowMul || 1) > h.slowMul) e.slowMul = h.slowMul;
-      e.hp -= h.dps * (dt || (1/60));   // frame-rate-independent
+      e.hp -= h.dps * hazardScale() * (dt || (1/60));   // frame-rate-independent + wave-scaled
     }
   },
   brazier: {
@@ -5239,10 +5239,19 @@ const HAZARDS = {
       h.armed = false;
       h.cd = h.recharge;
       e.stunT = Math.max(e.stunT || 0, h.rootDur);
-      applyDamage(e, h.dmg);
+      applyDamage(e, h.dmg * hazardScale());
     }
   }
 };
+
+// Hazards are flat-damage like the active skills used to be — by wave 50 a
+// 2-dps spike line takes ~48 minutes to kill one minion. Same wave-scale
+// formula as castSkill so they stay relevant from wave 1 to endless.
+// Caltrops (slow-only) and bear-trap root duration are intentionally
+// untouched — CC works regardless of HP.
+function hazardScale() {
+  return 1 + Math.max(0, wave) * 0.10;
+}
 
 let hazards = [];
 
@@ -5268,10 +5277,11 @@ function updateHazards(dt) {
         h.cd = h.rate;
         h.flashT = 0.35;
         const r2 = h.radius * h.radius;
+        const pulseDmg = h.dmg * hazardScale();
         for (const e of enemies) {
           if (e.hp <= 0) continue;
           const dx = e.x - h.x, dy = e.y - h.y;
-          if (dx*dx + dy*dy <= r2) applyDamage(e, h.dmg);
+          if (dx*dx + dy*dy <= r2) applyDamage(e, pulseDmg);
         }
         spawnExplosion(h.x, h.y, h.radius * 0.6);
       }
