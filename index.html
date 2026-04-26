@@ -4210,6 +4210,42 @@ function _cancelGameOverAutoRetry() {
   if (banner) { banner.classList.remove('show'); banner.textContent = ''; }
 }
 
+// Auto-prestige (Item 5). Fires inside triggerGameOver after RP banking.
+// Skips the gameover modal entirely and bypasses the ancestry picker by
+// re-using prestige.lastAncestryPicks. Returns true when it fired so the
+// caller can short-circuit the rest of the gameover handling.
+//
+// Hard preconditions (any miss -> manual gameover instead):
+//   - Setting toggled ON
+//   - Daily mode is OFF (daily has its own non-RP finish flow)
+//   - prestigeCount >= 1 (first prestige is always manual)
+//   - prestigeIsUnlocked() is still true at this moment (paranoid check)
+//   - research.totalRp >= autoPrestigeMinRp (player-set threshold)
+//   - We can compute a non-zero shard gain (paranoia: avoid auto-prestiging
+//     for 0 shards if the math ever returns 0)
+function _tryAutoPrestige() {
+  if (!autoPrestige) return false;
+  if (dailyMode) return false;
+  if ((prestige.prestigeCount || 0) < 1) return false;
+  if (typeof prestigeIsUnlocked !== 'function' || !prestigeIsUnlocked()) return false;
+  if ((research.totalRp || 0) < autoPrestigeMinRp) return false;
+  const gain = prestigeShardsFor(research.totalRp || 0, prestige.deepestWave || 0);
+  if (gain <= 0) return false;
+  // Bypass the modal/picker entirely. _runPrestigeConfirm does the wipe,
+  // resetRun, and toast cascade — same code path as a manual prestige.
+  const picks = Array.isArray(prestige.lastAncestryPicks) ? prestige.lastAncestryPicks : [];
+  // Fire the auto-prestige toast BEFORE the wipe so the player sees what
+  // happened (the achievement-toast queue survives resetRun).
+  if (typeof showAchievementToast === 'function') {
+    showAchievementToast({
+      name: '★ AUTO-PRESTIGE',
+      desc: '+' + gain + ' Crown Shard' + (gain === 1 ? '' : 's') + ' — fresh run starting'
+    });
+  }
+  _runPrestigeConfirm(gain, picks);
+  return true;
+}
+
 function triggerGameOver() {
   if (gameOver) return;
   gameOver = true;
@@ -4227,6 +4263,11 @@ function triggerGameOver() {
   research.crowns       += crownsEarned;
   research.totalCrowns  += crownsEarned;
   saveResearch();
+  // Auto-prestige check — must run AFTER the RP banking above so totalRp
+  // reflects this run's contribution. If it fires, the player goes straight
+  // from gameover -> prestige -> fresh run with no modals; we return early
+  // so the gameover overlay never shows and the AFK retry timer never starts.
+  if (_tryAutoPrestige()) return;
   // Update offline-progress rate with this completed run's pace so the
   // player earns proportional RP if they close the browser.
   if (typeof _recordOfflineRpRate === 'function') _recordOfflineRpRate(rpEarned);
@@ -4782,7 +4823,12 @@ let prestige = {
   // Promotion — each prestige with the bonus owned picks one random hero type
   // and grants a permanent +10% damage stack. { archer: 3, mage: 1, ... }.
   // Stacks uncapped — the longer you play the more compounding your army.
-  promotions:         {}
+  promotions:         {},
+  // Most-recent ancestry picks (per Item 5 / auto-prestige). Saved at the end
+  // of every prestige so the next auto-prestige can re-use the same selection
+  // without prompting the player. First-prestige is always manual so this is
+  // empty until at least one manual prestige has happened.
+  lastAncestryPicks:  []
 };
 const PRESTIGE_UNLOCK_RP = 500;   // totalRp threshold to unlock the feature
 // Shard award formula: base from lifetime RP + depth bonus from best wave
@@ -4827,6 +4873,15 @@ function loadPrestige() {
       const max = b.maxStacks || 1;
       const clamped = Math.max(0, Math.min(max, Math.floor(raw)));
       if (clamped > 0) prestige.purchased[b.id] = clamped;
+    }
+    // Last ancestry picks (used by Item 5 auto-prestige). Filter to known ids
+    // so a corrupted import can't preserve phantoms across prestige.
+    if (Array.isArray(p.lastAncestryPicks)) {
+      prestige.lastAncestryPicks = p.lastAncestryPicks.filter(id =>
+        typeof id === 'string' && RESEARCH_NODES.some(n => n.id === id)
+      );
+    } else {
+      prestige.lastAncestryPicks = [];
     }
   } catch {}
 }
@@ -13339,6 +13394,10 @@ function _runPrestigeConfirm(gain, keptNodes) {
       prestige.shards            += gain;
       prestige.totalShardsEarned += gain;
       prestige.prestigeCount     += 1;
+      // Remember the ancestry selection for the next auto-prestige (Item 5).
+      // If the player consciously prestiged with no picks, we still record the
+      // empty set — they may have meant to skip ancestry on purpose.
+      prestige.lastAncestryPicks = [...(keptNodes || [])];
       // Promotion: roll a random hero type for a permanent +10% stack.
       // Happens BEFORE the research wipe so the toast reads HERO_TYPES
       // without any races. Saves are inside rollPromotion().
