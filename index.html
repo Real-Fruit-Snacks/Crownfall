@@ -2486,6 +2486,42 @@
     background: #c83020; color: #fff8c0;
     box-shadow: inset 0 0 0 1px #ffe080;
   }
+  /* "A" auto-cast toggle, mirrored to the bottom-LEFT corner so it doesn't
+     overlap the centered SHORT label or the × clear button. Dim grey when
+     OFF (so the slot reads as manual). Bright green when ON, plus a soft
+     pulse so AFK farmers can see at a glance which slots are armed. */
+  #skillbar .sk .sk-auto {
+    position: absolute; bottom: 1px; left: 1px;
+    width: 12px; height: 12px;
+    padding: 0; margin: 0; border: 0;
+    background: rgba(10,6,2,0.55);
+    color: #8a7048;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    line-height: 12px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px #5a4030;
+    z-index: 3;
+    user-select: none;
+    image-rendering: pixelated;
+  }
+  #skillbar .sk .sk-auto:hover {
+    background: #3a2616; color: #ffe080;
+    box-shadow: inset 0 0 0 1px #ffd060;
+  }
+  #skillbar .sk .sk-auto.on {
+    background: #2c5028; color: #a8ffb0;
+    box-shadow: inset 0 0 0 1px #a8ffb0;
+    animation: skAutoPulse 1.4s ease-in-out infinite alternate;
+  }
+  #skillbar .sk .sk-auto.on:hover {
+    background: #4a7838; color: #fff8c0;
+  }
+  @keyframes skAutoPulse {
+    from { filter: brightness(0.85); }
+    to   { filter: brightness(1.25); }
+  }
   #skillbar .sk.empty .label { color: #8a7048; }
   #skillbar .sk .cd-overlay {
     position: absolute; left: 0; right: 0; bottom: 0; top: 0;
@@ -4679,7 +4715,11 @@ let research = {
   // Per-slot equipped skill memory. Auto-restored on every resetRun() so AFK
   // farmers don't have to re-equip after every Auto-Restart. null = empty slot.
   // Updated whenever buySkill() / clearSkillSlot() runs.
-  skillLoadout:        []
+  skillLoadout:        [],
+  // Per-slot auto-cast flags. When true, the slot fires automatically whenever
+  // its cooldown is ready AND the per-skill fire conditions in tickSkillAutoCast
+  // are met. Defaults to all false (manual play unchanged for new players).
+  skillAutoCast:       []
 };
 
 // ---------- PRESTIGE ----------
@@ -5154,7 +5194,8 @@ function saveResearch() {
       sawPrestigeUnlock:  !!research.sawPrestigeUnlock,
       openedPrestigeOnce: !!research.openedPrestigeOnce,
       reachedEndless:     !!research.reachedEndless,
-      skillLoadout:       Array.isArray(research.skillLoadout) ? research.skillLoadout.slice() : []
+      skillLoadout:       Array.isArray(research.skillLoadout)  ? research.skillLoadout.slice()  : [],
+      skillAutoCast:      Array.isArray(research.skillAutoCast) ? research.skillAutoCast.map(b => !!b) : []
     }));
   } catch {}
 }
@@ -6155,6 +6196,13 @@ function loadResearch() {
       );
     } else {
       research.skillLoadout = [];
+    }
+    // Per-slot auto-cast flags. Coerce every entry to a boolean so a corrupted
+    // import (numbers, strings, undefined) can't accidentally enable auto-cast.
+    if (Array.isArray(d.skillAutoCast)) {
+      research.skillAutoCast = d.skillAutoCast.map(b => !!b);
+    } else {
+      research.skillAutoCast = [];
     }
   } catch {}
 }
@@ -8295,9 +8343,15 @@ function renderSkillBar() {
     const sk = SKILLS[slot.skillId];
     if (!sk) { html += `<div class="sk empty" data-idx="${i}"></div>`; continue; }
     const armedClass = (armedSkill && armedSkill.slotIdx === i) ? ' armed' : '';
+    const isAuto = !!(research.skillAutoCast && research.skillAutoCast[i]);
+    const autoCls = isAuto ? ' on' : '';
+    const autoTitle = isAuto
+      ? 'Auto-cast: ON (click to disable). Skill will fire by itself when conditions are met.'
+      : 'Auto-cast: OFF (click to enable). Skill will fire by itself when conditions are met.';
     html += `<div class="sk${armedClass}" data-idx="${i}" title="${sk.name} \u2014 ${sk.desc} (key ${i + 1})" style="background:${sk.tag};">
       ${keyBadge}
       <button class="sk-clear" data-clear-idx="${i}" title="Clear this slot (also clears the saved loadout)" aria-label="Clear skill">\u00d7</button>
+      <button class="sk-auto${autoCls}" data-auto-idx="${i}" title="${autoTitle}" aria-label="Toggle auto-cast">A</button>
       <span class="glyph">${skillIconHtml(sk)}</span>
       <span class="label">${sk.short}</span>
     </div>`;
@@ -8307,9 +8361,12 @@ function renderSkillBar() {
   for (const el of skillBarEl.querySelectorAll('.sk')) {
     if (el.classList.contains('locked')) continue;
     el.addEventListener('pointerdown', (ev) => {
-      // The \u00d7 clear-button bubbles a pointerdown too \u2014 let its own handler
+      // The \u00d7 / A buttons bubble pointerdown too \u2014 let their own handlers
       // run instead of arming/casting the skill.
-      if (ev.target && ev.target.classList && ev.target.classList.contains('sk-clear')) return;
+      if (ev.target && ev.target.classList && (
+            ev.target.classList.contains('sk-clear') ||
+            ev.target.classList.contains('sk-auto')
+          )) return;
       ev.stopPropagation();
       ev.preventDefault();
       const idx = +el.dataset.idx;
@@ -8323,6 +8380,15 @@ function renderSkillBar() {
       ev.preventDefault();
       const idx = +btn.dataset.clearIdx;
       window.clearSkillSlot(idx);
+    });
+  }
+  // wire the AUTO toggle buttons
+  for (const btn of skillBarEl.querySelectorAll('.sk-auto')) {
+    btn.addEventListener('pointerdown', (ev) => {
+      ev.stopPropagation();
+      ev.preventDefault();
+      const idx = +btn.dataset.autoIdx;
+      window.toggleSkillAutoCast(idx);
     });
   }
 }
@@ -8434,10 +8500,23 @@ window.clearSkillSlot = function (idx) {
   }
   slot.skillId  = null;
   slot.cooldown = 0;
-  if (Array.isArray(research.skillLoadout)) research.skillLoadout[idx] = null;
+  if (Array.isArray(research.skillLoadout))  research.skillLoadout[idx]  = null;
+  if (Array.isArray(research.skillAutoCast)) research.skillAutoCast[idx] = false;
   saveResearch();
   renderSkillBar();
   updateUI();
+};
+
+// Toggle the auto-cast flag for a given slot. Wired to the small "A" badge
+// button at the bottom-left of every filled skill slot. Persists immediately
+// so AFK farmers don't lose the toggle if they close the tab.
+window.toggleSkillAutoCast = function (idx) {
+  const slot = SKILL_SLOTS[idx];
+  if (!slot || !slot.skillId) return;
+  if (!Array.isArray(research.skillAutoCast)) research.skillAutoCast = [];
+  research.skillAutoCast[idx] = !research.skillAutoCast[idx];
+  saveResearch();
+  renderSkillBar();
 };
 
 // ---------- skill juice systems ----------
@@ -8863,6 +8942,153 @@ function updateSkillCooldowns(dt) {
     if (sk.cooldown > 0) sk.cooldown = Math.max(0, sk.cooldown - dt);
   }
   if (rallyT > 0) rallyT = Math.max(0, rallyT - dt);
+}
+
+// =====================================================================
+//  ACTIVE-SKILL AUTO-CAST
+//  Per-slot opt-in. Each frame, for every filled slot whose auto-cast
+//  flag is on, evaluate that skill's fire conditions. If satisfied,
+//  call castSkill() with the chosen target. All targeting heuristics
+//  bias toward "what a competent player would have done" — densest
+//  cluster for AoE, highest-HP enemy for Smite, etc.
+//
+//  Defensive gates (apply to every skill):
+//    - cooldown ready, slot has a skill, skill is known
+//    - run is active (not gameOver, not paused, not armedSkill)
+//    - at least one enemy on field for offensive skills
+//
+//  Per-skill thresholds tuned for: don't waste a cast on trivial
+//  scenarios (e.g. 1 minion, full wall, etc).
+// =====================================================================
+
+// Heal-Wall fires when wall HP drops below this fraction of max.
+const _AUTO_HEAL_THRESHOLD     = 0.60;
+// Rally / Frost Nova / Stun Bomb want at least this many enemies on field.
+const _AUTO_RALLY_MIN_ENEMIES  = 5;
+const _AUTO_FROST_MIN_ENEMIES  = 4;
+// Meteor / Stun Bomb want at least this many enemies inside the AoE radius.
+const _AUTO_METEOR_MIN_CLUSTER = 3;
+const _AUTO_STUN_MIN_CLUSTER   = 2;
+// Smite avoids wasting casts on minions whose HP is already below this
+// fraction of the smite damage (no point one-shotting a goblin with Smite).
+const _AUTO_SMITE_MIN_HP_FRAC  = 1.0;
+
+// Returns true if the global state allows ANY auto-cast to fire.
+function _autoCastGloballyAllowed() {
+  if (gameOver) return false;
+  if (paused) return false;
+  if (armedSkill) return false;          // user is mid-aim, don't fight them
+  if (!effects.skillSlotsUnlocked) return false;
+  return true;
+}
+
+// Best target for auto-Smite: highest-HP enemy currently on field. Bosses
+// strongly preferred via a 2x weight so they pull focus even when minions
+// have similar HP. Skips enemies whose HP is already trivial.
+function _findAutoSmiteTarget() {
+  let best = null, bestScore = -1;
+  // Threshold: Smite's wave-scaled damage. Don't waste it on enemies under it.
+  const skillScale = waveScale() * (effects.skillDmgMul || 1);
+  const minHp = 60 * skillScale * _AUTO_SMITE_MIN_HP_FRAC;
+  for (const e of enemies) {
+    if (e.hp <= 0) continue;
+    if (e.hp < minHp) continue;
+    const score = e.hp * (e.isBoss ? 2 : 1);
+    if (score > bestScore) { bestScore = score; best = e; }
+  }
+  return best;
+}
+
+// Best (x, y) point for auto-Meteor: scan the field on a coarse grid for the
+// 36px-radius circle that contains the most enemies. Returns null if no
+// circle has at least _AUTO_METEOR_MIN_CLUSTER enemies in it.
+function _findAutoMeteorPoint() {
+  return _findAutoAoePoint(36, _AUTO_METEOR_MIN_CLUSTER);
+}
+
+// Best point for Stun Bomb: same scan but 50px radius and prefer clusters
+// containing a boss (counted as 3 enemies for ranking purposes).
+function _findAutoStunPoint() {
+  return _findAutoAoePoint(50, _AUTO_STUN_MIN_CLUSTER, /*bossWeight*/ 3);
+}
+
+// Generic densest-cluster scanner. Steps a 24-px grid over the playable
+// field and counts how many enemies lie within `radius`. Optional bossWeight
+// multiplier so AoE skills with anti-boss bias prefer clusters containing
+// bosses. Returns { x, y, count } or null.
+function _findAutoAoePoint(radius, minCount, bossWeight) {
+  if (enemies.length < minCount) return null;
+  const r2 = radius * radius;
+  const bw = bossWeight || 1;
+  let bestX = 0, bestY = 0, bestCount = 0;
+  // Step over the field in 24-px increments. Field span is roughly WALL_W..W.
+  const step = 24;
+  const xMin = (typeof WALL_W !== 'undefined' ? WALL_W : 0) + 8;
+  const xMax = (typeof W !== 'undefined' ? W : 480) - 8;
+  const yMin = 8;
+  const yMax = (typeof H !== 'undefined' ? H : 270) - 8;
+  for (let x = xMin; x <= xMax; x += step) {
+    for (let y = yMin; y <= yMax; y += step) {
+      let count = 0;
+      for (const e of enemies) {
+        if (e.hp <= 0) continue;
+        const dx = e.x - x, dy = (e.y - 3) - y;
+        if (dx * dx + dy * dy <= r2) count += (e.isBoss ? bw : 1);
+      }
+      if (count > bestCount) { bestCount = count; bestX = x; bestY = y; }
+    }
+  }
+  if (bestCount < minCount) return null;
+  return { x: bestX, y: bestY, count: bestCount };
+}
+
+// Heal-Wall fires when wall is below threshold AND there's pressure on it
+// (enemies present). Otherwise the player would burn their CD on a calm tick.
+function _shouldAutoHealWall() {
+  if (!effects.wallMaxHp) return false;
+  if (wallHP / effects.wallMaxHp > _AUTO_HEAL_THRESHOLD) return false;
+  if (enemies.length === 0) return false;
+  return true;
+}
+
+// Counts living enemies — small helper for Rally / Frost Nova thresholds.
+function _livingEnemyCount() {
+  let n = 0;
+  for (const e of enemies) if (e.hp > 0) n++;
+  return n;
+}
+
+// Per-frame auto-cast dispatch. Runs after updateSkillCooldowns so freshly-
+// recovered slots can fire on the same tick they come off cooldown.
+function tickSkillAutoCast() {
+  if (!_autoCastGloballyAllowed()) return;
+  if (!Array.isArray(research.skillAutoCast)) return;
+  for (let i = 0; i < SKILL_SLOTS.length; i++) {
+    if (!research.skillAutoCast[i]) continue;          // toggle off
+    const slot = SKILL_SLOTS[i];
+    if (!slot.skillId)        continue;                // empty slot
+    if (slot.cooldown > 0)    continue;                // not ready
+    if (i >= effects.skillSlotsUnlocked) continue;     // unlocked-count guard
+    const sk = SKILLS[slot.skillId];
+    if (!sk) continue;
+    // Per-skill fire conditions + targeting
+    if (sk.id === 'smite') {
+      const tgt = _findAutoSmiteTarget();
+      if (tgt) castSkill(i, sk, null, null, tgt);
+    } else if (sk.id === 'meteor') {
+      const pt = _findAutoMeteorPoint();
+      if (pt) castSkill(i, sk, pt.x, pt.y, null);
+    } else if (sk.id === 'stunBomb') {
+      const pt = _findAutoStunPoint();
+      if (pt) castSkill(i, sk, pt.x, pt.y, null);
+    } else if (sk.id === 'heal') {
+      if (_shouldAutoHealWall()) castSkill(i, sk, null, null, null);
+    } else if (sk.id === 'rally') {
+      if (_livingEnemyCount() >= _AUTO_RALLY_MIN_ENEMIES) castSkill(i, sk, null, null, null);
+    } else if (sk.id === 'frostNova') {
+      if (_livingEnemyCount() >= _AUTO_FROST_MIN_ENEMIES) castSkill(i, sk, null, null, null);
+    }
+  }
 }
 
 let _lastBarRender = 0;
@@ -12218,6 +12444,7 @@ function loop(t) {
     updateCoins(dt);
     updateBeams(dt);
     updateSkillCooldowns(dt);
+    tickSkillAutoCast();
     updateSkillFx(dt);
     updateFirePatches(dt);
     updatePlagueClouds(dt);
@@ -12568,7 +12795,7 @@ window.settingsWipe = function () {
       research  = { rp: 0, totalRp: 0, crowns: 0, totalCrowns: 0,
                     purchased: new Set(['root']), disabled: new Set(), repeatCounts: {},
                     sawPrestigeUnlock: false, openedPrestigeOnce: false, reachedEndless: false,
-                    skillLoadout: [] };
+                    skillLoadout: [], skillAutoCast: [] };
       prestige  = { shards: 0, totalShardsEarned: 0, prestigeCount: 0, purchased: {},
                     bankedGold: 0, deepestWave: 0, promotions: {} };
       if (typeof stats !== 'undefined') {
