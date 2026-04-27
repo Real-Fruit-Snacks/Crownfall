@@ -6037,7 +6037,18 @@ function checkAchievements() {
 // (crash, power loss, ctrl-W without confirmation) between a big kill spree and
 // the next save trigger, we want one more flush. These handlers do nothing
 // expensive — just re-persist the already-in-memory state.
+//
+// IMPORTANT — _suppressFlushSaves: when settingsApplyImport writes a fresh save
+// to localStorage and queues a reload, the page's pagehide / beforeunload /
+// visibilitychange-hidden listeners ALL fire before navigation completes. Each
+// one calls flushAllSaves(), which serializes the STALE pre-import in-memory
+// state and overwrites the freshly-imported localStorage with it. Net result:
+// the imported save silently reverts on every reload. This was the import-
+// not-working bug. The flag short-circuits flushes during the import->reload
+// window so the imported localStorage survives intact.
+let _suppressFlushSaves = false;
 function flushAllSaves() {
+  if (_suppressFlushSaves) return;
   // Force a stats flush regardless of the bumpStat throttle.
   try { saveStats(); _statsSaveDirty = false; } catch {}
   try { saveResearch(); } catch {}
@@ -13692,6 +13703,14 @@ window.settingsApplyImport = function () {
     danger:   true,
     onYes: () => {
       try {
+        // CRITICAL: suppress flushAllSaves so the page's exit listeners
+        // (pagehide / beforeunload / visibilitychange) don't overwrite the
+        // freshly-imported localStorage with the STALE in-memory state right
+        // before navigation. This was the silent "import doesn't work" bug \u2014
+        // the import wrote correctly, then the page's own exit handlers
+        // serialized stale `research` / `stats` / `prestige` / `commanders`
+        // back over the imported entries before the reload completed.
+        _suppressFlushSaves = true;
         // Clear current castle* keys, then apply imported
         const toRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -13705,6 +13724,7 @@ window.settingsApplyImport = function () {
         _setSaveStatus(status, 'ok', 'Save imported \u2014 reloading\u2026');
         setTimeout(() => location.reload(), 700);
       } catch (e) {
+        _suppressFlushSaves = false;
         _setSaveStatus(status, 'err', 'Failed to write save: ' + (e && e.message ? e.message : 'unknown error'));
       }
     }
