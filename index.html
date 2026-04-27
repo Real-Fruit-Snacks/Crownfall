@@ -4622,7 +4622,7 @@ const RESEARCH_NODES = [
   { id:'e4',   x:34, y:80, name:'Spoils',            desc:'+1 gold per kill',          cost:5, req:['e2'],         effect:{ killGold:1 } },
   { id:'e5',   x:66, y:80, name:'Coffers',           desc:'+40 starting gold',         cost:5, req:['e3'],         effect:{ startGold:40 } },
   { id:'e6',   x:50, y:82, name:'Mercantile',        desc:'+1 gold per kill',          cost:6, req:['e2','e3'],    effect:{ killGold:1 } },
-  { id:'eauto',x:50, y:66, name:'Coin Magnet',       desc:'Coins fly to the wall on their own.', cost:9, req:['e2','e3'], effect:{ autoCollect:true } },
+  { id:'eauto',x:62, y:56, name:'Coin Magnet',       desc:'Coins fly to the wall on their own — no more chasing them down.', cost:4, req:['root'], effect:{ autoCollect:true } },
   { id:'autoTap', x:44, y:62, name:'Sentry Marksmen', desc:'Wall guards auto-tap the closest enemy every 1.4s \u2014 no more clicking RSI.', cost:8, req:['e1'], effect:{ autoTap:1.4 } },
   { id:'autoTap2', x:38, y:58, name:'Keen Sentries',  desc:'Sentries fire even faster \u2014 auto-tap every 0.8s.', cost:12, req:['autoTap'], effect:{ autoTap:0.8 } },
   { id:'rRestlessHand', x:46, y:56, name:'Restless Hand', desc:'Holding the cursor on an enemy ticks 0.13s faster per level. Buy up to 4 times \u2014 caps near 5 hits per second.', cost:5, req:['root'], repeatable:true, maxStacks:4, effect:{ holdTapInterval:-0.13 } },
