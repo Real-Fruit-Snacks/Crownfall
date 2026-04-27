@@ -5638,11 +5638,14 @@ function loadCommanders() {
   } catch {}
 }
 
-// Cost in Crowns for the next commander (1st owned = 3, then +2 each)
+// Cost in Crowns for the next commander. The FIRST commander is free as an
+// onboarding nudge — players can try the automation system without spending
+// Crowns. Subsequent commanders ramp 3 / 5 / 7 / 9 / ... in Crowns.
 function commanderCost() {
   let owned = 0;
   for (const c of COMMANDERS) if (c.owned) owned++;
-  return 3 + owned * 2;
+  if (owned === 0) return 0;
+  return 3 + (owned - 1) * 2;
 }
 
 window.openCommander = function (slotIdx) {
@@ -5697,12 +5700,18 @@ function renderCommanderOverlay() {
     body.innerHTML = `
       <div class="cmd-buy-card">
         <div>Hire a Commander to automate this slot. Survives between runs.</div>
-        <div class="crown-cost">${cost} \u265B</div>
+        ${cost === 0
+          ? `<div class="crown-cost" style="color:#a8ffb0;">FREE</div>`
+          : `<div class="crown-cost">${cost} \u265B</div>`}
         <button onclick="buyCommanderForSlot(${c.idx})" ${can ? '' : 'disabled'}>
-          ${can ? 'Hire Commander' : `Need ${cost - research.crowns} more Crown${cost - research.crowns === 1 ? '' : 's'}`}
+          ${can
+            ? (cost === 0 ? 'Hire Commander (Free)' : 'Hire Commander')
+            : `Need ${cost - research.crowns} more Crown${cost - research.crowns === 1 ? '' : 's'}`}
         </button>
       </div>
-      <div class="cmd-info">Cost rises by 2 Crowns per commander you already own. Each can independently auto-hire a hero, auto-upgrade stats, and auto-imbue an element when affordable.</div>
+      <div class="cmd-info">${cost === 0
+        ? 'Your FIRST commander is free — try out the automation system. Subsequent commanders cost 3 / 5 / 7 / 9 Crowns. Each can independently auto-hire a hero, auto-upgrade stats, and auto-imbue an element when affordable.'
+        : 'Cost rises by 2 Crowns per commander you already own. Each can independently auto-hire a hero, auto-upgrade stats, and auto-imbue an element when affordable.'}</div>
     `;
     document.getElementById('cmd-save-btn').style.display = 'none';
     return;
