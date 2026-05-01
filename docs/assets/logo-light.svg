@@ -10,12 +10,20 @@
   <line x1="200" y1="140" x2="200" y2="200" stroke="#bcc0cc" stroke-width="1"/>
   <line x1="400" y1="140" x2="400" y2="200" stroke="#bcc0cc" stroke-width="1"/>
   <line x1="600" y1="140" x2="600" y2="200" stroke="#bcc0cc" stroke-width="1"/>
-  <text x="20" y="158" font-family="'JetBrains Mono', 'SF Mono', monospace" font-size="9" font-weight="600" fill="#9ca0b0" letter-spacing="2">HEROES</text>
-  <text x="20" y="186" font-family="'Inter', sans-serif" font-size="22" font-weight="700" fill="#1e1e2e" letter-spacing="-1">6<tspan fill="#df8e1d" font-size="14"> × CLASSES</tspan></text>
-  <text x="220" y="158" font-family="'JetBrains Mono', 'SF Mono', monospace" font-size="9" font-weight="600" fill="#9ca0b0" letter-spacing="2">RESEARCH</text>
-  <text x="220" y="186" font-family="'Inter', sans-serif" font-size="22" font-weight="700" fill="#1e1e2e" letter-spacing="-1">100+<tspan fill="#df8e1d" font-size="14"> NODES</tspan></text>
-  <text x="420" y="158" font-family="'JetBrains Mono', 'SF Mono', monospace" font-size="9" font-weight="600" fill="#9ca0b0" letter-spacing="2">EVENTS</text>
-  <text x="420" y="186" font-family="'Inter', sans-serif" font-size="22" font-weight="700" fill="#1e1e2e" letter-spacing="-1">5<tspan fill="#df8e1d" font-size="14"> × SPECIAL WAVES</tspan></text>
-  <text x="620" y="158" font-family="'JetBrains Mono', 'SF Mono', monospace" font-size="9" font-weight="600" fill="#9ca0b0" letter-spacing="2">STACK</text>
-  <text x="620" y="186" font-family="'Inter', sans-serif" font-size="22" font-weight="700" fill="#1e1e2e" letter-spacing="-1">VANILLA<tspan fill="#df8e1d" font-size="14"> · HTML5</tspan></text>
+
+  <text x="20" y="158" font-family="'JetBrains Mono', 'Courier New', monospace" font-size="10" font-weight="600" fill="#9ca0b0" letter-spacing="1">HEROES</text>
+  <text x="20" y="175" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700" fill="#df8e1d" letter-spacing="0">6 CLASSES</text>
+  <text x="20" y="190" font-family="'JetBrains Mono', 'Courier New', monospace" font-size="8" fill="#9ca0b0" letter-spacing="0">KNIGHT · MAGE · ARCHER · ETC</text>
+
+  <text x="220" y="158" font-family="'JetBrains Mono', 'Courier New', monospace" font-size="10" font-weight="600" fill="#9ca0b0" letter-spacing="1">RESEARCH</text>
+  <text x="220" y="175" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700" fill="#df8e1d" letter-spacing="0">100+ NODES</text>
+  <text x="220" y="190" font-family="'JetBrains Mono', 'Courier New', monospace" font-size="8" fill="#9ca0b0" letter-spacing="0">SKILL TREE · UNLOCKS</text>
+
+  <text x="420" y="158" font-family="'JetBrains Mono', 'Courier New', monospace" font-size="10" font-weight="600" fill="#9ca0b0" letter-spacing="1">EVENTS</text>
+  <text x="420" y="175" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700" fill="#df8e1d" letter-spacing="0">5 SPECIALS</text>
+  <text x="420" y="190" font-family="'JetBrains Mono', 'Courier New', monospace" font-size="8" fill="#9ca0b0" letter-spacing="0">BOSS WAVES · MODIFIERS</text>
+
+  <text x="620" y="158" font-family="'JetBrains Mono', 'Courier New', monospace" font-size="10" font-weight="600" fill="#9ca0b0" letter-spacing="1">STACK</text>
+  <text x="620" y="175" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700" fill="#df8e1d" letter-spacing="0">VANILLA JS</text>
+  <text x="620" y="190" font-family="'JetBrains Mono', 'Courier New', monospace" font-size="8" fill="#9ca0b0" letter-spacing="0">HTML5 · CANVAS · ONE FILE</text>
 </svg>
