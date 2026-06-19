@@ -1,0 +1,236 @@
+<p><strong>Crownfall</strong> is a pixel-art medieval <strong>wave-defense incremental</strong>. You command a row of heroes on a stone wall. Goblins, chargers, archers, healers, witches, and crowned bosses pour out of the field on the right. Hold them off as long as you can &mdash; every death banks <strong>Research Points</strong> and <strong>Crowns</strong> that permanently upgrade your fortress.</p>
+
+<p>You will die. A lot. Every run makes the next one stronger.</p>
+
+<hr>
+
+<h2>Latest Update &mdash; AFK Toolkit, Soft-Lock Fix &amp; Smarter Commanders</h2>
+<p>Direct follow-up to <strong>rofltastic</strong>'s review. Six commits covering the wave-41 soft-lock story, a full unattended-play toolkit for idle-game fans, the busted auto-upgrade AI, and a UI polish pass to match. Nothing is nerfed from the enemy side &mdash; the tools got better instead.</p>
+
+<h3>Anti-soft-lock bundle</h3>
+<ul>
+  <li><strong>Damage upgrades scale now.</strong> Was flat +1 per level (irrelevant at late waves); now <strong>+2% of the hero's base damage per level</strong>. 50 levels = 2&times; base, 100 levels = 3&times; base. Legacy heroes migrate cleanly.</li>
+  <li><strong>Bosses are immune to knockback.</strong> Cannon "concussive" and crossbow "heavy" builds no longer shove bosses backward faster than they can advance &mdash; that was the wave-41 stalemate path. Minions still eat the full 10px shove.</li>
+  <li><strong>Sell Hero button.</strong> Every filled slot panel gets a <em>Sell &middot; +Ng</em> button that refunds 50% of total gold spent (hire + upgrades + imbues). Confirm dialog so misclicks can't nuke a carry. Mid-run pivots are finally real.</li>
+  <li><strong>Priority targeting.</strong> Each hero gets a chip-button row on its panel: <em>Closest</em>, <em>To Wall</em>, <em>Low HP</em>, <em>High HP</em>, <em>Tanks</em> (max HP). CC-heavy setups can now explicitly focus bosses/elites instead of shoving minions indefinitely.</li>
+</ul>
+
+<h3>AFK / Idle toolkit</h3>
+<ul>
+  <li><strong>Auto-Dismiss Events</strong> (Settings). Mid-run event popups auto-close after 5 / 15 / 30 / 60 seconds. Dismissing picks <em>no</em> option &mdash; no reward, no penalty. Clicking any option cancels the timer and resolves normally. 15-second default. Opt-in.</li>
+  <li><strong>AFK Auto-Restart</strong> (Settings). If a wave stays "active" longer than 1 / 2 / 5 / 10 minutes, the run ends, banks any RP earned, and starts a fresh run. Commanders re-fill slots automatically. <strong>No cap</strong> on restart frequency &mdash; a long-running tab genuinely farms RP overnight.</li>
+  <li><strong>Offline progress</strong> &mdash; closes the loop for players who close the browser. Each finished run records its RP-per-minute into a smoothed rolling average; on next boot, time away &times; that rate is granted as RP with a welcome-back toast. No cap per spec.</li>
+  <li><strong>Wall Breached auto-retry.</strong> When AFK Auto-Restart is on, the gameover screen shows an <em>Auto-retry in Ns &middot; click any button to cancel</em> pulsing countdown (10s). Survives wall-breach, not just wave-stall &mdash; the overnight loop keeps rolling either way.</li>
+</ul>
+
+<h3>Commander auto-upgrade, rewritten</h3>
+<ul>
+  <li><strong>Round-robin distribution across heroes.</strong> Used to drain the treasury into slot 0 before anyone else got a turn. Now each eligible commander gets <em>one</em> upgrade per cycle in its priority order, cycles repeat until gold runs out. Matched-preset commanders end with identical level counts instead of one carry and three scrubs.</li>
+  <li><strong>Speed-priority actually works now.</strong> Hidden typo on the progress-reset path (<code>upgradePreset = 'roundRobin'</code>) silently fell through to the <code>dmg-first</code> default, so commanders set to SPD or RNG priority were quietly dumping all gold into damage. Now resets to <em>no auto-upgrade</em> &mdash; the player picks.</li>
+</ul>
+
+<h3>UI polish</h3>
+<ul>
+  <li><strong>Hero XP text finally readable.</strong> The <em>N / N XP</em> numbers on the level bar were dark brown on a gradient that hit near-black on the empty portion &mdash; effectively invisible. Now light cream with a 1px black outline, readable over both gold fill and dark empty.</li>
+  <li><strong>Target priority is a chip row, not a &lt;select&gt;.</strong> The native dropdown stuck out. Replaced with 5 pixel-art chip buttons that match the commander preset styling; click to set, active highlight moves live.</li>
+</ul>
+
+<hr>
+
+<details>
+<summary><strong>Previous update &mdash; Wolf, Bards &amp; QoL Polish</strong> &nbsp;(click to expand)</summary>
+<br>
+<p>Direct follow-up to community feedback from JohnSmith88's review thread. The war wolf feels alive, the bard has a real build path, range indicators read at a glance, and the most-played systems got six fixes.</p>
+
+<h3>The Hound, reborn</h3>
+<ul>
+  <li>Walks now (2-frame trot cycle). HP doubled 60 &rarr; 120. Bards heal the wolf from anywhere on the wall at 2 HP/sec each.</li>
+</ul>
+
+<h3>Bard chapter expansion &mdash; four new nodes</h3>
+<ul>
+  <li><strong>Double Time</strong>, <strong>War March</strong>, <strong>Extended Refrain</strong>, <strong>Healing Chorus</strong>. Fully researched: +70% fire rate, +55% damage, +90 aura range, plus wall regen.</li>
+</ul>
+
+<h3>Other changes</h3>
+<ul>
+  <li>Color-coded range indicators (one color per hero class, dotted for Bard auras).</li>
+  <li>Skills free to equip &mdash; cooldown-only gating.</li>
+  <li>Scholar's Mind exploit patched. Screen flash rate-limited. Bosses always spawn from the right edge. Merchant prices &minus;40%.</li>
+</ul>
+</details>
+
+<details>
+<summary><strong>Older update &mdash; Prestige Tree Expansion</strong> &nbsp;(click to expand)</summary>
+<br>
+<p>The prestige tree went from 10 bonuses to <strong>20</strong>, with a full reshuffle of what the late game looks like. New lategame-scaling damage, new compounding shard returns, a roaming pixel-art <strong>war wolf</strong>, comeback mechanics, a node-preservation modal, and two bug fixes. No enemy nerfs &mdash; the wall stays real, but so does the door next to it.</p>
+
+<h3>10 new prestige bonuses</h3>
+<ul>
+  <li><strong>Empire's Reach</strong> (8 shards &times; 3) &mdash; +0.5% hero damage per wave cleared past 20 per stack. Maxed, your wave-50 army hits +45% harder than your wave-20 army.</li>
+  <li><strong>Endless March</strong> (12 shards) &mdash; +1 bonus Crown Shard per lifetime prestige cycle. Later prestiges pay bigger than earlier ones.</li>
+  <li><strong>Hunter's Mark</strong> (8 shards) &mdash; first hit on each enemy marks it; every hit after deals +15% damage.</li>
+  <li><strong>Bank Vault</strong> (15 shards) &mdash; 25% of your unspent gold at run end carries to next run's starting purse.</li>
+  <li><strong>Promotion</strong> (6 shards) &mdash; every prestige, one random hero type gains a permanent +10% damage stack. Uncapped lottery pull per prestige.</li>
+  <li><strong>Skill Mastery</strong> (8 shards &times; 3) &mdash; -10% active skill cooldown per stack.</li>
+  <li><strong>Phoenix Down</strong> (18 shards) &mdash; first wall-HP-zero each run revives the wall to 50% HP.</li>
+  <li><strong>Dual Imbue</strong> (25 shards) &mdash; heroes can stack a second element on top of their primary. Both trigger on direct hits, splash, and mage chains.</li>
+  <li><strong>The Hound</strong> (25 shards) &mdash; unlocks a feral war-wolf that roams the battlefield. Pixel-art wolf sprite with pointed ears, raised tail, glowing amber eye.</li>
+  <li><strong>Ancestry</strong> (20 shards &times; 3) &mdash; on prestige, preserve 1/2/3 currently-owned research nodes across the wipe. Picker modal opens at prestige time.</li>
+</ul>
+
+<h3>Existing prestige bonuses buffed</h3>
+<ul>
+  <li><strong>Sharpened Edge</strong> now stacks up to <strong>10</strong> (was 5). Max damage bonus: +25% &rarr; <strong>+50%</strong>.</li>
+  <li><strong>Crowned Legacy</strong> doubled: +1% per prior prestige per stack &rarr; <strong>+2%</strong>.</li>
+  <li><strong>Shard formula rewards depth</strong> &mdash; <code>sqrt(totalRp/50) + floor(deepestWave/10)</code>. Pushing past your previous best pays extra shards per 10-wave milestone.</li>
+</ul>
+
+<h3>Discoverability fixes</h3>
+<ul>
+  <li><strong>Prestige Unlock toast</strong> &mdash; big gold <em>&#9818; PRESTIGE UNLOCKED</em> popup on first cross of 500 lifetime RP.</li>
+  <li><strong>Pulsing pause-button badge</strong> with gold glow + &#9819; crown until you open prestige once.</li>
+  <li><strong>Endless Zone milestone</strong> &mdash; clearing wave 50 pops a <em>&#128081; ENDLESS ZONE REACHED</em> toast. Every wave from 50 onward banks <strong>1.5&times; Research Points</strong>.</li>
+  <li><strong>Prestige screen surfaces Promotions + depth bonus</strong> in the blurb so you see them at a glance.</li>
+</ul>
+
+<h3>Bug fixes from player reviews</h3>
+<ul>
+  <li><strong>Bard phantom tooltip fixed</strong> &mdash; no more "Unlock Bard Alchemy" message for a node that never existed.</li>
+  <li><strong>Projectile hitbox scales with enemy size</strong> &mdash; ram bosses get a 9px hitbox (was 5px flat). Fixes fast-attacking heroes skimming past at certain angles.</li>
+</ul>
+</details>
+
+<details>
+<summary><strong>Older update &mdash; Levels, Crits &amp; Commander Polish</strong> &nbsp;(click to expand)</summary>
+<br>
+<p>A real progression layer for your heroes plus a top-to-bottom commander upgrade.</p>
+
+<h3>Hero progression</h3>
+<ul>
+  <li><strong>XP per kill</strong>, levels up to 99 with linear reward curve, <strong>crit chance scales with level</strong> (+1%/level up to 30%). Crits hit for 2&times; and inherit through splash + chains.</li>
+  <li>Hero panel shows Level, Crit %, live XP bar alongside DPS / Kills / Splash.</li>
+  <li>Bards stay at level 1 &mdash; no kills, no shots, aura is the value.</li>
+</ul>
+
+<h3>Combat clarity</h3>
+<ul>
+  <li>Every hero hit shows a damage number. Crits in red (<em>CRIT XX</em>), cannon timer-detonates flash <em>CRIT BLAST</em>.</li>
+  <li>Splash and chain hits stay quiet &mdash; only primary hits show popups.</li>
+</ul>
+
+<h3>Bestiary upgrades</h3>
+<ul>
+  <li>Moved to Pause menu. Boss section added (all 7 variants). Real in-game sprite portraits.</li>
+</ul>
+
+<h3>Commander upgrades</h3>
+<ul>
+  <li>Auto-hire is free (but unique per hero type). BROKEN flag when manual placement mismatches commander class. Reliable auto-hire at low gold.</li>
+</ul>
+
+<h3>UX fixes</h3>
+<ul>
+  <li>Wave-skip RP exploit plugged. <strong>Always Show Hero Ranges</strong> Settings toggle. Pause stays paused through sub-menus. DOM-based damage numbers at fixed CSS size.</li>
+</ul>
+</details>
+
+<details>
+<summary><strong>Older update &mdash; Controls &amp; Comfort Pass</strong> &nbsp;(click to expand)</summary>
+<br>
+
+<h3>Hands-off when you want it</h3>
+<ul>
+  <li>Game-speed toggle (1&times; / 2&times; / 3&times;). Hold-to-damage (Restless Hand research scales to 5.5 hits/sec). Swipe to collect coins.</li>
+</ul>
+
+<h3>Know what you're looking at</h3>
+<ul>
+  <li>DPS &amp; kill count on hero panel. Pulsing gold range arc. <em>BOSS NEXT</em> wave preview. Bestiary codex. Affordable research nodes pulse.</li>
+</ul>
+
+<h3>Accessibility + options</h3>
+<ul>
+  <li>Music &amp; SFX volume sliders. Reduced Motion toggle. Restart Tutorial button. Consistent pixel scrollbars.</li>
+</ul>
+
+<h3>Commander overhaul</h3>
+<ul>
+  <li>Every setting opt-in. Default 50g reserve. Commanders persist across runs.</li>
+</ul>
+
+<h3>Combat fixes</h3>
+<ul>
+  <li>Projectile lifespan scales with range. Cannons always splash. Mage damage 6 &rarr; 7.</li>
+</ul>
+</details>
+
+<details>
+<summary><strong>Older update &mdash; Player Feedback Patch</strong> &nbsp;(click to expand)</summary>
+<br>
+
+<h3>Better aim, better fights</h3>
+<ul>
+  <li>Heroes lead their targets. Cannoneers always splash. Bosses register taps clearly. Ranged enemies stay on-screen.</li>
+</ul>
+
+<h3>Less grind, faster onboarding</h3>
+<ul>
+  <li>3 hero slots open from run 1 (was 1). First skill slot visible from run 1. First skill is 5 RP + 15g (was 12 RP + 25g). +25% RP per wave. Enemy HP nudged down.</li>
+</ul>
+
+<h3>New content</h3>
+<ul>
+  <li>Battering Ram + SIEGE event wave. Sentry Marksmen research (wall auto-tap). 5th skill slot. Double-click WAVE to skip. Wave gold held until last enemy dies.</li>
+</ul>
+
+<h3>Bugs squashed</h3>
+<ul>
+  <li>Browser zoom no longer teleports enemies. Tutorial coachmarks don't cover buttons. Save auto-flushes on tab close. Wipe Everything is a true factory reset.</li>
+</ul>
+</details>
+
+<hr>
+
+<h2>Features</h2>
+<ul>
+  <li><strong>6 hero classes</strong> &mdash; Archer, Crossbow, Cannoneer, Mage, Cleric, Bard. Each with its own pool of weapon imbuements (Fire, Ice, Poison, Bleed, Knockback, Stun, Holy, Hex&hellip;).</li>
+  <li><strong>Deep Bard support path</strong> &mdash; 7 research nodes scaling aura strength, damage buff, range, and passive wall regen. A fully-researched bard feels like a character, not a stat stick.</li>
+  <li><strong>Hero leveling &amp; crits</strong> &mdash; XP per kill, 0% &rarr; 30% crit chance scaling, 2&times; damage inherited through splash + chains.</li>
+  <li><strong>7 enemy archetypes</strong> including the Battering Ram, plus 7 boss variants every 10th wave.</li>
+  <li><strong>6 active skills</strong> &mdash; Smite, Meteor, Heal Wall, Rally, Frost Nova, Stun Bomb. Free to equip, cooldown-gated only.</li>
+  <li><strong>5 field hazards</strong> &mdash; Wooden Spikes, Caltrops, Tar Pits, Watchfire Braziers, Bear Traps.</li>
+  <li><strong>Special event waves</strong> &mdash; Blood Moon, Night of the Restless, Goblin Horde, Champion's Challenge, Plague Wave, Siege Engines.</li>
+  <li><strong>Color-coded range indicators</strong> &mdash; every hero class draws a distinct-colored range ring; bards show their buff aura too.</li>
+  <li><strong>Research Book</strong> with 12 chapters and 100+ nodes.</li>
+  <li><strong>20-bonus Prestige tree</strong> &mdash; lategame damage scaling, a walking pixel-art war wolf (120 HP, bard-healable), dual elemental imbues, wall-revive safety nets, node preservation across wipes.</li>
+  <li><strong>Endless Zone</strong> &mdash; clear wave 50 for a permanent 1.5&times; RP multiplier.</li>
+  <li><strong>Daily Challenge</strong> &mdash; same seed for every player on a given day.</li>
+  <li><strong>Commander automation</strong> &mdash; per-slot Auto-Hire / Auto-Upgrade / Auto-Imbue / Auto-Skin. Round-robin gold distribution across commanders. Wall auto-tap via research.</li>
+  <li><strong>AFK / idle toolkit</strong> &mdash; Auto-Dismiss Events, AFK Auto-Restart on stall, Wall Breached auto-retry, offline-progress RP. Opt-in, no caps &mdash; genuinely overnight-friendly.</li>
+  <li><strong>Sell Hero + Priority Targeting</strong> &mdash; 50% refund on any filled slot, plus per-hero target priority (Closest / To Wall / Low HP / High HP / Tanks).</li>
+  <li><strong>15 achievements</strong> + a Hall of Records stats page.</li>
+  <li><strong>Bestiary</strong> &mdash; every enemy and boss from the Pause menu.</li>
+  <li><strong>Save export/import</strong> &mdash; back up your progress to a single text code.</li>
+  <li><strong>Mobile-friendly</strong> &mdash; works in landscape on phones; built-in fullscreen button.</li>
+</ul>
+
+<h2>Controls</h2>
+<ul>
+  <li><strong>Click</strong> &mdash; hire heroes, buy upgrades, collect coins, tap enemies</li>
+  <li><strong>Hold</strong> on an enemy &mdash; keep damaging it while pressed</li>
+  <li><strong>Swipe</strong> over coins &mdash; auto-collect</li>
+  <li><strong>Double-click WAVE block</strong> &mdash; skip to the next wave</li>
+  <li><strong>1&ndash;5</strong> &mdash; cast skill in slot N</li>
+  <li><strong>Q</strong> &mdash; end run, bank Research Points</li>
+  <li><strong>R</strong> &mdash; open research book</li>
+  <li><strong>Space</strong> &mdash; pause/resume</li>
+  <li><strong>M</strong> &mdash; mute sound</li>
+</ul>
+
+<h2>Tech notes</h2>
+<p>Single self-contained <code>index.html</code>. No installs, no accounts, no analytics. Runs offline once loaded. <strong>Progress is saved in your browser's localStorage</strong> &mdash; clearing site data wipes your save. Use the in-game <strong>Settings &rarr; Export Save</strong> to back it up.</p>
+
+<hr>
+
+<p><em>Made with Canvas, coffee, and a deep love of crunchy pixel art.</em></p>
