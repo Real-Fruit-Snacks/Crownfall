@@ -77,7 +77,6 @@ Crownfall/
 ├── index.html              # The complete game (HTML, CSS, JS, Assets)
 ├── docs/                   # GitHub Pages assets
 │   └── assets/             # Logos for the README
-├── pack-for-itch.bat       # Script to compress the game for Itch.io distribution
 └── README.md               # Project documentation
 ```
 

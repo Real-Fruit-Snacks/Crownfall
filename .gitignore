@@ -40,3 +40,5 @@ marketing/
 
 # One-off debug renders
 ram-test.png
+UPLOAD_TO_ITCH.md
+pack-for-itch.bat
