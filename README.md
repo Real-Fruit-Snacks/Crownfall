@@ -1,5 +1,10 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg" />
+  <img alt="Crownfall — a pixel-art medieval wave-defense incremental game" src="docs/assets/logo-light.svg" width="640" />
+</picture>
+
 # Crownfall
 
 A pixel-art medieval wave-defense incremental game in a single HTML file.
